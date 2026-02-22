@@ -3,7 +3,6 @@ require('dotenv').config();
 const {connectToMongoDb}= require('./connection')
 const cookieParser= require('cookie-parser')
 const cors= require('cors');
-const {verifyToken} = require('./Middlewares/auth')
 const userRoute= require('./Routes/User')
 const codeTemplateRoutes= require('./Routes/CodeTemplate')
 
@@ -31,10 +30,6 @@ app.use(cookieParser());
 
 // public Routes
 app.use('/api/auth' , userRoute);
-
-
-// mine made middlewares
-app.use(verifyToken);
 
 
 // codeTemplateRoutes

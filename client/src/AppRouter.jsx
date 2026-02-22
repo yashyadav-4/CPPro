@@ -1,4 +1,4 @@
-import { createBrowserRouter, createRoutesFromElements, Route } from 'react-router-dom'
+import { createBrowserRouter } from 'react-router-dom'
 import Layout from './Layout.jsx'
 import Login from './components/AuthPage/Login'
 import Signup from './components/AuthPage/Signup.jsx'
@@ -6,6 +6,8 @@ import Home from './components/Home/Home.jsx'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
 import Dashboard from './components/Dashboard/Dashboard.jsx'
 import LeaderBoard from './components/Leaderboard/Leaderboard.jsx'
+import CodeTemplate from './components/CodeTemplate/CodeTemplate.jsx'
+import SnippetDetail from './components/CodeTemplate/SnippetDetail.jsx'
 
 const router = createBrowserRouter([
     {
@@ -23,6 +25,14 @@ const router = createBrowserRouter([
             {
                 path: "leaderboard",
                 element: <ProtectedRoute><LeaderBoard /></ProtectedRoute>
+            },
+            {
+                path: "CodeTemplate",
+                element: <ProtectedRoute> <CodeTemplate /> </ProtectedRoute>
+            },
+            {
+                path: "CodeTemplate/:id",
+                element: <ProtectedRoute> <SnippetDetail /> </ProtectedRoute>
             }
         ]
     },

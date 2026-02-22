@@ -1,11 +1,12 @@
 const express= require('express');
 const { handleFetchAllTemplate, handleTemplateAdd, handleTemplateDelete, handleTemplateUpdate }= require('../Controllers/CodeTemplate')
 
+const {verifyToken} = require('../Middlewares/auth');
 const router= express.Router();
 
-router.get('/' , handleFetchAllTemplate);
-router.post('/' , handleTemplateAdd);
-router.delete('/:id' , handleTemplateDelete);
-router.patch('/:id' , handleTemplateUpdate);
+router.get('/' ,verifyToken ,handleFetchAllTemplate);
+router.post('/' ,verifyToken , handleTemplateAdd);
+router.delete('/:id' ,verifyToken , handleTemplateDelete);
+router.patch('/:id' ,verifyToken , handleTemplateUpdate);
 
 module.exports=router;

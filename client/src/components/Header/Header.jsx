@@ -34,6 +34,13 @@ export default function Header() {
                     >
                         Leaderboard
                     </Link>
+
+                    <Link
+                        to='/CodeTemplate'
+                        className={`nav-item ${isActive('/CodeTemplate') ? 'active' : ''}`}
+                    >
+                        Code Snippet
+                    </Link>
                 </nav>
             </div>
 
@@ -51,7 +58,7 @@ export default function Header() {
             </div> */}
 
             {/* Right Section - Actions & Profile */}
-            
+
             <div className="header-right">
                 <button className="header-btn" title="Notifications">
                     <Bell size={20} />

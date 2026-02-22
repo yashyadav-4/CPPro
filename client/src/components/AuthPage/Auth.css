@@ -1,4 +1,6 @@
-/* Auth Page Styles */
+/* Auth Page Styles
+   Uses global theme variables from index.css */
+
 .auth-wrapper {
     position: relative;
     z-index: 10;
@@ -30,30 +32,30 @@
 .auth-branding-logo {
     font-size: 72px;
     font-weight: 800;
-    color: #ffffff;
+    color: var(--text-primary);
     letter-spacing: -3px;
     margin-bottom: 16px;
     text-shadow: 0 0 60px rgba(255, 255, 255, 0.3);
 }
 
 .auth-branding-logo span {
-    color: #3b82f6;
+    color: var(--accent-primary);
 }
 
 .auth-branding-tagline {
     font-size: 18px;
-    color: rgba(255, 255, 255, 0.5);
+    color: var(--text-faint);
     font-weight: 400;
 }
 
 .auth-card {
     flex-shrink: 0;
-    background: linear-gradient(145deg, #0a0a0a 0%, #000000 100%);
+    background: linear-gradient(145deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
     border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 24px;
+    border-radius: var(--radius-2xl);
     padding: 40px;
     width: 420px;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+    box-shadow: var(--shadow-card);
 }
 
 /* Logo */
@@ -67,7 +69,7 @@
     width: 60px;
     height: 60px;
     background: linear-gradient(135deg, #ffffff 0%, #e0e0e0 100%);
-    border-radius: 16px;
+    border-radius: var(--radius-xl);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -89,7 +91,7 @@
 .auth-title {
     font-size: 28px;
     font-weight: 700;
-    color: #ffffff;
+    color: var(--text-primary);
     margin: 0 0 8px 0;
 }
 
@@ -102,8 +104,8 @@
 /* Tab Toggle */
 .auth-tabs {
     display: flex;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 12px;
+    background: var(--bg-input);
+    border-radius: var(--radius-lg);
     padding: 4px;
     margin-bottom: 28px;
 }
@@ -116,13 +118,13 @@
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all var(--transition-smooth);
     background: transparent;
-    color: rgba(255, 255, 255, 0.5);
+    color: var(--text-faint);
 }
 
 .auth-tab.active {
-    background: #ffffff;
+    background: var(--text-primary);
     color: #1a1a2e;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
@@ -148,7 +150,7 @@
 .input-label {
     font-size: 14px;
     font-weight: 500;
-    color: #ffffff;
+    color: var(--text-primary);
 }
 
 .input-wrapper {
@@ -160,28 +162,28 @@
 .input-icon {
     position: absolute;
     left: 16px;
-    color: rgba(255, 255, 255, 0.4);
+    color: var(--text-placeholder);
     pointer-events: none;
 }
 
 .auth-input {
     width: 100%;
     padding: 14px 16px 14px 48px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
+    background: var(--bg-input);
+    border: 1px solid var(--border-input);
+    border-radius: var(--radius-lg);
     font-size: 14px;
-    color: #ffffff;
-    transition: all 0.3s ease;
+    color: var(--text-primary);
+    transition: all var(--transition-smooth);
     outline: none;
 }
 
 .auth-input::placeholder {
-    color: rgba(255, 255, 255, 0.4);
+    color: var(--text-placeholder);
 }
 
 .auth-input:focus {
-    border-color: rgba(255, 255, 255, 0.3);
+    border-color: var(--border-input-focus);
     background: rgba(255, 255, 255, 0.08);
 }
 
@@ -190,13 +192,13 @@
     right: 16px;
     background: none;
     border: none;
-    color: rgba(255, 255, 255, 0.4);
+    color: var(--text-placeholder);
     cursor: pointer;
     padding: 4px;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: color 0.3s ease;
+    transition: color var(--transition-smooth);
 }
 
 .password-toggle svg {
@@ -225,7 +227,7 @@
 .remember-me input[type="checkbox"] {
     width: 16px;
     height: 16px;
-    accent-color: #ffffff;
+    accent-color: var(--text-primary);
     cursor: pointer;
 }
 
@@ -236,13 +238,13 @@
 
 .forgot-link {
     font-size: 14px;
-    color: #a78bfa;
+    color: var(--accent-purple);
     text-decoration: none;
-    transition: color 0.3s ease;
+    transition: color var(--transition-smooth);
 }
 
 .forgot-link:hover {
-    color: #c4b5fd;
+    color: var(--accent-purple-hover);
 }
 
 /* Submit Button */
@@ -253,14 +255,14 @@
     gap: 8px;
     width: 100%;
     padding: 14px 24px;
-    background: #ffffff;
+    background: var(--text-primary);
     border: none;
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     font-size: 16px;
     font-weight: 600;
     color: #1a1a2e;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all var(--transition-smooth);
     margin-top: 8px;
 }
 
@@ -284,12 +286,12 @@
 .divider-line {
     flex: 1;
     height: 1px;
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--border-input);
 }
 
 .divider-text {
     font-size: 14px;
-    color: rgba(255, 255, 255, 0.4);
+    color: var(--text-placeholder);
     white-space: nowrap;
 }
 
@@ -305,11 +307,11 @@
     align-items: center;
     justify-content: center;
     padding: 12px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
+    background: var(--bg-input);
+    border: 1px solid var(--border-input);
+    border-radius: var(--radius-lg);
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all var(--transition-smooth);
 }
 
 .social-btn:hover {
@@ -326,19 +328,19 @@
 .message {
     text-align: center;
     padding: 12px;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     font-size: 14px;
     margin-top: 16px;
 }
 
 .message.error {
-    background: rgba(239, 68, 68, 0.1);
-    color: #f87171;
-    border: 1px solid rgba(239, 68, 68, 0.2);
+    background: var(--color-error-bg);
+    color: var(--color-error-text);
+    border: 1px solid var(--color-error-border);
 }
 
 .message.success {
-    background: rgba(34, 197, 94, 0.1);
-    color: #4ade80;
-    border: 1px solid rgba(34, 197, 94, 0.2);
+    background: var(--color-success-bg);
+    color: var(--color-success-text);
+    border: 1px solid var(--color-success-border);
 }

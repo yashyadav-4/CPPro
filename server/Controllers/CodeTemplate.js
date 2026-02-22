@@ -4,7 +4,6 @@ async function handleFetchAllTemplate(req ,res){
     try{
         const user=req.user._id;
         const Alltemplates= await CodeTemplate.find({userId:user})
-        if(Alltemplates.length===0) return res.status(404).json({message:"no Templates found"});
         return res.status(200).json(Alltemplates);
     }catch(err){
         console.log("Error " , err);
@@ -19,10 +18,10 @@ async function handleTemplateAdd(req ,res){
         if(!userId){
             return res.status(401).json({message:"Not authenticated"});
         }
-        await CodeTemplate.create({
+        const newTemplate = await CodeTemplate.create({
             userId , title , description , language , code , tags , isPublic
         })
-        return res.status(201).json({message: "Snippet added successfully"})
+        return res.status(201).json({message: "Snippet added successfully" , template:newTemplate});
    }catch(err){
         console.log("Error " , err);
         return res.status(500).json({message:"Something went Wrong"})
@@ -38,7 +37,7 @@ async function handleTemplateDelete(req , res){
         if(!deletedTemplate){
             return res.status(404).json({message:"Template not found"});
         }
-        return res.status(200).json({messasge:"Template Deleted Succesfully"});
+        return res.status(200).json({message:"Template Deleted Succesfully"});
     }catch(err){
         console.log("Error " , err);
         res.status(500).json({message:"Something went Wrong"});
@@ -55,7 +54,7 @@ async function handleTemplateUpdate(req , res){
         if(!updatedTemplate){
             return res.status(404).json({message:"template cant be updated"});
         }
-        return res.status(201).json({message:"Template updated succeesfully"});
+        return res.status(200).json({message:"Template updated succeesfully" , template:updatedTemplate});
     }catch(err){
         console.log("Error " , err);
         res.status(500).json({message: "Something went wrong"});
