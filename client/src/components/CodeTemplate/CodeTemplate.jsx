@@ -4,9 +4,20 @@ import CodeTemplateList from "./CodeTemplateList"
 import AddSnippetModal from "./AddSnippetModal"
 import "./CodeTemplate.css"
 
+const LANGUAGE_FILTERS = [
+    { label: "All", value: "all" },
+    { label: "C++", value: "cpp" },
+    { label: "Python", value: "python" },
+    { label: "Java", value: "java" },
+]
+
+const ITEMS_PER_PAGE = 6
+
 export default function CodeTemplate() {
     const [snippets, setSnippets] = useState([])
     const [searchQuery, setSearchQuery] = useState("")
+    const [activeFilter, setActiveFilter] = useState("all")
+    const [currentPage, setCurrentPage] = useState(1)
     const [showAddModal, setShowAddModal] = useState(false)
     const [loading, setLoading] = useState(true)
 
@@ -43,16 +54,42 @@ export default function CodeTemplate() {
         }
     }
 
-    // Filter snippets by search query (title, language, tags)
+    // Build unique tag-based pills from all snippets
+    const tagPills = [...new Set(snippets.flatMap(s => s.tags || []))]
+
+    // Combined filter: search + active pill
     const filtered = snippets.filter(s => {
-        if (!searchQuery.trim()) return true
-        const q = searchQuery.toLowerCase()
-        return (
-            s.title.toLowerCase().includes(q) ||
-            s.language.toLowerCase().includes(q) ||
-            (s.tags && s.tags.some(t => t.toLowerCase().includes(q)))
-        )
+        // Language / tag pill filter
+        if (activeFilter !== "all") {
+            const isLangMatch = s.language === activeFilter
+            const isTagMatch = s.tags && s.tags.some(t => t.toLowerCase() === activeFilter.toLowerCase())
+            if (!isLangMatch && !isTagMatch) return false
+        }
+
+        // Search query filter
+        if (searchQuery.trim()) {
+            const q = searchQuery.toLowerCase()
+            return (
+                s.title.toLowerCase().includes(q) ||
+                s.language.toLowerCase().includes(q) ||
+                (s.tags && s.tags.some(t => t.toLowerCase().includes(q)))
+            )
+        }
+
+        return true
     })
+
+    // Pagination
+    const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE)
+    const paginatedSnippets = filtered.slice(
+        (currentPage - 1) * ITEMS_PER_PAGE,
+        currentPage * ITEMS_PER_PAGE
+    )
+
+    // Reset to page 1 when filters change
+    useEffect(() => {
+        setCurrentPage(1)
+    }, [searchQuery, activeFilter])
 
     return (
         <div className="ct-page">
@@ -60,7 +97,7 @@ export default function CodeTemplate() {
             <div className="ct-header">
                 <div className="ct-header-text">
                     <h1>My Code Snippets</h1>
-                    <p>Save, organize, and quickly access your frequently used code blocks.</p>
+                    <p>Save, organize, and quickly access your frequently used algorithms and templates.</p>
                 </div>
                 <button className="ct-add-btn" onClick={() => setShowAddModal(true)}>
                     <Plus size={18} />
@@ -85,11 +122,36 @@ export default function CodeTemplate() {
                 </button>
             </div>
 
+            {/* Filter Pills */}
+            <div className="ct-pills">
+                {LANGUAGE_FILTERS.map(f => (
+                    <button
+                        key={f.value}
+                        className={`ct-pill ${activeFilter === f.value ? "active" : ""}`}
+                        onClick={() => setActiveFilter(f.value)}
+                    >
+                        {f.label}
+                    </button>
+                ))}
+                {tagPills.map(tag => (
+                    <button
+                        key={tag}
+                        className={`ct-pill ${activeFilter === tag ? "active" : ""}`}
+                        onClick={() => setActiveFilter(activeFilter === tag ? "all" : tag)}
+                    >
+                        {tag.charAt(0).toUpperCase() + tag.slice(1)}
+                    </button>
+                ))}
+            </div>
+
             {/* Snippet Grid */}
             <CodeTemplateList
-                snippets={filtered}
+                snippets={paginatedSnippets}
                 onDelete={handleDelete}
                 loading={loading}
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
             />
 
             {/* Add Modal */}

@@ -60,19 +60,6 @@ export default function Header() {
             {/* Right Section - Actions & Profile */}
 
             <div className="header-right">
-                <button className="header-btn" title="Notifications">
-                    <Bell size={20} />
-                    <span className="notification-badge">3</span>
-                </button>
-                <button className="header-btn" title="Help">
-                    <HelpCircle size={20} />
-                </button>
-                <button className="header-btn" title="Settings">
-                    <Settings size={20} />
-                </button>
-
-                <div className="header-divider"></div>
-
                 <button className="profile-btn">
                     <div className="avatar">
                         <User size={18} />

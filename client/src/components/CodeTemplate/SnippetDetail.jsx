@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
-import { ChevronLeft, Star, Share2, Trash2, Copy, Check } from "lucide-react"
+import { ChevronLeft, Trash2, Copy, Check } from "lucide-react"
 import "./CodeTemplate.css"
 
 export default function SnippetDetail() {
@@ -64,12 +64,6 @@ export default function SnippetDetail() {
                         <span className="sd-lang-badge">{langLabel[language] || language}</span>
                     </div>
                     <div className="sd-actions">
-                        <button className="sd-action-btn" title="Favorite">
-                            <Star size={18} />
-                        </button>
-                        <button className="sd-action-btn" title="Share">
-                            <Share2 size={18} />
-                        </button>
                         <button className="sd-action-btn sd-action-delete" title="Delete" onClick={handleDelete}>
                             <Trash2 size={18} />
                         </button>
