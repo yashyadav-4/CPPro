@@ -4,14 +4,14 @@ import { ChevronLeft, Trash2, Copy, Check } from "lucide-react"
 import "./CodeTemplate.css"
 
 export default function SnippetDetail() {
-    const { state } = useLocation()
+    const { state } = useLocation() // to recieve data from one route to another without putting in url
     const navigate = useNavigate()
     const [copied, setCopied] = useState(false)
 
     const snippet = state?.snippet
 
     if (!snippet) {
-        navigate("/CodeTemplate", { replace: true })
+        navigate("/CodeTemplate", { replace: true }) // as in browser page are store as linked list one after other so if a page is deleted or its data is missing than replace true will remove than page so there wont be a infinite loop when u click on browser back
         return null
     }
 
@@ -24,12 +24,12 @@ export default function SnippetDetail() {
         javascript: "JAVASCRIPT",
     }
 
-    const codeLines = code ? code.split("\n") : []
+    const codeLines = code ? code.split("\n") : [] // split a single code string into array of strings so you can give numbering in left for each array line and can do other operations too , it looks better too so i just did it
 
     function handleCopy() {
         navigator.clipboard.writeText(code).then(() => {
             setCopied(true)
-            setTimeout(() => setCopied(false), 2000)
+            setTimeout(() => setCopied(false), 2000) // for better ux experience
         })
     }
 
@@ -37,7 +37,7 @@ export default function SnippetDetail() {
         try {
             const res = await fetch(`/api/codeTemplate/${_id}`, {
                 method: "DELETE",
-                credentials: "include",
+                credentials: "include", // just for cookiess
             })
             if (res.ok) {
                 navigate("/CodeTemplate", { replace: true })
@@ -71,7 +71,7 @@ export default function SnippetDetail() {
                 </div>
 
                 {/* Description */}
-                {description && <p className="sd-desc">{description}</p>}
+                {description && <p className="sd-desc">{description}</p>} {/* conditional rendering */}
 
                 {/* Code block */}
                 <div className="sd-code-wrapper">
@@ -82,8 +82,9 @@ export default function SnippetDetail() {
                     <pre className="sd-code">
                         <table className="sd-code-table">
                             <tbody>
-                                {codeLines.map((line, i) => (
-                                    <tr key={i}>
+                                {/* printing code with line number */}
+                                {codeLines.map((line, i) => ( 
+                                    <tr key={i}> 
                                         <td className="sd-line-num">{i + 1}</td>
                                         <td className="sd-line-content">{line}</td>
                                     </tr>
@@ -94,7 +95,7 @@ export default function SnippetDetail() {
                 </div>
 
                 {/* Tags */}
-                {tags && tags.length > 0 && (
+                {tags && tags.length > 0 && ( // double check so even tags doesnt exist or its length 0 it doesnt crash platform
                     <div className="sd-tags">
                         {tags.map((tag, i) => (
                             <span key={i} className="sd-tag">#{tag}</span>

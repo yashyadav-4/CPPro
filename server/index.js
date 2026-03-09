@@ -5,6 +5,7 @@ const cookieParser= require('cookie-parser')
 const cors= require('cors');
 const userRoute= require('./Routes/User')
 const codeTemplateRoutes= require('./Routes/CodeTemplate')
+const codeforcesRoutes= require('./Routes/Codeforces')
 
 // connection to mongo
 connectToMongoDb(process.env.MongoUrl)
@@ -31,6 +32,8 @@ app.use(cookieParser());
 // public Routes
 app.use('/api/auth' , userRoute);
 
+//
+app.use('/api/codeforces' , codeforcesRoutes);
 
 // codeTemplateRoutes
 app.use('/api/codeTemplate' , codeTemplateRoutes );

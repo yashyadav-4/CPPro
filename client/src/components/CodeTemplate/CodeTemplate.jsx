@@ -11,7 +11,7 @@ const LANGUAGE_FILTERS = [
     { label: "Java", value: "java" },
 ]
 
-const ITEMS_PER_PAGE = 6
+const ITEMS_PER_PAGE = 6;
 
 export default function CodeTemplate() {
     const [snippets, setSnippets] = useState([])
@@ -116,10 +116,10 @@ export default function CodeTemplate() {
                         onChange={e => setSearchQuery(e.target.value)}
                     />
                 </div>
-                <button className="ct-filter-btn">
+                {/* <button className="ct-filter-btn">
                     <SlidersHorizontal size={16} />
                     Filters
-                </button>
+                </button> */}
             </div>
 
             {/* Filter Pills */}

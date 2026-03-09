@@ -9,7 +9,7 @@ export default function AddSnippetModal({ onClose, onAdd }) {
         code: "",
         tags: "",
     })
-    const [submitting, setSubmitting] = useState(false)
+    const [submitting, setSubmitting] = useState(false) // using this to avoid multiple submition we set it on off while processing
 
     function handleChange(e) {
         setForm({ ...form, [e.target.name]: e.target.value })
@@ -27,16 +27,16 @@ export default function AddSnippetModal({ onClose, onAdd }) {
             code: form.code,
             tags: form.tags
                 .split(",")
-                .map(t => t.trim())
-                .filter(Boolean),
+                .map(t => t.trim()) // to remove needless whitespace 
+                .filter(Boolean),// to remove invalid tags like empty string , null , undefined
             isPublic: false,
         }
 
         try {
             const res = await fetch("/api/codeTemplate", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
+                headers: { "Content-Type": "application/json" }, // to tell backend that data is json string
+                credentials: "include", // tells browser to include user cookies in headers 
                 body: JSON.stringify(payload),
             })
             if (res.ok) {
@@ -51,8 +51,8 @@ export default function AddSnippetModal({ onClose, onAdd }) {
     }
 
     return (
-        <div className="ct-modal-overlay" onClick={onClose}>
-            <div className="ct-modal" onClick={e => e.stopPropagation()}>
+        <div className="ct-modal-overlay" onClick={onClose}> {/* to close the add snippet window when click anywhere outside form */}
+            <div className="ct-modal" onClick={e => e.stopPropagation()}> {/* its to stop window from being closed when clicked inside form */}
                 <div className="ct-modal-header">
                     <h2>New Snippet</h2>
                     <button className="ct-modal-close" onClick={onClose}>
@@ -120,6 +120,7 @@ export default function AddSnippetModal({ onClose, onAdd }) {
                         <button
                             type="submit"
                             className="ct-btn-submit"
+                            // disabled atribute to make button inclickable means when the form changes are being submitted or any required field is not filled button will be unclickable
                             disabled={submitting || !form.title.trim() || !form.code.trim()}
                         >
                             {submitting ? "Saving..." : "Save Snippet"}
