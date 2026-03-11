@@ -39,6 +39,8 @@ const codeTemplateSchema= new mongoose.Schema({
     },
 },{timestamps:true})
 
+codeTemplateSchema.index({userId:1 , createdAt:-1});
+
 const CodeTemplate= mongoose.model('CodeTemplate',codeTemplateSchema);
 
 module.exports=CodeTemplate;

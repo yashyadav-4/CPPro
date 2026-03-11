@@ -3,9 +3,11 @@ require('dotenv').config();
 const {connectToMongoDb}= require('./connection')
 const cookieParser= require('cookie-parser')
 const cors= require('cors');
+
 const userRoute= require('./Routes/User')
 const codeTemplateRoutes= require('./Routes/CodeTemplate')
-const codeforcesRoutes= require('./Routes/Codeforces')
+const postRoutes = require('./Routes/Post');
+const commentRoutes= require('./Routes/Comment');
 
 // connection to mongo
 connectToMongoDb(process.env.MongoUrl)
@@ -32,12 +34,11 @@ app.use(cookieParser());
 // public Routes
 app.use('/api/auth' , userRoute);
 
-//
-app.use('/api/codeforces' , codeforcesRoutes);
 
-// codeTemplateRoutes
+// auth routes
 app.use('/api/codeTemplate' , codeTemplateRoutes );
-
+app.use('/api/posts' , postRoutes);
+app.use('/api/comments' , commentRoutes);
 
 // test
 app.get('/api/test' , (req, res)=>{
