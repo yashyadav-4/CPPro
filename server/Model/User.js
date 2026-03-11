@@ -76,8 +76,7 @@ const userSchema = new mongoose.Schema({
 
 }, {timestamps:true});
 
-userSchema.index({email:1});
-userSchema.index({username:1});
+
 
 userSchema.index({"location.country":1 , "location.city":1} , {sparse:true}); // using sparse to make sure the document which contains the indexed field only are inlcuded in index
 

@@ -1,13 +1,17 @@
 const Post = require('../Model/Post');
 
+const User = require('../Model/User');
+
 async function handleCreatePost(req , res){
     try{
         const {title , content , types , tags}=req.body;
+        const fullUser = await User.findById(req.user._id);
+        if (!fullUser) return res.status(404).json({ message:"user not found in database."});
 
         const newPost= await Post.create({
-            authorId:req.user._id,
-            authorName:req.user.username,
-            authorPic:req.user.profilePic,
+            authorId: req.user._id,
+            authorName: fullUser.username || "Anonymous",
+            authorPic: fullUser.profilePic || "",
             title,
             content,
             types,
@@ -22,6 +26,7 @@ async function handleCreatePost(req , res){
 async function handleGetPosts(req , res){
     try{
         const {search , tag , page=1}= req.query;
+        const pageNumber = parseInt(page, 10) || 1;
         const limit=10;
         const query={};
 
@@ -33,7 +38,7 @@ async function handleGetPosts(req , res){
         }
         const posts= await Post.find(query)
             .sort(search ? {score:{$meta:"textScore"}}: {createdAt:-1})
-            .skip((page-1)*limit)
+            .skip((pageNumber-1)*limit)
             .limit(limit)
             .lean()
 
@@ -67,7 +72,9 @@ async function handleUpvotes(req , res){
         const post =await Post.findById(req.params.id);
         const userId= req.user._id;
 
-        if(post.upVotes.includes(userId)){//togelling
+        const hasUpvoted = post.upVotes.some(id => id.toString() === userId.toString());
+
+        if(hasUpvoted){//togelling
             await Post.findByIdAndUpdate(req.params.id , {$pull :{upVotes:userId}});
         }else{
             await Post.findByIdAndUpdate(req.params.id , {
@@ -86,7 +93,9 @@ async function handleDownVote(req , res){
         const post= await Post.findById(req.params.id);
         const userId= req.user._id;
 
-        if(post.downVotes.includes(userId)){
+        const hasDownvoted = post.downVotes.some(id => id.toString() === userId.toString());
+
+        if(hasDownvoted){
             await Post.findByIdAndUpdate(req.params.id , {$pull : {downVotes:userId}});
         }else{
             await Post.findByIdAndUpdate(req.params.id , {

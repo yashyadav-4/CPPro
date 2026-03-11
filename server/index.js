@@ -16,7 +16,7 @@ connectToMongoDb(process.env.MongoUrl)
 
 
 const app= express();
-const port= process.env.port ? parseInt(process.env.port) : 5000;
+const port= process.env.PORT ? parseInt(process.env.PORT) : 5000;
 
 
 // cors is not in use currently

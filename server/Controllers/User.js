@@ -7,7 +7,7 @@ function handleVerifyAuth(req , res){
     const token=req.cookies?.token;
     if(!token) return res.json({authenticated:false});
     const user= getUser(token);
-    return res.json({authenticated: !!user});
+    return res.json({authenticated: !!user, user});
 }
 
 async function handleUserSignup(req , res){
@@ -34,7 +34,7 @@ async function handleUserLogin(req , res){
     try{
         const {email , password}=req.body;
         if(!email || !password) {
-            return res.status(400).json({Error: "invalid Credentials"});
+            return res.status(400).json({message: "invalid Credentials"});
         }
         const user=await User.findOne({email});
         if(!user) return res.status(401).json({message:"invalid Credentials"})
@@ -69,7 +69,7 @@ function handleLogOut(req , res){
 async function handlePasswordChange(req , res){
     try{
         const {email , oldPassword , newPassword}= req.body;
-        if(!email || !oldPassword || !newPassword ) return res.status(401).json({Error:"invalid Credentials"});
+        if(!email || !oldPassword || !newPassword ) return res.status(401).json({message:"invalid credentials"});
         const user= await User.findOne({email});
         if(!user) return res.status(401).json({message:"Invalid credentials"});
 

@@ -1,11 +1,8 @@
-import { Link, useLocation } from "react-router-dom"
+import { Link, NavLink } from "react-router-dom"
 import { Bell, Settings, HelpCircle, Search, ChevronDown, User } from 'lucide-react'
 import './Header.css'
 
 export default function Header() {
-    const location = useLocation();
-
-    const isActive = (path) => location.pathname === path;
 
     return (
         <header className="header">
@@ -16,37 +13,38 @@ export default function Header() {
                 </Link>
 
                 <nav className="header-nav">
-                    <Link
+                    <NavLink
                         to='/'
-                        className={`nav-item ${isActive('/') ? 'active' : ''}`}
+                        end
+                        className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
                     >
                         Home
-                    </Link>
-                    <Link
+                    </NavLink>
+                    <NavLink
                         to='/dashboard'
-                        className={`nav-item ${isActive('/dashboard') ? 'active' : ''}`}
+                        className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
                     >
                         Dashboard
-                    </Link>
-                    <Link
+                    </NavLink>
+                    <NavLink
                         to='/leaderboard'
-                        className={`nav-item ${isActive('/leaderboard') ? 'active' : ''}`}
+                        className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
                     >
                         Leaderboard
-                    </Link>
+                    </NavLink>
 
-                    <Link
+                    <NavLink
                         to='/CodeTemplate'
-                        className={`nav-item ${isActive('/CodeTemplate') ? 'active' : ''}`}
+                        className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
                     >
                         Code Snippet
-                    </Link>
-                    <Link
+                    </NavLink>
+                    <NavLink
                         to='/community'
-                        className={`nav-item ${isActive('/community') ? 'active' : ''}`}
+                        className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
                     >
                         Community
-                    </Link>
+                    </NavLink>
                 </nav>
             </div>
 
