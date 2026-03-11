@@ -7,6 +7,7 @@ const {handleCreatePost , handleDeletePost , handleDownVote , handleUpvotes ,han
 
 router.use(verifyToken); // for all routes
 
+router.get('/' , handleGetPosts);
 router.post('/',handleCreatePost);
 router.delete('/:id' , handleDeletePost);
 router.patch('/:id/upvote' , handleUpvotes);

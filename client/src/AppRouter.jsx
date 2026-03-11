@@ -8,6 +8,7 @@ import Dashboard from './components/Dashboard/Dashboard.jsx'
 import LeaderBoard from './components/Leaderboard/Leaderboard.jsx'
 import CodeTemplate from './components/CodeTemplate/CodeTemplate.jsx'
 import SnippetDetail from './components/CodeTemplate/SnippetDetail.jsx'
+import Community from './components/Community Page/Community.jsx'
 
 const router = createBrowserRouter([
     {
@@ -33,6 +34,10 @@ const router = createBrowserRouter([
             {
                 path: "CodeTemplate/:id",
                 element: <ProtectedRoute> <SnippetDetail /> </ProtectedRoute>
+            },
+            {
+                path: "community",
+                element: <Community />
             }
         ]
     },

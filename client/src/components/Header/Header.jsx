@@ -41,6 +41,12 @@ export default function Header() {
                     >
                         Code Snippet
                     </Link>
+                    <Link
+                        to='/community'
+                        className={`nav-item ${isActive('/community') ? 'active' : ''}`}
+                    >
+                        Community
+                    </Link>
                 </nav>
             </div>
 
