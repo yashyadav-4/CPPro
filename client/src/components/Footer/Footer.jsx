@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Github, Twitter, Mail, Code2, Heart, ExternalLink, ChevronUp } from 'lucide-react';
 
 

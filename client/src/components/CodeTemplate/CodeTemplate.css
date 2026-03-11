@@ -37,9 +37,11 @@
     align-items: center;
     gap: 8px;
     padding: 10px 20px;
-    background: var(--accent-primary);
+    background: rgba(59, 130, 246, 0.25);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     color: var(--text-primary);
-    border: none;
+    border: 1px solid rgba(59, 130, 246, 0.35);
     border-radius: var(--radius-md);
     font-size: 14px;
     font-weight: 600;
@@ -49,9 +51,9 @@
 }
 
 .ct-add-btn:hover {
-    background: var(--accent-primary-dark);
-    box-shadow: 0 4px 16px var(--accent-primary-glow);
-    border-color: transparent;
+    background: rgba(59, 130, 246, 0.4);
+    border-color: rgba(59, 130, 246, 0.6);
+    box-shadow: 0 4px 20px var(--accent-primary-glow);
 }
 
 /* ── Search / Filter Bar ── */
@@ -461,7 +463,9 @@
     position: fixed;
     inset: 0;
     z-index: 2000;
-    background: rgba(0, 0, 0, 0.7);
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -480,21 +484,21 @@
 }
 
 .ct-modal {
-    background: var(--bg-elevated);
-    border: 1px solid var(--border-secondary);
-    border-radius: var(--radius-xl);
+    background: var(--bg-card);
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-lg);
     width: 100%;
-    max-width: 540px;
+    max-width: 600px;
     max-height: 90vh;
-    overflow-y: auto;
-    padding: 32px;
-    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
-    animation: slideUp 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    animation: slideUp 0.15s ease;
 }
 
 @keyframes slideUp {
     from {
-        transform: translateY(16px);
+        transform: translateY(10px);
         opacity: 0;
     }
 
@@ -508,11 +512,12 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 28px;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--border-primary);
 }
 
 .ct-modal-header h2 {
-    font-size: 20px;
+    font-size: 1.25rem;
     font-weight: 600;
     color: var(--text-primary);
     margin: 0;
@@ -544,6 +549,7 @@
     display: flex;
     flex-direction: column;
     gap: 20px;
+    padding: 1.5rem;
 }
 
 .ct-field {
@@ -563,8 +569,8 @@
 .ct-field textarea {
     width: 100%;
     padding: 10px 14px;
-    background: var(--bg-primary);
-    border: 1px solid var(--border-primary);
+    background: var(--bg-input);
+    border: 1px solid var(--border-input);
     border-radius: var(--radius-md);
     font-size: 14px;
     color: var(--text-primary);

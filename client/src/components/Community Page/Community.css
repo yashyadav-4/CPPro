@@ -37,21 +37,24 @@
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  background: var(--accent-primary);
+  background: rgba(59, 130, 246, 0.25);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   color: #fff;
-  border: none;
+  border: 1px solid rgba(59, 130, 246, 0.35);
   border-radius: var(--radius-lg);
   padding: 0.6rem 1.2rem;
   font-size: 0.85rem;
   font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
-  transition: background var(--transition-fast);
+  transition: all var(--transition-fast);
 }
 
 .btn-new-discussion:hover {
-  background: var(--accent-primary-dark);
-  border-color: transparent;
+  background: rgba(59, 130, 246, 0.4);
+  border-color: rgba(59, 130, 246, 0.6);
+  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.25);
 }
 
 /* ── Section 2: Controls ── */

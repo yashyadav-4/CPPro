@@ -35,7 +35,7 @@ export default function PostDetailModal({ post, onClose, onVoteToggle, currentUs
   const fetchComments = async () => {
     try {
       setLoadingComments(true);
-      const res = await axios.get(`http://localhost:5000/api/comments/${post._id}`, {
+      const res = await axios.get(`/api/comments/${post._id}`, {
         withCredentials: true,
       });
       setComments(Array.isArray(res.data) ? res.data : []);
@@ -54,7 +54,7 @@ export default function PostDetailModal({ post, onClose, onVoteToggle, currentUs
     try {
       setIsSubmitting(true);
       const res = await axios.post(
-        `http://localhost:5000/api/comments/${post._id}`,
+        `/api/comments/${post._id}`,
         { content: newComment },
         { withCredentials: true }
       );
@@ -73,7 +73,7 @@ export default function PostDetailModal({ post, onClose, onVoteToggle, currentUs
   const handleDeleteComment = async (commentId) => {
     if (!window.confirm("Delete this comment?")) return;
     try {
-      await axios.delete(`http://localhost:5000/api/comments/${commentId}`, {
+      await axios.delete(`/api/comments/${commentId}`, {
         withCredentials: true,
       });
       setComments(comments.filter(c => c._id !== commentId));

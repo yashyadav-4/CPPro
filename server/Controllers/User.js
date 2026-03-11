@@ -16,16 +16,21 @@ async function handleUserSignup(req , res){
         const user= await User.findOne({email});
         if(user) return res.status(400).json({message : "Account already exists"});
         
-        // using bcrypt for password hashing
+        // auto-generate a unique username from the name
+        const baseUsername = name.trim().toLowerCase().replace(/\s+/g, '_');
+        const suffix = Math.floor(1000 + Math.random() * 9000);
+        const username = `${baseUsername}_${suffix}`;
+
         const hashedPassword= await bcrypt.hash(password , 10);
         await User.create({
+            username,
             name ,
             email ,
             password:hashedPassword,
         })
-        return res.status(201).json({message:" Account created successfully "})
+        return res.status(201).json({message:"Account created successfully"})
     }catch(err){
-        console.log("Error " , err);
+        console.error("Signup error:" , err);
         return res.status(500).json({ message: "Something went wrong" });
     }
 }
@@ -56,7 +61,7 @@ async function handleUserLogin(req , res){
         });
         res.status(200).json({message:"Login Successful "});
     }catch(err){
-        console.error("Login error :" ,err);
+        console.error("Login error:" , err);
         res.status(500).json({message: "Something went wrong"});
     }
 }
@@ -85,8 +90,8 @@ async function handlePasswordChange(req , res){
         return res.status(200).json({message:"Password updated successfully"})
 
     }catch(err){
-        console.log(err);
-        res.status(500).json({message:"something went wrong"});
+        console.error("Password change error:" , err);
+        res.status(500).json({message:"Something went wrong"});
     }
 }
 

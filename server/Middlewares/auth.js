@@ -1,6 +1,6 @@
 const { getUser } = require("../Services/auth");
 
-async function verifyToken(req ,res , next){
+function verifyToken(req , res , next){
     const userToken=req.cookies?.token;
     if(!userToken) return res.status(401).json({message:"Login First"});
     const user=getUser(userToken);

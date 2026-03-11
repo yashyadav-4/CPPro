@@ -9,7 +9,7 @@ const platformSchema= new mongoose.Schema({
     },
     platform:{
         type:String,
-        enum:['codeforces , codechef , leetcode'],
+        enum:['codeforces', 'codechef', 'leetcode'],
         required:true,
     },
     platformUsername:{

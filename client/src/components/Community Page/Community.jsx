@@ -73,7 +73,7 @@ export default function Community() {
     // Fetch logged in user to check auth for voting UI
     const fetchUser = async () => {
       try {
-        const res = await axios.get("http://localhost:5000/api/auth/verify", {
+        const res = await axios.get("/api/auth/verify", {
           withCredentials: true,
         });
         if (res.data.authenticated && res.data.user) {
@@ -90,7 +90,7 @@ export default function Community() {
     try {
       setLoading(true);
       const limit = 10;
-      let url = `http://localhost:5000/api/posts?page=${page}&limit=${limit}`;
+      let url = `/api/posts?page=${page}&limit=${limit}`;
       
       if (debouncedSearch) {
         url += `&search=${encodeURIComponent(debouncedSearch)}`;
@@ -155,7 +155,7 @@ export default function Community() {
       }));
 
       await axios.patch(
-        `http://localhost:5000/api/posts/${postId}/${type}`,
+        `/api/posts/${postId}/${type}`,
         {},
         { withCredentials: true }
       );
@@ -172,7 +172,7 @@ export default function Community() {
 
   const handleCreatePost = async (postData) => {
     try {
-      await axios.post("http://localhost:5000/api/posts", postData, {
+      await axios.post("/api/posts", postData, {
         withCredentials: true,
       });
       setIsNewModalOpen(false);
@@ -188,7 +188,7 @@ export default function Community() {
   const handleDeletePost = async (postId) => {
     if (!window.confirm("Are you sure you want to delete this post?")) return;
     try {
-      await axios.delete(`http://localhost:5000/api/posts/${postId}`, {
+      await axios.delete(`/api/posts/${postId}`, {
         withCredentials: true,
       });
       fetchPosts();
