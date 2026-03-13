@@ -40,8 +40,14 @@ export default function DifficultyChart({ difficulty }) {
   const { chartData, totalSolved } = useMemo(() => {
     if (!difficulty?.length) return { chartData: [], totalSolved: 0 };
 
+    const mapped = difficulty.map(d => ({
+      ...d,
+      rating: d.rating || d._id || 0,
+      count: d.count || 0
+    }));
+
     // Sort by rating number
-    const sorted = [...difficulty].sort(
+    const sorted = mapped.sort(
       (a, b) => (parseInt(a.rating) || 0) - (parseInt(b.rating) || 0)
     );
 

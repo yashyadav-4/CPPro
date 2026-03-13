@@ -35,15 +35,23 @@ export default function Dashboard() {
       // Auth is handled via HTTP-only cookie — just include credentials
       const config = { withCredentials: true };
 
+      // First fetch the authenticated user
+      const authRes = await axios.get('/api/auth/verify', config);
+      const user = authRes.data?.user;
+      if (!user?._id) {
+        throw new Error('User not authenticated');
+      }
+      const userId = user._id;
+
       const results = await Promise.allSettled([
-        axios.get('/api/dashboard/profile', config),
-        axios.get('/api/dashboard/heatmap', config),
-        axios.get('/api/dashboard/rating', config),
-        axios.get('/api/dashboard/topics', config),
-        axios.get('/api/dashboard/difficulty', config),
+        axios.get(`/api/dashboard/profile/${userId}`, config),
+        axios.get(`/api/dashboard/heatmap/${userId}`, config),
+        axios.get(`/api/dashboard/rating/${userId}`, config),
+        axios.get(`/api/dashboard/topics/${userId}`, config),
+        axios.get(`/api/dashboard/difficulty/${userId}`, config),
       ]);
 
-      // Check if ALL requests failed (likely an auth issue)
+      // Check if ALL requests failed
       const allFailed = results.every((r) => r.status === 'rejected');
       if (allFailed) {
         const firstErr = results[0].reason;
@@ -56,7 +64,7 @@ export default function Dashboard() {
       const getValue = (result, extractor, fallback) => {
         if (result.status === 'fulfilled') {
           try {
-            return extractor(result.value.data);
+            return extractor(result.value.data.data) ?? fallback;
           } catch {
             return fallback;
           }
@@ -64,12 +72,37 @@ export default function Dashboard() {
         return fallback;
       };
 
+      const profileData = getValue(results[0], (d) => d, {});
+      const heatmapData = getValue(results[1], (d) => d, []);
+      const ratingData = getValue(results[2], (d) => d, { history: [], currentRating: 0, maxRating: 0 });
+      const topicsData = getValue(results[3], (d) => d, []);
+      const difficultyData = getValue(results[4], (d) => d, []);
+
+      // Format prediction for Recharts (array of {date, prediction})
+      const predictionArray = ratingData.prediction6Months 
+        ? [{
+            date: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString(),
+            predictedRating: ratingData.prediction6Months
+          }] 
+        : [];
+
       setData({
-        profile: getValue(results[0], (d) => d, null),
-        heatmap: getValue(results[1], (d) => d.heatmap || [], []),
-        rating: getValue(results[2], (d) => d || { history: [], prediction: [] }, { history: [], prediction: [] }),
-        topics: getValue(results[3], (d) => d.topics || [], []),
-        difficulty: getValue(results[4], (d) => d.difficulty || [], []),
+        profile: {
+          user: user,
+          platforms: [{
+            totalSolved: profileData.totalQuestionsSolved || 0,
+            currentRating: ratingData.currentRating || 0,
+            maxRating: ratingData.maxRating || 0,
+            currentRank: 'unrated',
+          }]
+        },
+        heatmap: heatmapData,
+        rating: { 
+          history: ratingData.history || [], 
+          prediction: predictionArray 
+        },
+        topics: topicsData,
+        difficulty: difficultyData,
       });
     } catch (err) {
       console.error('Dashboard data fetch error:', err);

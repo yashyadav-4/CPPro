@@ -25,7 +25,10 @@ export default function RadarChartComponent({ topics }) {
     // Build lookup from raw tags (normalize to lowercase)
     const lookup = {};
     topics.forEach((t) => {
-      lookup[t.tag.toLowerCase()] = t.count;
+      const tag = t.tag || t._id || '';
+      if (tag) {
+        lookup[tag.toLowerCase()] = t.count;
+      }
     });
 
     return TARGET_TOPICS.map((t) => ({
