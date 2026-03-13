@@ -34,6 +34,16 @@ const submissionSchema= new mongoose.Schema({
         default:'0',
     },
     tags:[{type:String}],
+    //for language-distribution analytics
+    language:{
+        type:String,
+        default:'',
+    },
+    //for contest-level grouping for upsolve analysis
+    contestId:{
+        type:String,
+        default:null,
+    },
     submittedAt:{
         type:Date,
         required:true,

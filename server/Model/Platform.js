@@ -52,9 +52,9 @@ const platformSchema= new mongoose.Schema({
         of:Number,
         default:{},
     },
-    lastFetched:{
+    lastSyncedAt:{
         type:Date,
-        default:Date.now
+        default:null
     }
 } , {timestamps:true});
 
