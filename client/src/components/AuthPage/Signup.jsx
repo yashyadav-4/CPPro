@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { User, Mail, Lock, Eye, EyeOff, ArrowRight, Layers } from "lucide-react";
-import MeteorShower from "../MeteorShower";
+import FallingStars from "./FallingStar";
 import './Auth.css';
 
 export default function Signup() {
@@ -12,6 +12,7 @@ export default function Signup() {
     });
     const [message, setMessage] = useState("");
     const [showPassword, setShowPassword] = useState(false);
+    const navigate = useNavigate();
 
     const handleChange = (e) => {
         setFormData({
@@ -32,16 +33,23 @@ export default function Signup() {
             });
             const data = await response.json();
             console.log('Response from backend: ', data);
-            setMessage(data.message);
+            
+            if (response.ok || data.message?.toLowerCase().includes('success')) {
+                setMessage("Account created successfully. Redirecting to login...");
+                setTimeout(() => navigate('/login'), 1500);
+            } else {
+                setMessage(data.message || "Signup failed");
+            }
         } catch (err) {
             console.log("Error ", err);
+            setMessage("An error occurred during signup");
         }
     };
 
     return (
         <>
-            <MeteorShower />
             <div className="auth-wrapper">
+                <FallingStars />
                 <div className="auth-card">
                     {/* Logo */}
                     <div className="auth-logo">

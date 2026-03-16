@@ -11,6 +11,7 @@ const postRoutes = require('./Routes/Post');
 const commentRoutes= require('./Routes/Comment');
 const syncRoutes = require('./Routes/syncRoutes');
 const dashboardRoutes = require('./Routes/dashboardRoutes');
+const leaderboardRoutes= require('./Routes/leaderboardRoutes');
 
 // connection to mongo
 connectToMongoDb(process.env.MongoUrl)
@@ -44,7 +45,7 @@ app.use('/api/posts' , postRoutes);
 app.use('/api/comments' , commentRoutes);
 app.use('/api/sync' , syncRoutes);
 app.use('/api/dashboard' , dashboardRoutes);
-
+app.use('/api/leaderboard' , leaderboardRoutes);
 
 // test
 app.get('/api/test', (req, res)=>{

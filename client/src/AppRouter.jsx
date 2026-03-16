@@ -28,11 +28,11 @@ const router = createBrowserRouter([
                 element: <ProtectedRoute><LeaderBoard /></ProtectedRoute>
             },
             {
-                path: "CodeTemplate",
+                path: "codesnippet",
                 element: <ProtectedRoute> <CodeTemplate /> </ProtectedRoute>
             },
             {
-                path: "CodeTemplate/:id",
+                path: "codesnippet/:id",
                 element: <ProtectedRoute> <SnippetDetail /> </ProtectedRoute>
             },
             {

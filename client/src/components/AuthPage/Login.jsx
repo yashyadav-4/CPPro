@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Layers } from "lucide-react";
-import MeteorShower from "../MeteorShower";
+import FallingStars from "./FallingStar";
 import './Auth.css';
 
 export default function Login() {
@@ -45,8 +45,8 @@ export default function Login() {
 
     return (
         <>
-            <MeteorShower />
             <div className="auth-wrapper">
+                <FallingStars />
                 <div className="auth-card">
                     {/* Logo */}
                     <div className="auth-logo">

@@ -8,22 +8,11 @@ const ICON_MAP = {
 };
 
 const COLOR_MAP = {
-  total: 'green',
-  active: 'blue',
-  streak: 'orange',
+  total: { iconBg: 'bg-green-50', iconColor: 'text-green-600', badgeText: 'text-green-700', badgeBg: 'bg-green-100', barColor: 'bg-green-500' },
+  active: { iconBg: 'bg-indigo-50', iconColor: 'text-indigo-600', badgeText: 'text-indigo-700', badgeBg: 'bg-indigo-100', barColor: 'bg-indigo-500' },
+  streak: { iconBg: 'bg-orange-50', iconColor: 'text-orange-600', badgeText: 'text-orange-700', badgeBg: 'bg-orange-100', barColor: 'bg-orange-500' },
 };
 
-/**
- * Reusable neon stat card.
- * @param {string}  type      - 'total' | 'active' | 'streak'
- * @param {string}  label     - e.g. "Total Solved"
- * @param {number}  value     - the big number
- * @param {string}  badgeText - e.g. "+74 this week"
- * @param {string}  sublabel  - e.g. "Top 2% globally" or "Don't break the chain!"
- * @param {boolean} highlightSub - cyan highlight the sublabel
- * @param {number}  personalBest - optional PB value for streak
- * @param {string}  unit      - optional unit text e.g. "Days"
- */
 export default function StatCard({
   type = 'total',
   label,
@@ -35,73 +24,64 @@ export default function StatCard({
   unit,
 }) {
   const Icon = ICON_MAP[type] || Target;
-  const color = COLOR_MAP[type] || 'green';
+  const colors = COLOR_MAP[type] || COLOR_MAP.total;
   const delay = type === 'total' ? 0.1 : type === 'active' ? 0.2 : 0.3;
 
-  // Mini bars data (decorative sparkline)
   const bars = [4, 6, 3, 8, 5, 7, 4, 9, 6, 3];
 
   return (
     <motion.div
-      className={`glass-card stat-${type}`}
+      className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm flex flex-col justify-between relative overflow-hidden group"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay }}
     >
-      <div className="stat-card-inner">
-        {/* Header: icon + badge */}
-        <div className="stat-header">
-          <div className={`stat-icon-wrap ${color}`}>
-            <Icon size={18} />
-          </div>
-          {badgeText && (
-            <span className={`stat-badge ${color}`}>
-              {type === 'total' && <TrendingUp size={12} />}
-              {type === 'streak' && personalBest != null && <Trophy size={12} />}
-              {personalBest != null ? `PB: ${personalBest}` : badgeText}
-            </span>
-          )}
-          {!badgeText && personalBest != null && (
-            <span className={`stat-badge amber`}>
-              <Trophy size={12} /> PB: {personalBest}
-            </span>
-          )}
+      <div className="flex justify-between items-start mb-4">
+        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${colors.iconBg} ${colors.iconColor}`}>
+          <Icon size={20} />
         </div>
-
-        {/* Label */}
-        <span className="stat-label">{label}</span>
-
-        {/* Value */}
-        <div className="stat-value">
-          {typeof value === 'number' ? value.toLocaleString() : value}
-          {unit && <span className={`stat-value-unit ${color}`}>{unit}</span>}
-        </div>
-
-        {/* Sublabel or mini bars */}
-        {sublabel && (
-          <span className={`stat-sublabel ${highlightSub ? 'highlight' : ''}`}>
-            {sublabel}
+        
+        {badgeText && (
+          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${colors.badgeBg} ${colors.badgeText}`}>
+            {type === 'total' && <TrendingUp size={12} />}
+            {type === 'streak' && personalBest != null && <Trophy size={12} />}
+            {personalBest != null ? `PB: ${personalBest}` : badgeText}
           </span>
         )}
+        {!badgeText && personalBest != null && (
+          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-700`}>
+            <Trophy size={12} /> PB: {personalBest}
+          </span>
+        )}
+      </div>
 
-        {/* Mini sparkline bars */}
-        <div className="mini-bars">
-          {bars.map((h, i) => (
-            <div
-              key={i}
-              className="mini-bar"
-              style={{
-                height: `${h * 3}px`,
-                background:
-                  color === 'green'
-                    ? `rgba(34,197,94,${0.3 + h * 0.06})`
-                    : color === 'blue'
-                    ? `rgba(56,189,248,${0.3 + h * 0.06})`
-                    : `rgba(251,146,60,${0.3 + h * 0.06})`,
-              }}
-            />
-          ))}
+      <div>
+        <p className="text-sm font-medium text-gray-500 mb-1">{label}</p>
+        <div className="flex items-baseline gap-2">
+          <h2 className="text-3xl font-extrabold text-gray-900">
+            {typeof value === 'number' ? value.toLocaleString() : value}
+          </h2>
+          {unit && <span className={`text-sm font-semibold ${colors.iconColor}`}>{unit}</span>}
         </div>
+        {sublabel && (
+          <p className={`text-sm mt-2 ${highlightSub ? 'text-green-600 font-medium' : colors.iconColor}`}>
+            {sublabel}
+          </p>
+        )}
+      </div>
+
+      {/* Mini sparkline bars */}
+      <div className="absolute bottom-0 right-4 flex items-end gap-1 h-12 opacity-40 group-hover:opacity-100 transition-opacity">
+        {bars.map((h, i) => (
+          <div
+            key={i}
+            className={`w-1.5 rounded-t-sm ${colors.barColor}`}
+            style={{
+              height: `${h * 4}px`,
+              opacity: 0.3 + h * 0.07,
+            }}
+          />
+        ))}
       </div>
     </motion.div>
   );

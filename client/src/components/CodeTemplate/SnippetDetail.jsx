@@ -11,7 +11,7 @@ export default function SnippetDetail() {
     const snippet = state?.snippet
 
     if (!snippet) {
-        navigate("/CodeTemplate", { replace: true }) // as in browser page are store as linked list one after other so if a page is deleted or its data is missing than replace true will remove than page so there wont be a infinite loop when u click on browser back
+        navigate("/codesnippet", { replace: true }) // as in browser page are store as linked list one after other so if a page is deleted or its data is missing than replace true will remove than page so there wont be a infinite loop when u click on browser back
         return null
     }
 
@@ -40,7 +40,7 @@ export default function SnippetDetail() {
                 credentials: "include", // just for cookiess
             })
             if (res.ok) {
-                navigate("/CodeTemplate", { replace: true })
+                navigate("/codesnippet", { replace: true })
             }
         } catch (err) {
             console.error("Failed to delete snippet:", err)
@@ -50,7 +50,7 @@ export default function SnippetDetail() {
     return (
         <div className="sd-page">
             {/* Back link */}
-            <button className="sd-back" onClick={() => navigate("/CodeTemplate")}>
+            <button className="sd-back" onClick={() => navigate("/codesnippet")}>
                 <ChevronLeft size={18} />
                 Back to all snippets
             </button>

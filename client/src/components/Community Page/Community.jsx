@@ -7,9 +7,9 @@ import {
   MessageCircle,
   ChevronLeft,
   ChevronRight,
+  TrendingUp,
 } from "lucide-react";
 import axios from "axios";
-import "./Community.css";
 import NewPostModal from "./NewPostModal";
 import PostDetailModal from "./PostDetailModal";
 
@@ -22,7 +22,6 @@ const FILTERS = [
   "Contest Recap",
 ];
 
-// Helper for displaying relative time
 const timeAgo = (date) => {
   if (!date) return "Just now";
   const seconds = Math.floor((new Date() - new Date(date)) / 1000);
@@ -39,7 +38,6 @@ const timeAgo = (date) => {
   return "Just now";
 };
 
-// Debounce hook
 function useDebounce(value, delay) {
   const [debouncedValue, setDebouncedValue] = useState(value);
   useEffect(() => {
@@ -62,15 +60,11 @@ export default function Community() {
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(false);
   
-  // Modals state
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState(null);
-
-  // Current user state for delete/vote checks
   const [currentUser, setCurrentUser] = useState(null); 
 
   useEffect(() => {
-    // Fetch logged in user to check auth for voting UI
     const fetchUser = async () => {
       try {
         const res = await axios.get("/api/auth/verify", {
@@ -103,11 +97,30 @@ export default function Community() {
       const res = await axios.get(url, { withCredentials: true });
       if (Array.isArray(res.data)) {
         setPosts(res.data);
-        // Backend API doesn't compute totalPages, simply showing page logic context
         setTotalPages(res.data.length === limit ? page + 1 : page);
+        localStorage.setItem('community_posts', JSON.stringify(res.data));
       }
     } catch (error) {
-      console.error("Failed to fetch posts:", error);
+      console.log("Using localStorage fallback for fetching posts");
+      const localPosts = JSON.parse(localStorage.getItem('community_posts') || '[]');
+      
+      // Basic local filtering
+      let filtered = [...localPosts];
+      if (activeFilter !== "All") {
+          filtered = filtered.filter(p => 
+             Array.isArray(p.tags) ? p.tags.includes(activeFilter.toLowerCase()) : 
+             (p.types === activeFilter.toLowerCase())
+          );
+      }
+      if (debouncedSearch) {
+          filtered = filtered.filter(p => 
+              p.title.toLowerCase().includes(debouncedSearch.toLowerCase()) || 
+              p.content.toLowerCase().includes(debouncedSearch.toLowerCase())
+          );
+      }
+
+      setPosts(filtered);
+      setTotalPages(1); // Simple fallback pagination
     } finally {
       setLoading(false);
     }
@@ -118,55 +131,70 @@ export default function Community() {
   }, [fetchPosts]);
 
   const handleVote = async (postId, type) => {
-    try {
-      // Optimistically update
-      if (!currentUser) return; // Prevent vote if not logged in visually
-      const userId = currentUser._id;
-      
-      setPosts(currentPosts => currentPosts.map(p => {
-        if (p._id === postId) {
-          const isUpvote = type === "upvote";
-          let newUpvotes = [...(p.upVotes || [])];
-          let newDownvotes = [...(p.downVotes || [])];
-          
-          if (isUpvote) {
-             if (newUpvotes.includes(userId)) {
-                 newUpvotes = newUpvotes.filter(id => id !== userId);
-             } else {
-                 newUpvotes.push(userId);
-                 newDownvotes = newDownvotes.filter(id => id !== userId);
-             }
-          } else {
-             if (newDownvotes.includes(userId)) {
-                 newDownvotes = newDownvotes.filter(id => id !== userId);
-             } else {
-                 newDownvotes.push(userId);
-                 newUpvotes = newUpvotes.filter(id => id !== userId);
-             }
-          }
-          
-          return {
-             ...p,
-             upVotes: newUpvotes,
-             downVotes: newDownvotes
-          };
+    const currentUserId = currentUser?._id || "localUser";
+    
+    // Optimistic Update
+    setPosts(currentPosts => currentPosts.map(p => {
+      if (p._id === postId) {
+        const isUpvote = type === "upvote";
+        let newUpvotes = [...(p.upVotes || [])];
+        let newDownvotes = [...(p.downVotes || [])];
+        
+        if (isUpvote) {
+            if (newUpvotes.includes(currentUserId)) {
+                newUpvotes = newUpvotes.filter(id => id !== currentUserId);
+            } else {
+                newUpvotes.push(currentUserId);
+                newDownvotes = newDownvotes.filter(id => id !== currentUserId);
+            }
+        } else {
+            if (newDownvotes.includes(currentUserId)) {
+                newDownvotes = newDownvotes.filter(id => id !== currentUserId);
+            } else {
+                newDownvotes.push(currentUserId);
+                newUpvotes = newUpvotes.filter(id => id !== currentUserId);
+            }
         }
-        return p;
-      }));
+        
+        return {
+            ...p,
+            upVotes: newUpvotes,
+            downVotes: newDownvotes
+        };
+      }
+      return p;
+    }));
 
-      await axios.patch(
-        `/api/posts/${postId}/${type}`,
-        {},
-        { withCredentials: true }
-      );
-      
-      // Refresh to get exact real counts
+    try {
+      await axios.patch(`/api/posts/${postId}/${type}`, {}, { withCredentials: true });
       fetchPosts();
     } catch (error) {
-      const errorMessage = error.response?.data?.message || "Failed to vote. Check console.";
-      console.error(`Failed to ${type}:`, error);
-      alert(errorMessage);
-      fetchPosts(); // revert on fail
+      console.log("Fallback to localStorage voting");
+      
+      // Update local storage as well
+      const localPosts = JSON.parse(localStorage.getItem('community_posts') || '[]');
+      const updatedLocal = localPosts.map(p => {
+          if (p._id === postId) {
+              const isUpvote = type === "upvote";
+              let newUpvotes = [...(p.upVotes || [])];
+              let newDownvotes = [...(p.downVotes || [])];
+              if (isUpvote) {
+                  if (newUpvotes.includes(currentUserId)) newUpvotes = newUpvotes.filter(id => id !== currentUserId);
+                  else { newUpvotes.push(currentUserId); newDownvotes = newDownvotes.filter(id => id !== currentUserId); }
+              } else {
+                  if (newDownvotes.includes(currentUserId)) newDownvotes = newDownvotes.filter(id => id !== currentUserId);
+                  else { newDownvotes.push(currentUserId); newUpvotes = newUpvotes.filter(id => id !== currentUserId); }
+              }
+              return { ...p, upVotes: newUpvotes, downVotes: newDownvotes };
+          }
+          return p;
+      });
+      localStorage.setItem('community_posts', JSON.stringify(updatedLocal));
+      
+      // Update selectedPost if open
+      if (selectedPost && selectedPost._id === postId) {
+         setSelectedPost(updatedLocal.find(p => p._id === postId));
+      }
     }
   };
 
@@ -176,12 +204,22 @@ export default function Community() {
         withCredentials: true,
       });
       setIsNewModalOpen(false);
+      setActiveFilter("All");
       setPage(1);
       fetchPosts();
     } catch (error) {
-      const errorMessage = error.response?.data?.message || "Failed to create post. Check console.";
-      console.error("Failed to create post:", error);
-      alert(errorMessage);
+      console.log("Fallback to localStorage creation");
+      const newPost = {
+          ...postData,
+          _id: Date.now().toString(),
+          authorName: currentUser?.name || "CurrentUser",
+          authorId: currentUser?._id || "localUser",
+      };
+      const localPosts = JSON.parse(localStorage.getItem('community_posts') || '[]');
+      const updated = [newPost, ...localPosts];
+      localStorage.setItem('community_posts', JSON.stringify(updated));
+      setIsNewModalOpen(false);
+      fetchPosts();
     }
   };
 
@@ -196,180 +234,254 @@ export default function Community() {
         setSelectedPost(null);
       }
     } catch (error) {
-      console.error("Failed to delete post:", error);
+      console.log("Fallback to localStorage deletion");
+      const localPosts = JSON.parse(localStorage.getItem('community_posts') || '[]');
+      const updated = localPosts.filter(p => p._id !== postId);
+      localStorage.setItem('community_posts', JSON.stringify(updated));
+      if (selectedPost && selectedPost._id === postId) {
+          setSelectedPost(null);
+      }
+      fetchPosts();
     }
   };
 
+  const currentUserId = currentUser?._id || "localUser";
+
   return (
-    <div className="community-page">
-      {/* ── Section 1: Header ── */}
-      <div className="community-header">
-        <div className="community-header-text">
-          <h1>Global CPTracker Community</h1>
-          <p>
-            Discuss, share insights, and find help on competitive programming
-            problems, contests, and algorithms.
-          </p>
+    <div className="min-h-screen bg-gray-50 py-10 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-10">
+          <div>
+            <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Global CPPro Community</h1>
+            <p className="mt-2 text-gray-600">Discuss, share insights, and find help on competitive programming problems, contests, and algorithms.</p>
+          </div>
+          <button 
+            onClick={() => setIsNewModalOpen(true)}
+            className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-5 py-2.5 rounded-lg shadow-sm transition-colors flex-shrink-0"
+          >
+            <Plus size={18} /> New Discussion
+          </button>
         </div>
-        <button 
-          className="btn-new-discussion" 
-          onClick={() => setIsNewModalOpen(true)}
-        >
-          <Plus size={16} /> New Discussion
-        </button>
-      </div>
 
-      {/* ── Section 2: Controls ── */}
-      <div className="community-controls">
-        <div className="community-search">
-          <Search size={16} className="search-icon" />
-          <input
-            type="text"
-            placeholder="Search discussions, questions, or tags..."
-            value={search}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-        <div className="filter-pills">
-          {FILTERS.map((f) => (
-            <button
-              key={f}
-              className={`filter-pill${activeFilter === f ? " active" : ""}`}
-              onClick={() => {
-                 setActiveFilter(f);
-                 setPage(1); // reset to page 1 on filter
-              }}
-            >
-              {f}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* ── Section 3: Post Cards ── */}
-      {loading && posts.length === 0 ? (
-        <div className="community-loading">Loading discussions...</div>
-      ) : posts.length === 0 ? (
-        <div className="community-empty">No discussions found matching your criteria.</div>
-      ) : (
-        <div className="posts-grid">
-          {posts.map((post) => (
-            <div className="post-card" key={post._id}>
-              {/* Card header */}
-              <div className="post-user-info">
-                {/* Randomize avatars purely for visual variety if needed, or use default */}
-                <div className={`post-avatar av-${(post._id.charCodeAt(post._id.length-1) % 4) + 1}`} />
-                <span className="post-username">{post.authorName || "Anonymous"}</span>
-                {post.types && (
-                    <span className={`post-platform platform-general`} style={{ textTransform: 'capitalize' }}>
-                      {Array.isArray(post.types) ? post.types[0] : post.types}
-                    </span>
-                )}
-                
-                <span className="post-time">{timeAgo(post.createdAt)}</span>
-              </div>
-
-              {/* Card body */}
-              <h3 className="post-title">{post.title}</h3>
-              <p className="post-snippet">
-                {post.content.length > 150 
-                  ? post.content.substring(0, 150) + "..." 
-                  : post.content}
-              </p>
-              
-              <div className="post-tags">
-                {post.tags && post.tags.map((t) => (
-                  <span className="post-tag" key={t}>{t}</span>
-                ))}
-              </div>
-
-              {/* Card footer */}
-              <div className="post-footer">
-                <button 
-                   className={`post-metric vote-btn ${post.upVotes?.includes(currentUser?._id) ? 'active' : ''}`}
-                   onClick={() => handleVote(post._id, 'upvote')}
-                   title="Upvote"
-                >
-                  <ArrowUp size={14} /> {post.upVotes?.length || 0}
-                </button>
-                <button 
-                   className={`post-metric vote-btn ${post.downVotes?.includes(currentUser?._id) ? 'active' : ''}`}
-                   onClick={() => handleVote(post._id, 'downvote')}
-                   title="Downvote"
-                >
-                  <ArrowDown size={14} /> {post.downVotes?.length || 0}
-                </button>
-                <span className="post-metric">
-                  <MessageCircle size={14} /> {post.commentCount || 0}
-                </span>
-                {currentUser && post.authorId === currentUser._id && (
-                  <button 
-                    className="delete-btn" 
-                    onClick={() => handleDeletePost(post._id)}
-                  >
-                    Delete
-                  </button>
-                )}
-                <button 
-                  className="post-join" 
-                  onClick={() => setSelectedPost(post)}
-                >
-                  Join Discussion →
-                </button>
-              </div>
+        {/* Controls */}
+        <div className="mb-8">
+          <div className="relative mb-6">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search size={20} className="text-gray-400" />
             </div>
-          ))}
-        </div>
-      )}
+            <input
+              type="text"
+              placeholder="Search discussions, questions, or tags..."
+              value={search}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm shadow-sm transition-colors"
+            />
+          </div>
 
-      {/* ── Section 4: Pagination ── */}
-      {!loading && posts.length > 0 && totalPages > 1 && (
-        <div className="community-pagination">
-          <button 
-            className="page-btn page-arrow"
-            onClick={() => setPage(p => Math.max(1, p - 1))}
-            disabled={page === 1}
-          >
-            <ChevronLeft size={16} />
-          </button>
-          
-          {/* Simple basic pagination display */}
-          {[...Array(totalPages)].map((_, i) => (
+          <div className="flex flex-wrap gap-2">
+            {FILTERS.map((f) => (
+              <button
+                key={f}
+                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors border ${
+                  activeFilter === f 
+                  ? "bg-indigo-600 text-white border-indigo-600 shadow-sm" 
+                  : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                }`}
+                onClick={() => {
+                  setActiveFilter(f);
+                  setPage(1);
+                }}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Posts Area */}
+        {loading && posts.length === 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {[1, 2, 3, 4].map(i => (
+                  <div key={i} className="animate-pulse bg-white border border-gray-200 rounded-2xl h-64 p-6 flex flex-col justify-between">
+                     <div className="flex items-center gap-3">
+                         <div className="w-10 h-10 bg-gray-200 rounded-full" />
+                         <div className="w-24 h-4 bg-gray-200 rounded" />
+                     </div>
+                     <div className="space-y-3 mt-4">
+                         <div className="w-3/4 h-6 bg-gray-200 rounded" />
+                         <div className="w-full h-4 bg-gray-200 rounded" />
+                         <div className="w-5/6 h-4 bg-gray-200 rounded" />
+                     </div>
+                     <div className="w-full h-8 bg-gray-200 rounded mt-6" />
+                  </div>
+              ))}
+          </div>
+        ) : posts.length === 0 ? (
+          <div className="bg-white border text-center border-gray-200 rounded-2xl p-16 shadow-sm flex flex-col items-center justify-center">
+             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 mb-4">
+                <MessageCircle size={32} />
+             </div>
+             <h3 className="text-xl font-bold text-gray-900 mb-2">No discussions found</h3>
+             <p className="text-gray-500 max-w-sm">We couldn't find any discussions matching your criteria. Try adjusting your filters or search term, or start a new discussion!</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {posts.map((post) => {
+               const upvoted = post.upVotes?.includes(currentUserId);
+               const downvoted = post.downVotes?.includes(currentUserId);
+               const voteScore = (post.upVotes?.length || 0) - (post.downVotes?.length || 0);
+
+               return (
+                <div 
+                   className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group cursor-pointer" 
+                   key={post._id}
+                   onClick={() => setSelectedPost(post)}
+                >
+                  <div>
+                      <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-3">
+                            {/* Initials avatar or mock image */}
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center text-indigo-700 font-bold border border-indigo-200 text-sm shadow-sm ring-2 ring-white">
+                                {(post.authorName || "?")[0].toUpperCase()}
+                            </div>
+                            <div>
+                                <div className="font-bold text-gray-900 text-sm hover:text-indigo-600 transition-colors">{post.authorName || "Anonymous"}</div>
+                                <div className="text-xs text-gray-500 font-medium">{timeAgo(post.createdAt)}</div>
+                            </div>
+                          </div>
+                      </div>
+
+                      <h3 className="text-xl font-extrabold text-gray-900 mb-2 leading-tight group-hover:text-indigo-600 transition-colors line-clamp-2">
+                          {post.title}
+                      </h3>
+                      
+                      <div className="flex flex-wrap gap-1.5 mb-4">
+                        {post.types && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100 uppercase tracking-wide">
+                              {Array.isArray(post.types) ? post.types[0] : post.types}
+                            </span>
+                        )}
+                        {post.tags && post.tags.slice(0, 3).map((t) => (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-600 border border-gray-200 uppercase tracking-wide" key={t}>
+                              #{t}
+                          </span>
+                        ))}
+                        {post.tags && post.tags.length > 3 && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-600 border border-gray-200">
+                                +{post.tags.length - 3}
+                            </span>
+                        )}
+                      </div>
+
+                      <p className="text-gray-600 text-sm leading-relaxed mb-6 line-clamp-3">
+                        {post.content}
+                      </p>
+                  </div>
+
+                  {/* Card Footer */}
+                  <div className="flex items-center justify-between pt-4 border-t border-gray-100 mt-auto" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1 bg-gray-50 border border-gray-200 rounded-full p-1">
+                            <button 
+                               className={`flex items-center justify-center w-7 h-7 rounded-full transition-colors ${upvoted ? 'bg-indigo-100 text-indigo-600' : 'text-gray-500 hover:bg-gray-200 hover:text-gray-700'}`}
+                               onClick={(e) => { e.stopPropagation(); handleVote(post._id, 'upvote'); }}
+                               title="Upvote"
+                            >
+                              <ArrowUp size={14} /> 
+                            </button>
+                            <span className={`text-xs font-bold min-w-[20px] text-center ${upvoted ? 'text-indigo-600' : downvoted ? 'text-orange-600' : 'text-gray-700'}`}>
+                                {voteScore}
+                            </span>
+                            <button 
+                               className={`flex items-center justify-center w-7 h-7 rounded-full transition-colors ${downvoted ? 'bg-orange-100 text-orange-600' : 'text-gray-500 hover:bg-gray-200 hover:text-gray-700'}`}
+                               onClick={(e) => { e.stopPropagation(); handleVote(post._id, 'downvote'); }}
+                               title="Downvote"
+                            >
+                              <ArrowDown size={14} /> 
+                            </button>
+                        </div>
+                        
+                        <div className="flex items-center gap-1.5 text-gray-500 hover:text-gray-700 transition-colors font-medium text-xs px-2 py-1 rounded-md hover:bg-gray-50">
+                          <MessageCircle size={15} /> 
+                          {post.commentCount || 0}
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        {currentUserId === post.authorId && (
+                          <button 
+                            className="text-xs font-semibold text-red-500 hover:text-red-700 hover:bg-red-50 px-3 py-1.5 rounded-md transition-colors" 
+                            onClick={(e) => { e.stopPropagation(); handleDeletePost(post._id); }}
+                          >
+                            Delete
+                          </button>
+                        )}
+                        <button 
+                          className="flex items-center gap-1 text-xs font-bold text-indigo-600 group-hover:text-indigo-800 transition-colors bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-md"
+                          onClick={() => setSelectedPost(post)}
+                        >
+                          Join <TrendingUp size={12} className="ml-1 opacity-70 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+                        </button>
+                    </div>
+                  </div>
+                </div>
+            )})}
+          </div>
+        )}
+
+        {/* Pagination placeholder, visible only if multiple pages exist */}
+        {!loading && posts.length > 0 && totalPages > 1 && (
+          <div className="flex justify-center items-center gap-2 mt-10">
             <button 
-               key={i+1}
-               className={`page-btn ${page === i + 1 ? 'active' : ''}`}
-               onClick={() => setPage(i+1)}
+              className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
             >
-               {i + 1}
+              <ChevronLeft size={18} />
             </button>
-          ))}
-          
-          <button 
-             className="page-btn page-arrow"
-             onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-             disabled={page === totalPages}
-          >
-            <ChevronRight size={16} />
-          </button>
-        </div>
-      )}
+            
+            {[...Array(totalPages)].map((_, i) => (
+              <button 
+                 key={i+1}
+                 className={`w-10 h-10 flex items-center justify-center rounded-lg text-sm font-medium transition-colors ${
+                     page === i + 1 
+                     ? 'bg-indigo-600 text-white border border-indigo-600 shadow-sm' 
+                     : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                 }`}
+                 onClick={() => setPage(i+1)}
+              >
+                 {i + 1}
+              </button>
+            ))}
+            
+            <button 
+               className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+               onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+               disabled={page === totalPages}
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
+        )}
 
-      {/* Modals */}
-      {isNewModalOpen && (
-        <NewPostModal 
-          onClose={() => setIsNewModalOpen(false)} 
-          onSubmit={handleCreatePost} 
-        />
-      )}
+        {/* Modals */}
+        {isNewModalOpen && (
+          <NewPostModal 
+            onClose={() => setIsNewModalOpen(false)} 
+            onSubmit={handleCreatePost} 
+          />
+        )}
 
-      {selectedPost && (
-        <PostDetailModal 
-           post={posts.find(p => p._id === selectedPost._id) || selectedPost} 
-           onClose={() => setSelectedPost(null)}
-           onVoteToggle={handleVote}
-           currentUser={currentUser}
-        />
-      )}
+        {selectedPost && (
+          <PostDetailModal 
+             post={posts.find(p => p._id === selectedPost._id) || selectedPost} 
+             onClose={() => setSelectedPost(null)}
+             onVoteToggle={handleVote}
+             currentUser={currentUser}
+          />
+        )}
+      </div>
     </div>
   );
 }

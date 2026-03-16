@@ -1,15 +1,9 @@
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Radar,
-  RadarChart as RechartsRadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  ResponsiveContainer,
+  Radar, RadarChart as RechartsRadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer,
 } from 'recharts';
 
-// We show exactly these 5 topics; map from raw tags → display names
 const TARGET_TOPICS = [
   { tag: 'dp', label: 'DP' },
   { tag: 'graphs', label: 'Graphs' },
@@ -22,13 +16,10 @@ export default function RadarChartComponent({ topics }) {
   const chartData = useMemo(() => {
     if (!topics?.length) return TARGET_TOPICS.map((t) => ({ topic: t.label, value: 0 }));
 
-    // Build lookup from raw tags (normalize to lowercase)
     const lookup = {};
     topics.forEach((t) => {
       const tag = t.tag || t._id || '';
-      if (tag) {
-        lookup[tag.toLowerCase()] = t.count;
-      }
+      if (tag) lookup[tag.toLowerCase()] = t.count;
     });
 
     return TARGET_TOPICS.map((t) => ({
@@ -41,50 +32,32 @@ export default function RadarChartComponent({ topics }) {
 
   return (
     <motion.div
-      className="glass-card radar-card"
+      className="bg-white border border-gray-200 shadow-sm rounded-xl p-6"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 0.5 }}
     >
-      <div className="chart-card-header">
-        <div>
-          <h3 className="chart-card-title">Topic Proficiency</h3>
-          <p className="radar-subtitle">Based on recent 100 solves</p>
-        </div>
+      <div className="mb-2 text-center md:text-left">
+        <h3 className="text-lg font-bold text-gray-900">Topic Proficiency</h3>
+        <p className="text-xs text-gray-500 font-medium">Based on recent 100 solves</p>
       </div>
 
-      <ResponsiveContainer width="100%" height={280}>
-        <RechartsRadarChart cx="50%" cy="50%" outerRadius="70%" data={chartData}>
-          <PolarGrid
-            stroke="rgba(56, 189, 248, 0.1)"
-            gridType="polygon"
-          />
+      <ResponsiveContainer width="100%" height={260}>
+        <RechartsRadarChart cx="50%" cy="50%" outerRadius="65%" data={chartData}>
+          <PolarGrid stroke="#E5E7EB" gridType="polygon" />
           <PolarAngleAxis
             dataKey="topic"
-            tick={{
-              fill: '#9ca3af',
-              fontSize: 12,
-              fontWeight: 500,
-            }}
+            tick={{ fill: '#6B7280', fontSize: 11, fontWeight: 600 }}
           />
-          <PolarRadiusAxis
-            domain={[0, maxValue]}
-            tick={false}
-            axisLine={false}
-          />
+          <PolarRadiusAxis domain={[0, maxValue]} tick={false} axisLine={false} />
           <Radar
             name="Proficiency"
             dataKey="value"
-            stroke="#38bdf8"
+            stroke="#4F46E5"
             strokeWidth={2}
-            fill="rgba(56, 189, 248, 0.15)"
-            fillOpacity={1}
-            dot={{
-              r: 4,
-              fill: '#38bdf8',
-              stroke: '#0d1117',
-              strokeWidth: 2,
-            }}
+            fill="#4F46E5"
+            fillOpacity={0.15}
+            dot={{ r: 4, fill: '#4F46E5', stroke: '#fff', strokeWidth: 2 }}
           />
         </RechartsRadarChart>
       </ResponsiveContainer>

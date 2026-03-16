@@ -3,11 +3,22 @@ const {setUser, getUser}= require('../Services/auth')
 const bcrypt = require('bcryptjs');
 
 
-function handleVerifyAuth(req , res){
-    const token=req.cookies?.token;
-    if(!token) return res.json({authenticated:false});
-    const user= getUser(token);
-    return res.json({authenticated: !!user, user});
+async function handleVerifyAuth(req, res) {
+    try {
+        const token = req.cookies?.token;
+        if (!token) return res.json({ authenticated: false });
+        
+        const userPayload = getUser(token);
+        if (!userPayload) return res.json({ authenticated: false });
+
+        const user = await User.findById(userPayload._id).select('-password');
+        if (!user) return res.json({ authenticated: false });
+
+        return res.json({ authenticated: true, user });
+    } catch (err) {
+        console.error("Auth verify error:", err);
+        return res.json({ authenticated: false });
+    }
 }
 
 async function handleUserSignup(req , res){
@@ -66,8 +77,14 @@ async function handleUserLogin(req , res){
     }
 }
 
-function handleLogOut(req , res){
-    res.clearCookie('token' , {path:'/'});
+function handleLogOut(req, res){
+    res.cookie('token', '', {
+        httpOnly: true,
+        expires: new Date(0),
+        maxAge: 0,
+        path: '/',
+        sameSite: 'strict'
+    });
     return res.json({message: "logged out succesfully"});
 }
 
