@@ -1,7 +1,7 @@
 const axios= require('axios');
-const cryto=require('crypto');
+const crypto=require('crypto');
 const User= require('../Model/User');
-const {acquireLock , releaseLock}= require('../Utils/cfApiLock');
+const {acquireLock , releaseLock}= require('../Utils/cfApiQueue');
 
 const generateCode=async(userId)=>{
     const uniqueCode= `cppro-${crypto.randomBytes(3).toString('hex')}`;
@@ -18,7 +18,7 @@ const verifyAndLinkCodeforces = async(userId ,handle)=>{
 
     if(!user.verificationCode){
         const err= new Error("No verification code found. please generate one first");
-        err.status(400);
+        err.status=400;
         throw err;
     }
     let cfProfile;
@@ -28,7 +28,7 @@ const verifyAndLinkCodeforces = async(userId ,handle)=>{
         cfProfile = response.data.result[0];
     }catch(error){
         const err= new Error("Invalid codeforces handle");
-        err.status(400);
+        err.status=400;
         throw err;
     }finally{
         releaseLock();
@@ -40,18 +40,18 @@ const verifyAndLinkCodeforces = async(userId ,handle)=>{
 
     if(!firstName.includes(code)){
         const err= new Error("cf handle verification failed");
-        err.status(400);
+        err.status=400;
         throw err; 
     }
     await User.findByIdAndUpdate(
         userId,
         {
             $set:{"linkedAccounts.codeforces":cleanHandle},
-            $unSet:{verificationCode :""}
+            $unset:{verificationCode :""}
         },
         {new:true}
     );
-    return {message:"linking codeforces account succesfull :" , cleanHandle};
+    return {message: `linking codeforces account successful: ${cleanHandle}`};
 };
 
 module.exports={generateCode , verifyAndLinkCodeforces};

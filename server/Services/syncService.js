@@ -2,7 +2,7 @@ const axios = require('axios');
 const syncRepo= require('../Repositories/syncRepository');
 const Platform = require('../Model/Platform');
 const Submission= require('../Model/Submissions');
-const {acquireLock , releaseLock}= require('../Utils/cfApiLock');
+const {acquireLock , releaseLock}= require('../Utils/cfApiQueue');
 
 const delay = (ms)=> new Promise(resolve=> setTimeout(resolve , ms));
 
