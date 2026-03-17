@@ -12,6 +12,7 @@ const commentRoutes= require('./Routes/Comment');
 const syncRoutes = require('./Routes/syncRoutes');
 const dashboardRoutes = require('./Routes/dashboardRoutes');
 const leaderboardRoutes= require('./Routes/leaderboardRoutes');
+const {startContinuousSync}= require('./Workers/autoSyncWorker');
 
 // connection to mongo
 connectToMongoDb(process.env.MongoUrl)
@@ -47,11 +48,15 @@ app.use('/api/sync' , syncRoutes);
 app.use('/api/dashboard' , dashboardRoutes);
 app.use('/api/leaderboard' , leaderboardRoutes);
 
+//auto continous sync
+startContinuousSync();
+
 // test
 app.get('/api/test', (req, res)=>{
     res.json({message :"backend is working"});
 })
 
+//health test for cron-jobs for keeping server active
 app.get('/api/health',(req, res)=> {
     const dbState =mongoose.connection.readyState;
     const dbStatusMap= {

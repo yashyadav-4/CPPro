@@ -2,13 +2,15 @@ const axios = require('axios');
 const syncRepo= require('../Repositories/syncRepository');
 const Platform = require('../Model/Platform');
 const Submission= require('../Model/Submissions');
+const {acquireLock , releaseLock}= require('../Utils/cfApiLock');
 
 const delay = (ms)=> new Promise(resolve=> setTimeout(resolve , ms));
 
-const syncCodeforcesProfile= async(userId , handle)=>{
+const syncCodeforcesProfile= async(userId , handle , priority='medium')=>{
     try{
         console.log('syncservice proccessing for user: ' ,{handle});
 
+        await acquireLock(priority);
         const statusRes= await axios.get(`https://codeforces.com/api/user.status?handle=${handle}`);
         const submissions= statusRes.data.result;
 
@@ -28,6 +30,8 @@ const syncCodeforcesProfile= async(userId , handle)=>{
 
         const infoRes=await axios.get(`https://codeforces.com/api/user.info?handles=${handle}`);
         const userInfo =infoRes.data.result[0];
+
+        releaseLock();
 
         const uniqueSolvedCount= await Submission.distinct('problemId' , {
             userId:userId,
@@ -58,6 +62,7 @@ const syncCodeforcesProfile= async(userId , handle)=>{
             message:"sync done"
         };
     }catch(error){
+        releaseLock();
         console.error(`error syncing for ${handle}:`,error.message);
         if (error.response &&error.response.status ===400) {
             throw new Error("invalid codeforces handle");

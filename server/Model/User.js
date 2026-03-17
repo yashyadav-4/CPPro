@@ -73,7 +73,10 @@ const userSchema = new mongoose.Schema({
             default:true,
         }
     },
-
+    verificationCode:{ //changed later: needed for platform verification
+        type:String,
+        default:null
+    }
 }, {timestamps:true});
 
 
