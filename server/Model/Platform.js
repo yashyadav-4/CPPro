@@ -33,6 +33,10 @@ const platformSchema= new mongoose.Schema({
         type:String,
         default:'unrated',
     },
+    contribution:{
+        type:Number,
+        default:0,
+    },
     ratedHistory:[{
         rating:{type:Number},
         date:{type:Date},

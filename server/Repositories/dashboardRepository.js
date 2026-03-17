@@ -3,6 +3,7 @@
 // $lt:less than
 // &ne:not equal to
 
+const Post = require('../Model/Post');
 const mongoose = require('mongoose');
 const Submission= require('../Model/Submissions');
 const Platform= require('../Model/Platform');
@@ -92,10 +93,11 @@ const getRatingHistory=async(userId , platform)=>{
     const platformData= await Platform.findOne({
         userId:userId,
         platform:platform
-    }).select('ratedHistory currentRating maxRating platformUsername');
+    }).select('ratedHistory currentRating maxRating platformUsername contribution');
 
     return platformData;
 }
+
 
 const getProfileSummary = async(userId)=>{
     const uniqueSolved= await Submission.distinct('problemId' , {
@@ -122,9 +124,30 @@ const getProfileSummary = async(userId)=>{
     ]);
     const activeDays= activeDaysAggregation.length>0? activeDaysAggregation[0].totalActiveDays : 0;
 
+    const userUpvotesAggregation = await Post.aggregate([
+        {
+            $match: {
+                authorId: new mongoose.Types.ObjectId(userId)
+            }
+        },
+        {
+            $project: {
+                upvotesCount: { $size: { $ifNull: ["$upVotes", []] } }
+            }
+        },
+        {
+            $group: {
+                _id: null,
+                totalUpvotes: { $sum: "$upvotesCount" }
+            }
+        }
+    ]);
+    const totalUpvotes = userUpvotesAggregation.length > 0 ? userUpvotesAggregation[0].totalUpvotes : 0;
+
     return{
         totalQuestionsSolved: uniqueSolved.length,
-        totalActiveDays: activeDays
+        totalActiveDays: activeDays,
+        totalUpvotes: totalUpvotes
     };
 };
 

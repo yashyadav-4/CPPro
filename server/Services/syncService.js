@@ -48,6 +48,7 @@ const syncCodeforcesProfile= async(userId , handle , priority='medium')=>{
                     maxRating :userInfo.maxRating || 0,
                     currentRank : userInfo.rank || 'unrated',
                     maxRank : userInfo.maxRank || 'unrated',
+                    contribution: userInfo.contribution || 0,
                     ratedHistory:ratingHistory,
                     totalSolved :uniqueSolvedCount.length,
                     lastSyncedAt: new Date() 

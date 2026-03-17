@@ -34,6 +34,7 @@ export default function Dashboard() {
     topics: [],
     difficulty: [],
   });
+  const [refreshing, setRefreshing] = useState(false);
 
   const fetchDashboardData = useCallback(async () => {
     setLoading(true);
@@ -92,6 +93,7 @@ export default function Dashboard() {
       setData({
         profile: {
           user: user,
+          upvotes: profileData.totalUpvotes || 0,
           platforms: [{
             totalSolved: profileData.totalQuestionsSolved || 0,
             currentRating: ratingData.currentRating || 0,
@@ -113,6 +115,7 @@ export default function Dashboard() {
       setData({
         profile: {
           user: { name: 'Yash', profilePic: null },
+          upvotes: 42,
           platforms: [{ totalSolved: 257, currentRating: 1287, maxRating: 1290, currentRank: getRankFromRating(1287) }]
         },
         heatmap: Array.from({length: 365}).map((_, i) => {
@@ -135,6 +138,19 @@ export default function Dashboard() {
   useEffect(() => {
     fetchDashboardData();
   }, [fetchDashboardData]);
+
+  const handleManualRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await axios.post('/api/sync/refresh', {}, { withCredentials: true });
+      await fetchDashboardData();
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.message || 'Failed to refresh data');
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const platform = data.profile?.platforms?.[0];
   const totalSolved = platform?.totalSolved || 0;
@@ -217,6 +233,17 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto space-y-6">
         
+        <div className="flex justify-end">
+          <button
+            onClick={handleManualRefresh}
+            disabled={refreshing}
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg text-white transition-colors duration-200 ${refreshing ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'}`}
+          >
+            <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
+            {refreshing ? 'Refreshing...' : 'Manual Refresh'}
+          </button>
+        </div>
+
         {/* Row 1: Profile + 3 Stat Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <ProfileCard profile={data.profile} />

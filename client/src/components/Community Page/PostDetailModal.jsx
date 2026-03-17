@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { X, ArrowUp, ArrowDown, MessageCircle, Send, User, Trash2 } from "lucide-react";
 import axios from "axios";
+import DeleteConfirmModal from "../common/DeleteConfirmModal";
 
 const timeAgo = (date) => {
   if (!date) return "Just now";
@@ -24,6 +25,7 @@ export default function PostDetailModal({ post, onClose, onVoteToggle, currentUs
   const [loadingComments, setLoadingComments] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
+  const [commentToDelete, setCommentToDelete] = useState(null);
 
   useEffect(() => {
     if (post) {
@@ -91,8 +93,9 @@ export default function PostDetailModal({ post, onClose, onVoteToggle, currentUs
     }
   };
 
-  const handleDeleteComment = async (commentId) => {
-    if (!window.confirm("Delete this comment?")) return;
+  const confirmDeleteComment = async () => {
+    if (!commentToDelete) return;
+    const commentId = commentToDelete;
     try {
       await axios.delete(`/api/comments/${commentId}`, {
         withCredentials: true,
@@ -106,7 +109,13 @@ export default function PostDetailModal({ post, onClose, onVoteToggle, currentUs
       const localCommentsReqs = JSON.parse(localStorage.getItem('post_comments') || '{}');
       localCommentsReqs[post._id] = updated;
       localStorage.setItem('post_comments', JSON.stringify(localCommentsReqs));
+    } finally {
+      setCommentToDelete(null);
     }
+  };
+
+  const handleDeleteComment = (commentId) => {
+    setCommentToDelete(commentId);
   };
 
   if (!post) return null;
@@ -252,6 +261,14 @@ export default function PostDetailModal({ post, onClose, onVoteToggle, currentUs
             </div>
         </div>
       </div>
+      
+      <DeleteConfirmModal 
+        isOpen={!!commentToDelete}
+        onClose={() => setCommentToDelete(null)}
+        onConfirm={confirmDeleteComment}
+        title="Delete Comment"
+        message="Are you sure you want to delete this comment? This action cannot be undone."
+      />
     </div>
   );
 }

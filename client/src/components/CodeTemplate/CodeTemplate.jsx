@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react"
 import { Search, Plus } from "lucide-react"
 import CodeTemplateList from "./CodeTemplateList"
 import AddSnippetModal from "./AddSnippetModal"
+import SnippetDetailModal from "./SnippetDetailModal"
 
 const LANGUAGE_FILTERS = [
     { label: "All", value: "all" },
@@ -19,6 +20,7 @@ export default function CodeTemplate() {
     const [activeFilter, setActiveFilter] = useState("all")
     const [currentPage, setCurrentPage] = useState(1)
     const [showAddModal, setShowAddModal] = useState(false)
+    const [selectedSnippet, setSelectedSnippet] = useState(null)
     const [loading, setLoading] = useState(true)
 
     const fetchSnippets = useCallback(async () => {
@@ -182,6 +184,7 @@ export default function CodeTemplate() {
                     currentPage={currentPage}
                     totalPages={totalPages}
                     onPageChange={setCurrentPage}
+                    onViewSnippet={setSelectedSnippet}
                 />
 
                 {/* Add Modal */}
@@ -189,6 +192,15 @@ export default function CodeTemplate() {
                     <AddSnippetModal
                         onClose={() => setShowAddModal(false)}
                         onAddLocal={handleAddSnippetLocal}
+                    />
+                )}
+
+                {/* Detail Modal */}
+                {selectedSnippet && (
+                    <SnippetDetailModal 
+                        snippet={selectedSnippet}
+                        onClose={() => setSelectedSnippet(null)}
+                        onDelete={handleDelete}
                     />
                 )}
             </div>

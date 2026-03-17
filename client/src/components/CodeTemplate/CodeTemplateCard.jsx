@@ -1,5 +1,4 @@
 import { useState } from "react"
-import { useNavigate } from "react-router-dom"
 import { Code2, Copy, Check, ExternalLink } from "lucide-react"
 
 function timeAgo(dateStr) {
@@ -40,8 +39,7 @@ const BG_COLOR = {
     javascript: "bg-yellow-50 text-yellow-600",
 }
 
-export default function CodeTemplateCard({ snippet }) {
-    const navigate = useNavigate()
+export default function CodeTemplateCard({ snippet, onViewSnippet }) {
     const [copied, setCopied] = useState(false)
 
     const { _id, title, language, code, tags, createdAt, updatedAt } = snippet
@@ -54,7 +52,9 @@ export default function CodeTemplateCard({ snippet }) {
     }
 
     function handleViewDetails() {
-        navigate(`/codesnippet/${_id}`, { state: { snippet } })
+        if (onViewSnippet) {
+            onViewSnippet(snippet)
+        }
     }
 
     const createdDate = createdAt ? new Date(createdAt).toLocaleDateString("en-US", {

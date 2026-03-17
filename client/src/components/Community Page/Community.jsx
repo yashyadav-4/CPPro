@@ -12,6 +12,7 @@ import {
 import axios from "axios";
 import NewPostModal from "./NewPostModal";
 import PostDetailModal from "./PostDetailModal";
+import DeleteConfirmModal from "../common/DeleteConfirmModal";
 
 const FILTERS = [
   "All",
@@ -62,7 +63,8 @@ export default function Community() {
   
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState(null);
-  const [currentUser, setCurrentUser] = useState(null); 
+  const [currentUser, setCurrentUser] = useState(null);
+  const [postToDelete, setPostToDelete] = useState(null);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -223,8 +225,9 @@ export default function Community() {
     }
   };
 
-  const handleDeletePost = async (postId) => {
-    if (!window.confirm("Are you sure you want to delete this post?")) return;
+  const confirmDeletePost = async () => {
+    if (!postToDelete) return;
+    const postId = postToDelete;
     try {
       await axios.delete(`/api/posts/${postId}`, {
         withCredentials: true,
@@ -242,7 +245,13 @@ export default function Community() {
           setSelectedPost(null);
       }
       fetchPosts();
+    } finally {
+      setPostToDelete(null);
     }
+  };
+
+  const handleDeletePost = (postId) => {
+    setPostToDelete(postId);
   };
 
   const currentUserId = currentUser?._id || "localUser";
@@ -481,6 +490,14 @@ export default function Community() {
              currentUser={currentUser}
           />
         )}
+
+        <DeleteConfirmModal 
+          isOpen={!!postToDelete}
+          onClose={() => setPostToDelete(null)}
+          onConfirm={confirmDeletePost}
+          title="Delete Post"
+          message="Are you sure you want to delete this post? This action cannot be undone."
+        />
       </div>
     </div>
   );

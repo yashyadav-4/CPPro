@@ -80,6 +80,7 @@ const getRatingAnalysis = async(userId , platform)=>{
         platformUsername: dbData.platformUsername,
         currentRating: dbData.currentRating,
         maxRating: dbData.maxRating,
+        contribution: dbData.contribution,
         history: history,
         prediction6Months: prediction
     };

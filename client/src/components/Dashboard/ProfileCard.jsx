@@ -8,6 +8,7 @@ export default function ProfileCard({ profile }) {
   const currentRating = platform?.currentRating || 0;
   const maxRating = platform?.maxRating || 0;
   const currentRank = platform?.currentRank || 'Unrated';
+  const upvotes = profile?.upvotes || 0;
 
   return (
     <motion.div
@@ -24,8 +25,8 @@ export default function ProfileCard({ profile }) {
             <User size={28} />
           </div>
         )}
-        <div>
-          <h3 className="text-lg font-bold text-gray-900 leading-tight truncate max-w-[150px]">
+        <div className="flex-1 min-w-0">
+          <h3 className="text-lg font-bold text-gray-900 leading-tight truncate">
             {user?.name || 'User'}
           </h3>
           <span className="inline-block mt-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 capitalize">
@@ -43,6 +44,11 @@ export default function ProfileCard({ profile }) {
         <div className="flex-1">
           <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-1">Max Rating</p>
           <p className="text-2xl font-bold text-green-600">{maxRating}</p>
+        </div>
+        <div className="w-px bg-gray-200"></div>
+        <div className="flex-1">
+          <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-1">Upvotes</p>
+          <p className={`text-2xl font-bold ${upvotes > 0 ? 'text-green-600' : upvotes < 0 ? 'text-red-600' : 'text-gray-900'}`}>{upvotes > 0 ? `+${upvotes}` : upvotes}</p>
         </div>
       </div>
     </motion.div>
