@@ -1,3 +1,9 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// [RETIRED] cfApiQueue.js — Replaced by Utils/bouncer.js (Lean Nexus Engine)
+// This file is kept for reference only. All imports have been migrated.
+// ═══════════════════════════════════════════════════════════════════════════
+
+/*
 let isApiBusy= false;
 
 const waitingQueue={
@@ -37,3 +43,4 @@ const processQueue = ()=>{
 };
 
 module.exports={acquireLock , releaseLock};
+*/

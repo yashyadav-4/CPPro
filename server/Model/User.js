@@ -76,6 +76,14 @@ const userSchema = new mongoose.Schema({
     verificationCode:{ //changed later: needed for platform verification
         type:String,
         default:null
+    },
+    lastLogin:{
+        type:Date,
+        default:null
+    },
+    lastCfUpdate:{
+        type:Date,
+        default:null
     }
 }, {timestamps:true});
 

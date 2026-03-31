@@ -1,3 +1,10 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// [RETIRED] autoSyncWorker.js — Replaced by on-demand Lean Nexus engine
+// The system is now purely on-demand. Background continuous sync is disabled.
+// See docs/LEAN_NEXUS.md for the new architecture.
+// ═══════════════════════════════════════════════════════════════════════════
+
+/*
 const User=require('../Model/User');
 const Platform = require('../Model/Platform')
 const syncService= require('../Services/syncService');
@@ -48,3 +55,4 @@ const startContinuousSync= async()=>{
 }
 
 module.exports={startContinuousSync};
+*/

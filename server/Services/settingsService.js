@@ -1,7 +1,7 @@
-const axios= require('axios');
+const { cfAxios } = require('../Utils/nexusProxy');
+const { bouncer } = require('../Utils/bouncer');
 const crypto=require('crypto');
 const User= require('../Model/User');
-const {acquireLock , releaseLock}= require('../Utils/cfApiQueue');
 
 const generateCode=async(userId)=>{
     const uniqueCode= `cppro-${crypto.randomBytes(3).toString('hex')}`;
@@ -23,15 +23,14 @@ const verifyAndLinkCodeforces = async(userId ,handle)=>{
     }
     let cfProfile;
     try{
-        await acquireLock('high');
-        const response = await axios.get(`https://codeforces.com/api/user.info?handles=${cleanHandle}`);
+        const response = await bouncer.schedule(() =>
+            cfAxios.get(`https://codeforces.com/api/user.info?handles=${cleanHandle}`)
+        );
         cfProfile = response.data.result[0];
     }catch(error){
         const err= new Error("Invalid codeforces handle");
         err.status=400;
         throw err;
-    }finally{
-        releaseLock();
     }
 
     const firstName= cfProfile.firstName || "";
@@ -52,7 +51,7 @@ const verifyAndLinkCodeforces = async(userId ,handle)=>{
         {new:true}
     );
 
-    // Trigger immediate sync in background so dashboard has data right away
+    //trigger immediate sync in background so dashboard has data right away
     const syncService = require('./syncService');
     syncService.syncCodeforcesProfile(userId, cleanHandle, 'high')
         .then(() => console.log(`[VERIFY] initial sync complete for ${cleanHandle}`))

@@ -37,10 +37,32 @@ export default function Dashboard() {
     difficulty: [],
   });
   const [refreshing, setRefreshing] = useState(false);
+  const [cooldown, setCooldown] = useState(0); // seconds remaining
   const navigate = useNavigate();
 
-  const fetchDashboardData = useCallback(async () => {
-    setLoading(true);
+  // Countdown timer effect
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setInterval(() => {
+      setCooldown(prev => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [cooldown]);
+
+  const formatCooldown = (seconds) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
+
+  const fetchDashboardData = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     setError(null);
 
     try {
@@ -56,7 +78,7 @@ export default function Dashboard() {
       // Check if Codeforces account is linked
       if (!user.linkedAccounts?.codeforces) {
         setNotLinked(true);
-        setLoading(false);
+        if (!silent) setLoading(false);
         return;
       }
       setNotLinked(false);
@@ -72,8 +94,8 @@ export default function Dashboard() {
       const allFailed = results.every((r) => r.status === 'rejected');
       if (allFailed) {
         const firstErr = results[0].reason;
-        setError(firstErr.response?.data?.message || 'Failed to load dashboard data');
-        setLoading(false);
+        if (!silent) setError(firstErr.response?.data?.message || 'Failed to load dashboard data');
+        if (!silent) setLoading(false);
         return;
       }
 
@@ -124,7 +146,7 @@ export default function Dashboard() {
       console.error('Dashboard data fetch error:', err);
       setError(err.message || 'Failed to load dashboard data');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
@@ -133,10 +155,20 @@ export default function Dashboard() {
   }, [fetchDashboardData]);
 
   const handleManualRefresh = async () => {
+    if (cooldown > 0) return; // already on cooldown
     setRefreshing(true);
     try {
-      await axios.post('/api/sync/refresh', {}, { withCredentials: true });
-      await fetchDashboardData();
+      const res = await axios.post('/api/sync/refresh', {}, { withCredentials: true });
+      const { freshness, remainingSeconds } = res.data;
+
+      if (freshness === 'fresh') {
+        // Data is still fresh — start cooldown timer
+        setCooldown(remainingSeconds);
+      } else {
+        // Stale — background update kicked off, refetch after delay to pick up new data
+        await fetchDashboardData(true);
+        setTimeout(() => fetchDashboardData(true), 6000);
+      }
     } catch (err) {
       console.error(err);
       alert(err.response?.data?.message || 'Failed to refresh data');
@@ -249,11 +281,21 @@ export default function Dashboard() {
         <div className="flex justify-end">
           <button
             onClick={handleManualRefresh}
-            disabled={refreshing}
-            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg text-white transition-colors duration-200 ${refreshing ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'}`}
+            disabled={refreshing || cooldown > 0}
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg text-white transition-colors duration-200 ${
+              cooldown > 0
+                ? 'bg-amber-500 cursor-not-allowed'
+                : refreshing
+                  ? 'bg-indigo-400 cursor-not-allowed'
+                  : 'bg-indigo-600 hover:bg-indigo-700'
+            }`}
           >
             <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
-            {refreshing ? 'Refreshing...' : 'Manual Refresh'}
+            {cooldown > 0
+              ? `Refresh in ${formatCooldown(cooldown)}`
+              : refreshing
+                ? 'Refreshing...'
+                : 'Manual Refresh'}
           </button>
         </div>
 

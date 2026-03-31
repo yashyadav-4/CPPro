@@ -13,7 +13,6 @@ const syncRoutes = require('./Routes/syncRoutes');
 const dashboardRoutes = require('./Routes/dashboardRoutes');
 const leaderboardRoutes= require('./Routes/leaderboardRoutes');
 const settingsRoutes=require('./Routes/settingsRoutes');
-const {startContinuousSync}= require('./Workers/autoSyncWorker');
 
 // connection to mongo
 connectToMongoDb(process.env.MongoUrl)
@@ -50,8 +49,6 @@ app.use('/api/dashboard' , dashboardRoutes);
 app.use('/api/leaderboard' , leaderboardRoutes);
 app.use('/api/settings' , settingsRoutes);
 
-//auto continous sync
-startContinuousSync();
 
 // test
 app.get('/api/test', (req, res)=>{
