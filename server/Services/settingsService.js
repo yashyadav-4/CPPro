@@ -51,7 +51,32 @@ const verifyAndLinkCodeforces = async(userId ,handle)=>{
         },
         {new:true}
     );
+
+    // Trigger immediate sync in background so dashboard has data right away
+    const syncService = require('./syncService');
+    syncService.syncCodeforcesProfile(userId, cleanHandle, 'high')
+        .then(() => console.log(`[VERIFY] initial sync complete for ${cleanHandle}`))
+        .catch(err => console.error(`[VERIFY] initial sync failed for ${cleanHandle}:`, err.message));
+
     return {message: `linking codeforces account successful: ${cleanHandle}`};
 };
+const unlinkCodeforces = async(userId)=>{
+    const user = await User.findById(userId);
+    if(!user?.linkedAccounts?.codeforces){
+        const err = new Error("No Codeforces account is linked");
+        err.status = 400;
+        throw err;
+    }
+    await User.findByIdAndUpdate(userId, {
+        $set:{"linkedAccounts.codeforces":""},
+        $unset:{verificationCode:""}
+    });
+    //remove all codeforces data: platform stats + submission history
+    const Platform = require('../Model/Platform');
+    const Submission = require('../Model/Submissions');
+    await Platform.deleteMany({userId, platform:'codeforces'});
+    await Submission.deleteMany({userId, platform:'codeforces'});
+    return {message:"Codeforces account unlinked successfully"};
+};
 
-module.exports={generateCode , verifyAndLinkCodeforces};
+module.exports={generateCode , verifyAndLinkCodeforces, unlinkCodeforces};

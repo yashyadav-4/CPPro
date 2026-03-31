@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, NavLink, useNavigate } from "react-router-dom"
-import { Sun, Moon, LogOut, Menu, X } from 'lucide-react'
+import { Sun, Moon, LogOut, Menu, X, Shield } from 'lucide-react'
 
 export default function Header() {
     const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -128,6 +128,13 @@ export default function Header() {
                                         </div>
                                         <button 
                                             className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                                            onMouseDown={(e) => { e.preventDefault(); navigate('/verify-codeforces'); setIsDropdownOpen(false); }}
+                                        >
+                                            <Shield size={16} />
+                                            Verify Codeforces
+                                        </button>
+                                        <button 
+                                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                                             onMouseDown={(e) => { e.preventDefault(); handleLogout(); }}
                                         >
                                             <LogOut size={16} />
@@ -192,6 +199,14 @@ export default function Header() {
                                     <p className="text-sm font-medium text-gray-900">{user.name}</p>
                                     <p className="text-xs text-gray-500 truncate">{user.email}</p>
                                 </div>
+                                <Link 
+                                    to="/verify-codeforces"
+                                    onClick={() => setIsMobileMenuOpen(false)}
+                                    className="w-full flex items-center gap-2 px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-50"
+                                >
+                                    <Shield size={20} />
+                                    Verify Codeforces
+                                </Link>
                                 <button 
                                     className="w-full text-left flex items-center gap-2 px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-50"
                                     onClick={(e) => { e.preventDefault(); handleLogout(); }}

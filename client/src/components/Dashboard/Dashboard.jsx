@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { AlertTriangle, RefreshCw, Shield, Link as LinkIcon } from 'lucide-react';
 
 import SkeletonLoader from './SkeletonLoader';
 import ProfileCard from './ProfileCard';
@@ -27,6 +28,7 @@ export default function Dashboard() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [notLinked, setNotLinked] = useState(false);
   const [data, setData] = useState({
     profile: null,
     heatmap: [],
@@ -35,6 +37,7 @@ export default function Dashboard() {
     difficulty: [],
   });
   const [refreshing, setRefreshing] = useState(false);
+  const navigate = useNavigate();
 
   const fetchDashboardData = useCallback(async () => {
     setLoading(true);
@@ -49,6 +52,14 @@ export default function Dashboard() {
         throw new Error('User not authenticated');
       }
       const userId = user._id;
+
+      // Check if Codeforces account is linked
+      if (!user.linkedAccounts?.codeforces) {
+        setNotLinked(true);
+        setLoading(false);
+        return;
+      }
+      setNotLinked(false);
 
       const results = await Promise.allSettled([
         axios.get(`/api/dashboard/profile/${userId}`, config),
@@ -111,25 +122,7 @@ export default function Dashboard() {
       });
     } catch (err) {
       console.error('Dashboard data fetch error:', err);
-      // Fallback local mock data for CPTracker design testing when not authenticated
-      setData({
-        profile: {
-          user: { name: 'Yash', profilePic: null },
-          upvotes: 42,
-          platforms: [{ totalSolved: 257, currentRating: 1287, maxRating: 1290, currentRank: getRankFromRating(1287) }]
-        },
-        heatmap: Array.from({length: 365}).map((_, i) => {
-            const d = new Date();
-            d.setDate(d.getDate() - 365 + i);
-            return { date: d.toISOString().split('T')[0], count: Math.random() > 0.7 ? Math.floor(Math.random()*5) : 0 };
-        }),
-        rating: { 
-          history: [{date: '2025-09-01', rating: 300}, {date: '2025-10-01', rating: 800}, {date: '2026-03-01', rating: 1287}], 
-          prediction: [{date: '2026-09-01', predictedRating: 1500}] 
-        },
-        topics: [{tag: 'dp', count: 40}, {tag: 'graphs', count: 30}, {tag: 'math', count: 50}, {tag: 'strings', count: 20}, {tag: 'greedy', count: 45}],
-        difficulty: [{rating: 800, count: 90}, {rating: 900, count: 45}, {rating: 1000, count: 45}, {rating: 1100, count: 50}, {rating: 1200, count: 27}],
-      });
+      setError(err.message || 'Failed to load dashboard data');
     } finally {
       setLoading(false);
     }
@@ -207,6 +200,26 @@ export default function Dashboard() {
     return (
       <div className="min-h-screen bg-gray-50 flex justify-center items-center">
         <SkeletonLoader />
+      </div>
+    );
+  }
+
+  if (notLinked) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col justify-center items-center p-6">
+        <div className="bg-white border text-center border-gray-200 rounded-xl p-8 max-w-md w-full shadow-sm">
+          <div className="w-16 h-16 rounded-full bg-indigo-50 flex items-center justify-center mx-auto mb-5">
+            <LinkIcon size={28} className="text-indigo-600" />
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Link Your Codeforces Account</h2>
+          <p className="text-gray-500 mb-6">To view your dashboard with stats, ratings, and progress tracking, you need to verify and link your Codeforces account first.</p>
+          <button
+            className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+            onClick={() => navigate('/verify-codeforces')}
+          >
+            <Shield size={16} /> Verify Codeforces Account
+          </button>
+        </div>
       </div>
     );
   }

@@ -8,6 +8,7 @@ import Dashboard from './components/Dashboard/Dashboard.jsx'
 import LeaderBoard from './components/Leaderboard/Leaderboard.jsx'
 import CodeTemplate from './components/CodeTemplate/CodeTemplate.jsx'
 import Community from './components/Community Page/Community.jsx'
+import VerifyCodeforces from './components/VerifyCodeforces/VerifyCodeforces.jsx'
 
 const router = createBrowserRouter([
     {
@@ -33,6 +34,10 @@ const router = createBrowserRouter([
             {
                 path: "community",
                 element: <Community />
+            },
+            {
+                path: "verify-codeforces",
+                element: <ProtectedRoute><VerifyCodeforces /></ProtectedRoute>
             }
         ]
     },
