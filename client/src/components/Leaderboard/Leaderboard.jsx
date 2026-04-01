@@ -47,7 +47,7 @@ export default function LeaderBoard() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 py-10 px-4 sm:px-6 lg:px-8 flex justify-center">
-        <div className="max-w-5xl w-full space-y-4">
+        <div className="max-w-6xl w-full space-y-4">
           <div className="h-10 bg-gray-200 animate-pulse rounded w-1/4 mb-8"></div>
           {Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="h-16 bg-white border border-gray-200 animate-pulse rounded-xl w-full"></div>
@@ -77,13 +77,13 @@ export default function LeaderBoard() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-6xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
             <Trophy className="text-indigo-600" size={32} />
             Global Leaderboard
           </h1>
-          <p className="text-gray-500 mt-2">Top performers ranked by CPPro Score (Codeforces Rating + Total Solved &times; 2)</p>
+          <p className="text-gray-500 mt-2">Top performers ranked by CPPro Score — combining Codeforces &amp; LeetCode stats</p>
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -91,21 +91,39 @@ export default function LeaderBoard() {
             <table className="w-full whitespace-nowrap">
               <thead className="bg-gray-50 border-b border-gray-200 text-gray-500 text-xs uppercase tracking-wider">
                 <tr>
-                  <th className="px-6 py-4 font-semibold text-center w-24">Rank</th>
-                  <th className="px-6 py-4 font-semibold text-left">User</th>
-                  <th className="px-6 py-4 font-semibold text-right">CP Score</th>
-                  <th className="px-6 py-4 font-semibold text-right">CF Rating</th>
-                  <th className="px-6 py-4 font-semibold text-right">Total Solved</th>
+                  <th className="px-5 py-4 font-semibold text-center w-20">Rank</th>
+                  <th className="px-5 py-4 font-semibold text-left">User</th>
+                  <th className="px-5 py-4 font-semibold text-right">CP Score</th>
+                  <th className="px-5 py-4 font-semibold text-right">
+                    <span className="inline-flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-blue-500 inline-block"></span>CF Rating
+                    </span>
+                  </th>
+                  <th className="px-5 py-4 font-semibold text-right">
+                    <span className="inline-flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-blue-500 inline-block"></span>CF Solved
+                    </span>
+                  </th>
+                  <th className="px-5 py-4 font-semibold text-right">
+                    <span className="inline-flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-amber-500 inline-block"></span>LC Rating
+                    </span>
+                  </th>
+                  <th className="px-5 py-4 font-semibold text-right">
+                    <span className="inline-flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-amber-500 inline-block"></span>LC Solved
+                    </span>
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {leaderboard.length > 0 ? (
                   leaderboard.map((user) => (
                     <tr key={user._id} className={`${getRankClass(user.rank)}`}>
-                      <td className="px-6 py-4 text-center">
+                      <td className="px-5 py-4 text-center">
                         {getRankBadge(user.rank)}
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-5 py-4">
                         <div className="flex items-center">
                           <div className="flex-shrink-0 h-10 w-10">
                             {user.profilePic ? (
@@ -118,26 +136,32 @@ export default function LeaderBoard() {
                           </div>
                           <div className="ml-4">
                             <div className="text-sm font-medium text-gray-900">{user.name || user.username}</div>
-                            <div className="text-sm text-gray-500">@{user.username}</div>
+                            <div className="text-sm text-gray-500">{user.username}</div>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-right">
+                      <td className="px-5 py-4 text-right">
                         <div className="text-lg font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50/50 dark:bg-indigo-900/20 inline-block px-3 py-1 rounded-lg">
                           {user.cpScore}
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="text-sm font-medium text-gray-900">{user.currentRating || 'Unrated'}</div>
+                      <td className="px-5 py-4 text-right">
+                        <div className="text-sm font-medium text-gray-900">{user.cfRating || '—'}</div>
                       </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="text-sm text-gray-600">{user.totalSolved}</div>
+                      <td className="px-5 py-4 text-right">
+                        <div className="text-sm text-gray-600">{user.cfSolved || 0}</div>
+                      </td>
+                      <td className="px-5 py-4 text-right">
+                        <div className="text-sm font-medium text-gray-900">{user.lcRating || '—'}</div>
+                      </td>
+                      <td className="px-5 py-4 text-right">
+                        <div className="text-sm text-gray-600">{user.lcSolved || 0}</div>
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="5" className="px-6 py-12 text-center text-gray-500">
+                    <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
                       No users found on the leaderboard yet.
                     </td>
                   </tr>
@@ -146,7 +170,14 @@ export default function LeaderBoard() {
             </table>
           </div>
         </div>
+
+        {/* Score formula explanation */}
+        <div className="mt-4 p-4 bg-gray-100 rounded-lg border border-gray-200">
+          <p className="text-xs text-gray-500 text-center">
+            <strong>Score Formula:</strong> CF Rating + (CF Solved × 2) + LC Contest Rating + (LC Solved × 2)
+          </p>
+        </div>
       </div>
     </div>
   );
-}
+}

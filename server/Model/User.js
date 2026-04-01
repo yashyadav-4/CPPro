@@ -84,6 +84,10 @@ const userSchema = new mongoose.Schema({
     lastCfUpdate:{
         type:Date,
         default:null
+    },
+    lastLcUpdate:{
+        type:Date,
+        default:null
     }
 }, {timestamps:true});
 

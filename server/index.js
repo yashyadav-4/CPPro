@@ -10,9 +10,10 @@ const codeTemplateRoutes= require('./Routes/CodeTemplate')
 const postRoutes = require('./Routes/Post');
 const commentRoutes= require('./Routes/Comment');
 const syncRoutes = require('./Routes/syncRoutes');
-const dashboardRoutes = require('./Routes/dashboardRoutes');
+const dashboardRoutes = require('./Routes/cfDashboardRoutes');
 const leaderboardRoutes= require('./Routes/leaderboardRoutes');
 const settingsRoutes=require('./Routes/settingsRoutes');
+const lcDashboardRoutes= require('./Routes/lcDashboardRoutes');
 
 // connection to mongo
 connectToMongoDb(process.env.MongoUrl)
@@ -48,6 +49,7 @@ app.use('/api/sync' , syncRoutes);
 app.use('/api/dashboard' , dashboardRoutes);
 app.use('/api/leaderboard' , leaderboardRoutes);
 app.use('/api/settings' , settingsRoutes);
+app.use('/api/lc-dashboard', lcDashboardRoutes);
 
 
 // test

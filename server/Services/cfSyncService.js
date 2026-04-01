@@ -1,6 +1,6 @@
-const { cfAxios } = require('../Utils/nexusProxy');
-const { bouncer } = require('../Utils/bouncer');
-const syncRepo = require('../Repositories/syncRepository');
+const {Yaxios}= require('../Utils/nexusProxy');
+const {bouncer} =require('../Utils/bouncer');
+const syncRepo = require('../Repositories/cfSyncRepository');
 const Platform = require('../Model/Platform');
 const Submission = require('../Model/Submissions');
 const User = require('../Model/User');
@@ -35,14 +35,14 @@ const syncCodeforcesProfile =async(userId, handle)=>{
 
         //1. fetch submissions via bouncer-scheduled proxy call
         const statusRes= await bouncer.schedule(()=>
-            cfAxios.get(`https://codeforces.com/api/user.status?handle=${handle}`)
+            Yaxios.get(`https://codeforces.com/api/user.status?handle=${handle}`)
         );
         const submissions =statusRes.data.result;
         await syncRepo.processAndSaveSubmissions(userId, submissions);
 
         //2. fetching rating history
         const ratingRes =await bouncer.schedule(()=>
-            cfAxios.get(`https://codeforces.com/api/user.rating?handle=${handle}`)
+            Yaxios.get(`https://codeforces.com/api/user.rating?handle=${handle}`)
         );
         const ratingHistory= ratingRes.data.result.map(r =>({
             rating: r.newRating,
@@ -52,7 +52,7 @@ const syncCodeforcesProfile =async(userId, handle)=>{
 
         //3. fetching user info
         const infoRes =await bouncer.schedule(() =>
-            cfAxios.get(`https://codeforces.com/api/user.info?handles=${handle}`)
+            Yaxios.get(`https://codeforces.com/api/user.info?handles=${handle}`)
         );
         const userInfo=infoRes.data.result[0];
 

@@ -1,5 +1,5 @@
 
-const dashboardRepo= require('../Repositories/dashboardRepository');
+const dashboardRepo= require('../Repositories/cfDashboardRepository');
 
 const generateLast365Days=()=>{
     const dates=[];

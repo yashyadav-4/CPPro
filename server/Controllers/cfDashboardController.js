@@ -1,4 +1,4 @@
-const dashboardService= require('../Services/dashboardService');
+const dashboardService= require('../Services/cfDashboardService');
 async function getProfileSummary(req , res){
     try{
         const  {userId}= req.params;

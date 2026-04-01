@@ -67,11 +67,11 @@ const getNextAgent = async () => {
     return agent;
 };
 
-//if proxy doesnt respond in 15 sec with data from codeforces than just dont freeze server and kill request
-const cfAxios = axios.create({ timeout: 15000 });
+//if proxy doesnt respond in 15 sec than just dont freeze server and kill request
+const Yaxios = axios.create({ timeout: 15000 });
 
 //intercept every request: round-robin proxy IP + random UA
-cfAxios.interceptors.request.use(async (config) => {
+Yaxios.interceptors.request.use(async (config) => {
     config.headers['User-Agent'] = getRandomUA();
     const agent = await getNextAgent();
     if (agent) {
@@ -81,4 +81,4 @@ cfAxios.interceptors.request.use(async (config) => {
     return config;
 });
 
-module.exports = { cfAxios, getRandomUA };
+module.exports= {Yaxios,cfAxios:Yaxios, getRandomUA};

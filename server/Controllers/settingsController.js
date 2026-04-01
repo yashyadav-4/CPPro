@@ -34,4 +34,35 @@ const unlinkCodeforcesAccount = async(req, res)=>{
     }
 }
 
-module.exports= {getVerificationCode , verifyCodeforcesAccount, unlinkCodeforcesAccount};
+// ── LeetCode handlers ──
+const verifyLeetcodeAccount = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { handle } = req.body;
+        if (!handle) {
+            return res.status(400).json({ success: false, message: "LeetCode handle required" });
+        }
+        const result = await settingsService.verifyAndLinkLeetcode(userId, handle);
+        return res.status(200).json({ success: true, message: result.message });
+    } catch (error) {
+        return res.status(error.status || 500).json({ success: false, message: error.message });
+    }
+};
+
+const unlinkLeetcodeAccount = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const result = await settingsService.unlinkLeetcode(userId);
+        return res.status(200).json({ success: true, message: result.message });
+    } catch (error) {
+        return res.status(error.status || 500).json({ success: false, message: error.message });
+    }
+};
+
+module.exports = {
+    getVerificationCode,
+    verifyCodeforcesAccount,
+    unlinkCodeforcesAccount,
+    verifyLeetcodeAccount,
+    unlinkLeetcodeAccount,
+};
