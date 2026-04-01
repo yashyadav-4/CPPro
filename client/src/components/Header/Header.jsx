@@ -131,7 +131,7 @@ export default function Header() {
                                             onMouseDown={(e) => { e.preventDefault(); navigate('/verify-codeforces'); setIsDropdownOpen(false); }}
                                         >
                                             <Shield size={16} />
-                                            Verify Codeforces
+                                            Verification
                                         </button>
                                         <button 
                                             className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
@@ -205,7 +205,7 @@ export default function Header() {
                                     className="w-full flex items-center gap-2 px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-50"
                                 >
                                     <Shield size={20} />
-                                    Verify Codeforces
+                                    Verification
                                 </Link>
                                 <button 
                                     className="w-full text-left flex items-center gap-2 px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-50"

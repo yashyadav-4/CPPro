@@ -115,6 +115,7 @@ const verifyAndLinkLeetcode = async (userId, handle) => {
     const realName = lcProfile.matchedUser?.profile?.realName
         || lcProfile.profile?.realName
         || lcProfile.realName
+        || lcProfile.name
         || '';
     const code = user.verificationCode;
 

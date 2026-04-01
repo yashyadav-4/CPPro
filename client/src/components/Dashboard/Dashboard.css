@@ -1,1 +1,82 @@
-/* Dashboard.css is deprecated in favor of Tailwind CSS in components */
+/* ===== Glow Card Effects ===== */
+.card-glow {
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+.card-glow:hover {
+  transform: translateY(-2px);
+}
+
+.dark .card-glow-indigo {
+  box-shadow: 0 0 25px rgba(99, 102, 241, 0.12), inset 0 1px 0 rgba(255,255,255,0.03);
+}
+.dark .card-glow-indigo:hover {
+  box-shadow: 0 0 40px rgba(99, 102, 241, 0.22), inset 0 1px 0 rgba(255,255,255,0.05);
+}
+.dark .card-glow-emerald {
+  box-shadow: 0 0 25px rgba(16,185,129,0.12), inset 0 1px 0 rgba(255,255,255,0.03);
+}
+.dark .card-glow-emerald:hover {
+  box-shadow: 0 0 40px rgba(16,185,129,0.22), inset 0 1px 0 rgba(255,255,255,0.05);
+}
+.dark .card-glow-amber {
+  box-shadow: 0 0 25px rgba(245,158,11,0.12), inset 0 1px 0 rgba(255,255,255,0.03);
+}
+.dark .card-glow-amber:hover {
+  box-shadow: 0 0 40px rgba(245,158,11,0.22), inset 0 1px 0 rgba(255,255,255,0.05);
+}
+.dark .card-glow-violet {
+  box-shadow: 0 0 25px rgba(139,92,246,0.12), inset 0 1px 0 rgba(255,255,255,0.03);
+}
+.dark .card-glow-violet:hover {
+  box-shadow: 0 0 40px rgba(139,92,246,0.22), inset 0 1px 0 rgba(255,255,255,0.05);
+}
+
+/* ===== Number Glow ===== */
+.dark .num-glow-indigo  { text-shadow: 0 0 24px rgba(99,102,241,0.45); }
+.dark .num-glow-emerald { text-shadow: 0 0 24px rgba(16,185,129,0.45); }
+.dark .num-glow-amber   { text-shadow: 0 0 24px rgba(245,158,11,0.45); }
+
+/* ===== Platform Pills ===== */
+.platform-pill {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ===== Heatmap Tooltip ===== */
+.heatmap-tip {
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+/* ===== Dark Recharts Overrides ===== */
+.dark .recharts-cartesian-grid line { stroke: #1e1e2e !important; }
+.dark .recharts-text { fill: #6b7280 !important; }
+
+/* ===== Donut Center Overlay ===== */
+.donut-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  text-align: center;
+}
+
+/* ===== Award Badge Shine ===== */
+@keyframes badge-shine {
+  0%   { background-position: -100% 0; }
+  100% { background-position: 200% 0; }
+}
+.award-badge-gold {
+  background: linear-gradient(110deg, #eab308 0%, #fde047 45%, #eab308 55%, #eab308 100%);
+  background-size: 200% 100%;
+}
+.award-badge-gold:hover { animation: badge-shine 1.5s ease-in-out; }
+
+/* ===== Scrollbar (dark) ===== */
+.dark .custom-scroll::-webkit-scrollbar-thumb { background: #2d2d3a; }
+.dark .custom-scroll::-webkit-scrollbar-track  { background: transparent; }
