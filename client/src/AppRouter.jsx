@@ -9,6 +9,8 @@ import LeaderBoard from './components/Leaderboard/Leaderboard.jsx'
 import CodeTemplate from './components/CodeTemplate/CodeTemplate.jsx'
 import Community from './components/Community Page/Community.jsx'
 import VerifyCodeforces from './components/VerifyCodeforces/VerifyCodeforces.jsx'
+import LearningPage from './components/Learning/LearningPage.jsx'
+import LevelUpPage from './components/LevelUp/LevelUpPage.jsx'
 
 const router = createBrowserRouter([
     {
@@ -26,6 +28,14 @@ const router = createBrowserRouter([
             {
                 path: "leaderboard",
                 element: <ProtectedRoute><LeaderBoard /></ProtectedRoute>
+            },
+            {
+                path: "learning",
+                element: <ProtectedRoute><LearningPage /></ProtectedRoute>
+            },
+            {
+                path: "level-up",
+                element: <ProtectedRoute><LevelUpPage /></ProtectedRoute>
             },
             {
                 path: "codesnippet",

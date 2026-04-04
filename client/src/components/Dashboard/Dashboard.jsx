@@ -1,122 +1,71 @@
-import { useState, useEffect, useCallback } from 'react';
-import { motion } from 'framer-motion';
+import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import {
-  LayoutDashboard, AlertTriangle, RefreshCw, Shield, Link as LinkIcon,
-} from 'lucide-react';
+import { RefreshCw, Link as LinkIcon, AlertTriangle, Shield } from 'lucide-react';
 
-import './Dashboard.css';
-import AggregateStatCard from './AggregateStatCard';
-import UnifiedHeatmap from './UnifiedHeatmap';
-import DifficultyDonut from './DifficultyDonut';
-import DualRatingChart from './DualRatingChart';
-import PlatformProfileCard from './PlatformProfileCard';
-import AwardsCard from './AwardsCard';
-import TopicAnalysisChart from './TopicAnalysisChart';
+import { useDashboardData } from '../../hooks/useDashboardData';
 
-/* ── Theme hook ── */
-function useIsDark() {
-  const [isDark, setIsDark] = useState(document.documentElement.classList.contains('dark'));
-  useEffect(() => {
-    const obs = new MutationObserver(() => setIsDark(document.documentElement.classList.contains('dark')));
-    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-    return () => obs.disconnect();
-  }, []);
-  return isDark;
-}
+import StatCards from './StatCards';
+import PlatformProfiles from './PlatformProfiles';
+import DifficultyBreakdown from './DifficultyBreakdown';
+import WeekStreak from './WeekStreak';
+import ActivityHeatmap from './ActivityHeatmap';
+import RatingProgression from './RatingProgression';
+import TopTopics from './TopTopics';
+import RecentContests from './RecentContests';
+import UpsolveQueue from './UpsolveQueue';
+import SkillGaps from './SkillGaps';
+import Achievements from './Achievements';
 
-/* ── Helpers ── */
-const safe = (result, extractor, fallback) => {
-  if (result.status === 'fulfilled') {
-    try { return extractor(result.value.data) ?? fallback; } catch { return fallback; }
+// ── Merge two day arrays into combined last-7-days ───────────────────────────
+function mergeLast7Days(cfDays, lcDays) {
+  const result = [];
+  const len = Math.max(cfDays?.length || 0, lcDays?.length || 0, 7);
+  for (let i = 0; i < len; i++) {
+    const cfDay = cfDays?.[i] || { date: '', solved: false };
+    const lcDay = lcDays?.[i] || { date: '', solved: false };
+    result.push({
+      date: cfDay.date || lcDay.date,
+      solved: cfDay.solved || lcDay.solved,
+    });
   }
-  return fallback;
-};
-
-const getRankFromRating = (r) => {
-  if (!r) return 'Unrated';
-  if (r < 1200) return 'Newbie'; if (r < 1400) return 'Pupil';
-  if (r < 1600) return 'Specialist'; if (r < 1900) return 'Expert';
-  if (r < 2100) return 'Candidate Master'; if (r < 2300) return 'Master';
-  if (r < 2400) return 'International Master'; if (r < 2600) return 'Grandmaster';
-  if (r < 3000) return 'International Grandmaster'; return 'Legendary Grandmaster';
-};
-
-const getLcRankName = (r) => {
-  if (!r) return 'Unrated';
-  if (r < 1500) return 'Beginner'; if (r < 1700) return 'Intermediate';
-  if (r < 1900) return 'Guardian'; if (r < 2100) return 'Knight';
-  if (r < 2400) return 'Guardian'; return 'Guardian';
-};
-
-/* ── Merge LC calendar (unix-timestamp JSON string) into date/count array ── */
-function parseLcCalendar(calendarData) {
-  if (!calendarData?.submissionCalendar) return [];
-  try {
-    const obj = JSON.parse(calendarData.submissionCalendar);
-    return Object.entries(obj).map(([ts, count]) => ({
-      date: new Date(Number(ts) * 1000).toISOString().split('T')[0],
-      count,
-    }));
-  } catch { return []; }
+  return result;
 }
 
-/* ── Merge CF + LC heatmaps ── */
-function mergeHeatmaps(cfHeatmap, lcEntries) {
+// ── Merge heatmap arrays (CF + LC calendar) ──────────────────────────────────
+function mergeHeatmaps(cfHeatmap, lcCalendar) {
   const map = {};
   (cfHeatmap || []).forEach(d => { map[d.date] = (map[d.date] || 0) + d.count; });
-  (lcEntries || []).forEach(d => { map[d.date] = (map[d.date] || 0) + d.count; });
-  return Object.entries(map)
-    .map(([date, count]) => ({ date, count }))
-    .sort((a, b) => a.date.localeCompare(b.date));
+  (lcCalendar || []).forEach(d => { map[d.date] = (map[d.date] || 0) + d.count; });
+  return Object.entries(map).map(([date, count]) => ({ date, count })).sort((a, b) => a.date.localeCompare(b.date));
 }
 
-/* ── Build topic list from LC skills ── */
-function buildTopicsFromLc(skillStats) {
-  if (!skillStats) return [];
-  const all = [
-    ...(skillStats.fundamental || []),
-    ...(skillStats.intermediate || []),
-    ...(skillStats.advanced || []),
-  ];
-  return all.map(s => ({ topic: s.tagName, count: s.problemsSolved }));
-}
-
-/* ── Merge CF topics + LC topics ── */
+// ── Merge topic arrays and take top 8 ────────────────────────────────────────
 function mergeTopics(cfTopics, lcTopics) {
   const map = {};
-  (cfTopics || []).forEach(t => {
-    const name = t.tag || t._id || t.topic || 'Other';
-    map[name] = (map[name] || 0) + (t.count || 0);
-  });
-  (lcTopics || []).forEach(t => {
-    const name = t.topic || t.tagName || 'Other';
-    map[name] = (map[name] || 0) + (t.count || 0);
-  });
+  (cfTopics || []).forEach(t => { map[t.name] = (map[t.name] || 0) + t.count; });
+  (lcTopics || []).forEach(t => { map[t.name] = (map[t.name] || 0) + t.count; });
   return Object.entries(map)
-    .map(([topic, count]) => ({ topic, count }))
-    .sort((a, b) => b.count - a.count);
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 8);
+}
+
+function mergeContests(cfContests, lcContests) {
+  return [...(cfContests || []), ...(lcContests || [])]
+    .filter(c => c.date)
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .slice(0, 15);
 }
 
 export default function Dashboard() {
-  const isDark = useIsDark();
   const navigate = useNavigate();
+  const { cfData, lcData, userId, linkedAccounts, loading, error, refetch } = useDashboardData();
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [notLinked, setNotLinked] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [cooldown, setCooldown] = useState(0);
 
-  // Which platforms are linked
-  const [hasCf, setHasCf] = useState(false);
-  const [hasLc, setHasLc] = useState(false);
-
-  // Assembled dashboard data
-  const [dash, setDash] = useState(null);
-
-  /* Cooldown timer */
+  // Cooldown timer
   useEffect(() => {
     if (cooldown <= 0) return;
     const t = setInterval(() => setCooldown(p => p <= 1 ? (clearInterval(t), 0) : p - 1), 1000);
@@ -125,245 +74,49 @@ export default function Dashboard() {
 
   const formatCooldown = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
-  /* ══════ Fetch all data ══════ */
-  const fetchData = useCallback(async (silent = false) => {
-    if (!silent) setLoading(true);
-    setError(null);
-
-    try {
-      const config = { withCredentials: true };
-      const authRes = await axios.get('/api/auth/verify', config);
-      const user = authRes.data?.user;
-      if (!user?._id) throw new Error('User not authenticated');
-      const uid = user._id;
-
-      const cfLinked = !!user.linkedAccounts?.codeforces;
-      const lcLinked = !!user.linkedAccounts?.leetcode;
-      setHasCf(cfLinked);
-      setHasLc(lcLinked);
-
-      if (!cfLinked && !lcLinked) {
-        setNotLinked(true);
-        if (!silent) setLoading(false);
-        return;
-      }
-      setNotLinked(false);
-
-      // Build API calls based on what's linked
-      const cfCalls = cfLinked ? [
-        axios.get(`/api/dashboard/profile/${uid}`, config),
-        axios.get(`/api/dashboard/heatmap/${uid}`, config),
-        axios.get(`/api/dashboard/rating/${uid}`, config),
-        axios.get(`/api/dashboard/topics/${uid}`, config),
-        axios.get(`/api/dashboard/difficulty/${uid}`, config),
-      ] : [null, null, null, null, null];
-
-      const lcCalls = lcLinked ? [
-        axios.get(`/api/lc-dashboard/profile/${uid}`, config),
-        axios.get(`/api/lc-dashboard/skills/${uid}`, config),
-        axios.get(`/api/lc-dashboard/calendar/${uid}`, config),
-        axios.get(`/api/lc-dashboard/contests/${uid}`, config),
-      ] : [null, null, null, null];
-
-      const allPromises = [...cfCalls, ...lcCalls].map(p => p ? p : Promise.resolve({ data: { success: true, data: null } }));
-      const results = await Promise.allSettled(allPromises);
-
-      // Extract CF data
-      const cfProfile    = safe(results[0], d => d.data, null);
-      const cfHeatmap    = safe(results[1], d => d.data, []);
-      const cfRating     = safe(results[2], d => d.data, null);
-      const cfTopics     = safe(results[3], d => d.data, []);
-      const cfDifficulty = safe(results[4], d => d.data, []);
-
-      // Extract LC data
-      const lcProfileRaw = safe(results[5], d => d.data, null);
-      const lcSkills     = safe(results[6], d => d.data, null);
-      const lcCalendar   = safe(results[7], d => d.data, null);
-      const lcContests   = safe(results[8], d => d.data, null);
-
-      const lcProfile = lcProfileRaw?.profile || null;
-
-      // ── Compute combined stats ──
-      const cfSolved = cfProfile?.totalQuestionsSolved || 0;
-      const lcSolved = lcProfile?.totalSolved || 0;
-      const totalSolved = cfSolved + lcSolved;
-
-      const lcHeatmapEntries = parseLcCalendar(lcCalendar);
-      const combinedHeatmap = mergeHeatmaps(cfHeatmap, lcHeatmapEntries);
-      const activeDays = combinedHeatmap.filter(d => d.count > 0).length;
-      const totalSubmissions = combinedHeatmap.reduce((s, d) => s + d.count, 0);
-
-      // Difficulty breakdown
-      const cfDiffMap = {};
-      (cfDifficulty || []).forEach(d => { cfDiffMap[d.rating || d._id] = d.count; });
-      const easyCount = (lcProfile?.easySolved || 0);
-      const mediumCount = (lcProfile?.mediumSolved || 0);
-      const hardCount = (lcProfile?.hardSolved || 0);
-      const cfTotalDiff = Object.values(cfDiffMap).reduce((s, v) => s + v, 0);
-      const diffBreakdown = {
-        total: easyCount + mediumCount + hardCount + cfTotalDiff,
-        easyCount,
-        mediumCount,
-        hardCount: hardCount + cfTotalDiff, // CF problems lumped into hard bucket
-      };
-      // If only CF is linked, set total to cfTotalDiff with no easy/med split
-      if (!lcLinked && cfLinked) {
-        // For CF-only, show the difficulty bar chart data directly
-        diffBreakdown.total = cfTotalDiff;
-        diffBreakdown.easyCount = 0;
-        diffBreakdown.mediumCount = 0;
-        diffBreakdown.hardCount = cfTotalDiff;
-        // We'll render the DifficultyChart differently for CF-only below
-      }
-
-      // Dual rating history
-      const cfRatingHistory = (cfRating?.history || []).map(h => ({
-        date: h.date || h.ratingUpdateTimeSeconds
-          ? new Date((h.ratingUpdateTimeSeconds || 0) * 1000).toISOString().split('T')[0]
-          : '',
-        cfRating: h.newRating || h.rating || 0,
-      }));
-
-      const lcRatingHistory = (lcContests?.contestHistory || [])
-        .filter(c => c.attended)
-        .map(c => ({
-          date: c.contestStartTime
-            ? new Date(c.contestStartTime * 1000).toISOString().split('T')[0]
-            : '',
-          lcRating: Math.round(c.rating || 0),
-          contestTitle: c.contestTitle,
-          rank: c.ranking,
-        }))
-        .sort((a, b) => a.date.localeCompare(b.date));
-
-      // Merge into unified timeline
-      const allDates = new Set();
-      cfRatingHistory.forEach(h => allDates.add(h.date));
-      lcRatingHistory.forEach(h => allDates.add(h.date));
-      const sortedDates = [...allDates].sort();
-
-      let lastCf = cfRatingHistory.length ? cfRatingHistory[0].cfRating : null;
-      let lastLc = lcRatingHistory.length ? lcRatingHistory[0].lcRating : null;
-      const cfLookup = {}; cfRatingHistory.forEach(h => { cfLookup[h.date] = h.cfRating; });
-      const lcLookup = {}; lcRatingHistory.forEach(h => { lcLookup[h.date] = h; });
-
-      const dualRating = {
-        dates: sortedDates,
-        codeforcesRatings: sortedDates.map(d => { if (cfLookup[d] !== undefined) lastCf = cfLookup[d]; return lastCf; }),
-        leetcodeRatings: sortedDates.map(d => { if (lcLookup[d] !== undefined) lastLc = lcLookup[d].lcRating; return lastLc; }),
-        contestNames: lcRatingHistory.filter(h => h.contestTitle).map(h => ({
-          date: h.date, name: h.contestTitle, rank: h.rank || 0,
-        })),
-      };
-
-      // Platform profiles
-      const platformProfiles = {};
-      if (cfLinked) {
-        const cfCur = cfRating?.currentRating || 0;
-        const cfMax = cfRating?.maxRating || 0;
-        platformProfiles.codeforces = {
-          currentRating: cfCur, maxRating: cfMax,
-          rankName: cfProfile?.platforms?.[0]?.currentRank || cfRating?.currentRank || getRankFromRating(cfCur),
-        };
-      }
-      if (lcLinked) {
-        const lastLcRating = lcRatingHistory.length ? lcRatingHistory[lcRatingHistory.length - 1].lcRating : 0;
-        const maxLcRating = lcRatingHistory.reduce((m, h) => Math.max(m, h.lcRating || 0), 0);
-        platformProfiles.leetcode = {
-          currentRating: lastLcRating, maxRating: maxLcRating,
-          rankName: getLcRankName(lastLcRating),
-        };
-      }
-
-      // Topics
-      const lcTopics = buildTopicsFromLc(lcSkills);
-      const combinedTopics = mergeTopics(cfTopics, lcTopics);
-
-      // Awards (derived from data)
-      const awards = [];
-      if (lcCalendar?.streak > 0) awards.push({ id: 'lc_streak', type: 'gold', platform: 'leetcode', title: `${lcCalendar.streak} Day Streak` });
-      if (lcCalendar?.totalActiveDays > 100) awards.push({ id: 'lc_100', type: 'silver', platform: 'leetcode', title: '100+ Active Days' });
-      if (lcSolved >= 50) awards.push({ id: 'lc_50', type: 'bronze', platform: 'leetcode', title: '50+ Problems' });
-      if (cfSolved >= 50) awards.push({ id: 'cf_50', type: 'bronze', platform: 'codeforces', title: '50+ Problems' });
-      if (cfSolved >= 200) awards.push({ id: 'cf_200', type: 'silver', platform: 'codeforces', title: '200+ Problems' });
-      if (cfSolved >= 500) awards.push({ id: 'cf_500', type: 'gold', platform: 'codeforces', title: '500+ Problems' });
-      if ((cfRating?.maxRating || 0) >= 1400) awards.push({ id: 'cf_pupil', type: 'gold', platform: 'codeforces', title: 'Pupil+' });
-
-      // CF-only difficulty data (for the bar view) — store raw
-      const cfDifficultyRaw = cfDifficulty;
-
-      setDash({
-        user,
-        hasCf: cfLinked,
-        hasLc: lcLinked,
-        aggregateTopStats: { totalCombinedSolved: totalSolved, totalCombinedActiveDays: activeDays, totalCombinedSubmissions: totalSubmissions },
-        platformsSolvedCounts: { codeforces: cfSolved, leetcode: lcSolved },
-        combinedHeatmap,
-        combinedProblemsBreakdown: diffBreakdown,
-        cfDifficultyRaw,
-        dualRatingHistory: dualRating,
-        platformProfiles,
-        combinedTopicAnalysis: combinedTopics,
-        combinedAwards: awards,
-      });
-    } catch (err) {
-      console.error('Dashboard fetch error:', err);
-      if (!silent) setError(err.message || 'Failed to load dashboard data');
-    } finally {
-      if (!silent) setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { fetchData(); }, [fetchData]);
-
-  const handleRefresh = async () => {
-    if (cooldown > 0) return;
+  const handleRefresh = useCallback(async () => {
+    if (cooldown > 0 || !userId) return;
     setRefreshing(true);
     try {
-      // Refresh both platforms
       const config = { withCredentials: true };
       const promises = [];
-      if (hasCf) promises.push(axios.post('/api/sync/refresh', {}, config));
-      if (hasLc) promises.push(axios.post('/api/sync/refresh-lc', {}, config));
+      if (linkedAccounts.codeforces) promises.push(axios.post('/api/sync/refresh', {}, config));
+      if (linkedAccounts.leetcode) promises.push(axios.post('/api/sync/refresh-lc', {}, config));
       const results = await Promise.allSettled(promises);
-
-      // Check for cooldown
-      const firstFresh = results.find(r => r.status === 'fulfilled' && r.value.data?.freshness === 'fresh');
-      if (firstFresh) {
-        setCooldown(firstFresh.value.data.remainingSeconds || 60);
+      const fresh = results.find(r => r.status === 'fulfilled' && r.value.data?.freshness === 'fresh');
+      
+      if (fresh) {
+        setCooldown(fresh.value.data.remainingSeconds || 600);
+        setRefreshing(false);
       } else {
-        await fetchData(true);
-        setTimeout(() => fetchData(true), 6000);
+        // Backend started a background sync. Fetch current, then wait 6s to fetch new.
+        await refetch(true);
+        setTimeout(async () => {
+          await refetch(true);
+          setRefreshing(false);
+          setCooldown(600);
+        }, 6000);
       }
     } catch (err) {
       console.error(err);
-    } finally { setRefreshing(false); }
-  };
+      setRefreshing(false);
+    }
+  }, [cooldown, userId, linkedAccounts, refetch]);
 
-  /* ── Loading ── */
-  if (loading) {
+  // ── Not linked ──────────────────────────────────────────────────────────────
+  if (!loading && !linkedAccounts.codeforces && !linkedAccounts.leetcode && !error) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-[#0a0a0f] flex justify-center items-center transition-colors">
-        <div className="flex flex-col items-center gap-3">
-          <RefreshCw size={28} className="animate-spin text-indigo-500" />
-          <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Loading dashboard...</p>
-        </div>
-      </div>
-    );
-  }
-
-  /* ── Not linked ── */
-  if (notLinked) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-[#0a0a0f] flex flex-col justify-center items-center p-6 transition-colors">
-        <div className="bg-white dark:bg-[#13131d] border border-gray-200 dark:border-[#1e1e2e] text-center rounded-xl p-8 max-w-md w-full shadow-sm">
+      <div className="min-h-screen bg-[#F5F5F3] dark:bg-[#1A1A1A] flex flex-col justify-center items-center p-6">
+        <div className="bg-white dark:bg-[#242424] border border-black/[0.07] dark:border-white/[0.08] text-center rounded-xl p-8 max-w-md w-full">
           <div className="w-16 h-16 rounded-full bg-indigo-50 dark:bg-indigo-500/15 flex items-center justify-center mx-auto mb-5">
             <LinkIcon size={28} className="text-indigo-600 dark:text-indigo-400" />
           </div>
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Link Your Account</h2>
-          <p className="text-gray-500 dark:text-gray-400 mb-6">Link at least one platform (Codeforces or LeetCode) to view your dashboard.</p>
-          <button className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
-            onClick={() => navigate('/verify-codeforces')}>
+          <h2 className="text-xl font-medium text-gray-900 dark:text-white mb-2">Link Your Account</h2>
+          <p className="text-gray-500 dark:text-gray-400 mb-6 font-normal">Link at least one platform to view your dashboard.</p>
+          <button
+            className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+            onClick={() => navigate('/verify-codeforces')}
+          >
             <Shield size={16} /> Go to Verification
           </button>
         </div>
@@ -371,16 +124,18 @@ export default function Dashboard() {
     );
   }
 
-  /* ── Error ── */
-  if (error && !dash) {
+  // ── Error ────────────────────────────────────────────────────────────────────
+  if (error && !cfData && !lcData) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-[#0a0a0f] flex flex-col justify-center items-center p-6 transition-colors">
-        <div className="bg-white dark:bg-[#13131d] border border-gray-200 dark:border-[#1e1e2e] text-center rounded-xl p-8 max-w-md w-full shadow-sm">
+      <div className="min-h-screen bg-[#F5F5F3] dark:bg-[#1A1A1A] flex flex-col justify-center items-center p-6">
+        <div className="bg-white dark:bg-[#242424] border border-black/[0.07] dark:border-white/[0.08] text-center rounded-xl p-8 max-w-md w-full">
           <AlertTriangle size={48} className="text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Something went wrong</h2>
-          <p className="text-gray-500 dark:text-gray-400 mb-6">{error}</p>
-          <button className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
-            onClick={() => fetchData()}>
+          <h2 className="text-xl font-medium text-gray-900 dark:text-white mb-2">Something went wrong</h2>
+          <p className="text-gray-500 dark:text-gray-400 mb-6 font-normal">{error}</p>
+          <button
+            className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+            onClick={() => refetch()}
+          >
             <RefreshCw size={16} /> Retry
           </button>
         </div>
@@ -388,67 +143,156 @@ export default function Dashboard() {
     );
   }
 
-  if (!dash) return null;
+  // ── Derive combined props ─────────────────────────────────────────────────
+  const cf = cfData || {};
+  const lc = lcData || {};
+
+  // StatCards
+  const totalSolved = (cf.cfSolved ?? 0) + (lc.lcSolved ?? 0);
+  const totalSubmissions = (cf.cfTotalSubmissions ?? 0);
+  const activeDays = (cf.cfActiveDays ?? 0) + (lc.lcActiveDays ?? 0);
+  const activeDaysThisMonth = (cf.cfActiveDaysThisMonth ?? 0);
+  const solvedThisMonth = (cf.cfSolvedThisMonth ?? 0) + (lc.lcSolvedThisMonth ?? 0);
+  const solvedLastMonth = (cf.cfSolvedLastMonth ?? 0) + (lc.lcSolvedLastMonth ?? 0);
+
+  // Unified streak (from LC endpoint which merged both)
+  const currentStreak = lc.currentStreak ?? cf.cfCurrentStreak ?? 0;
+  const bestStreak = lc.bestStreak ?? cf.cfBestStreak ?? 0;
+  const bestStreakPlatform = lc.bestStreakPlatform ?? 'codeforces';
+
+  // Acceptance rate
+  const cfAR = cf.cfAcceptanceRate ?? null;
+  const lcAR = lc.lcAcceptanceRate ?? null;
+  const acceptanceRate = (cfAR !== null && lcAR !== null)
+    ? Math.round((cfAR + lcAR) / 2)
+    : cfAR ?? lcAR ?? null;
+
+  // Platform profiles
+  const profileProps = {
+    cfHandle: cf.cfHandle || null,
+    cfRating: cf.cfRating || null,
+    cfMaxRating: cf.cfMaxRating || null,
+    cfRank: cf.cfRank || null,
+    lcHandle: lc.lcHandle || null,
+    lcRating: lc.lcRating || null,
+    lcMaxRating: lc.lcMaxRating || null,
+    lcRank: lc.lcRank || null,
+  };
+
+  // Difficulty breakdown
+  const cfBands = cf.cfDiffBands || [];
+  const lcBands = [
+    { label: 'Easy', count: lc.lcEasy ?? 0 },
+    { label: 'Medium', count: lc.lcMedium ?? 0 },
+    { label: 'Hard', count: lc.lcHard ?? 0 },
+  ];
+
+  // Last 7 days (merge CF + LC)
+  const last7Days = mergeLast7Days(cf.cfLast7Days, lc.lcLast7Days);
+
+  // Heatmap (merge)
+  const heatmapData = mergeHeatmaps(cf.cfHeatmap, lc.lcCalendarParsed);
+
+  // Rating histories
+  const cfRatingHistory = cf.cfRatingHistory || [];
+  const lcRatingHistory = lc.lcRatingHistory || [];
+
+  // Topics (merge, top 8)
+  const topics = mergeTopics(cf.cfTopics, lc.lcTopics);
+
+  // Contests (merge, sort by date, top 6)
+  const contests = mergeContests(cf.recentCfContests, lc.recentLcContests);
+
+  // Upsolve queue
+  const upsolveProblems = cf.upsolveQueue || [];
+
+  // Skill gaps
+  const skills = cf.skillGaps || [];
+
+  // Achievements (from LC endpoint which computed combined)
+  const achievements = lc.achievements || [];
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#0a0a0f] py-8 px-4 sm:px-6 lg:px-8 transition-colors duration-300">
-      <div className="max-w-7xl mx-auto space-y-6">
-
+    <div className="bg-[#F5F5F3] dark:bg-[#1A1A1A] px-6 py-6 min-h-screen">
+      <div className="max-w-[1400px] mx-auto space-y-3">
         {/* Header */}
-        <motion.div className="flex items-center justify-between"
-          initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5 }}>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-500/15 flex items-center justify-center">
-              <LayoutDashboard size={20} className="text-indigo-600 dark:text-indigo-400" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">Dashboard</h1>
-              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-                {dash.hasCf && dash.hasLc ? 'Codeforces + LeetCode' : dash.hasCf ? 'Codeforces' : 'LeetCode'}
-              </p>
-            </div>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-lg font-medium text-gray-900 dark:text-white">Dashboard</h1>
+            <p className="text-xs text-gray-400 dark:text-gray-500 font-normal">
+              {linkedAccounts.codeforces && linkedAccounts.leetcode
+                ? 'Codeforces + LeetCode'
+                : linkedAccounts.codeforces ? 'Codeforces' : 'LeetCode'}
+            </p>
           </div>
-
-          <button onClick={handleRefresh} disabled={refreshing || cooldown > 0}
-            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg text-white transition-colors ${
-              cooldown > 0 ? 'bg-amber-500 cursor-not-allowed'
-                : refreshing ? 'bg-indigo-400 cursor-not-allowed'
-                : 'bg-indigo-600 hover:bg-indigo-700'}`}>
-            <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
-            {cooldown > 0 ? `Refresh in ${formatCooldown(cooldown)}` : refreshing ? 'Refreshing...' : 'Refresh'}
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing || cooldown > 0}
+            className={`flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg text-white transition-colors ${
+              cooldown > 0
+                ? 'bg-amber-500 cursor-not-allowed'
+                : refreshing
+                  ? 'bg-indigo-400 cursor-not-allowed'
+                  : 'bg-indigo-600 hover:bg-indigo-700'
+            }`}
+          >
+            <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
+            {cooldown > 0 ? `${formatCooldown(cooldown)}` : refreshing ? 'Refreshing...' : 'Refresh'}
           </button>
-        </motion.div>
-
-        {/* Row 1: Stat Cards + Heatmap */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          <AggregateStatCard type="solved" stats={dash.aggregateTopStats}
-            platformCounts={dash.platformsSolvedCounts} />
-          <AggregateStatCard type="active" stats={dash.aggregateTopStats} />
-          <div className="lg:col-span-2">
-            <UnifiedHeatmap data={dash.combinedHeatmap} isDark={isDark} />
-          </div>
         </div>
 
-        {/* Row 2: Donut + Rating Chart */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-          <div className="lg:col-span-2">
-            <DifficultyDonut breakdown={dash.combinedProblemsBreakdown} isDark={isDark} />
-          </div>
-          <div className="lg:col-span-3">
-            <DualRatingChart ratingData={dash.dualRatingHistory} isDark={isDark}
-              hasCf={dash.hasCf} hasLc={dash.hasLc} />
-          </div>
+        {/* Row 1: Stat Cards */}
+        <StatCards
+          loading={loading}
+          totalSolved={totalSolved}
+          cfSolved={cf.cfSolved ?? 0}
+          lcSolved={lc.lcSolved ?? 0}
+          activeDays={activeDays}
+          totalSubmissions={totalSubmissions}
+          currentStreak={currentStreak}
+          bestStreak={bestStreak}
+          acceptanceRate={acceptanceRate}
+          cfAcceptanceRate={cfAR}
+          lcAcceptanceRate={lcAR}
+          solvedThisMonth={solvedThisMonth}
+          activeDaysThisMonth={activeDaysThisMonth}
+        />
+
+        {/* Row 2: Platform info trio */}
+        <div className="grid grid-cols-3 gap-3">
+          <PlatformProfiles loading={loading} {...profileProps} />
+          <DifficultyBreakdown loading={loading} cfBands={cfBands} lcBands={lcBands} />
+          <WeekStreak
+            loading={loading}
+            currentStreak={currentStreak}
+            bestStreak={bestStreak}
+            bestStreakPlatform={bestStreakPlatform}
+            last7Days={last7Days}
+            solvedThisMonth={solvedThisMonth}
+            solvedLastMonth={solvedLastMonth}
+          />
         </div>
 
-        {/* Row 3: Platform Profiles + Topic Analysis */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <PlatformProfileCard profiles={dash.platformProfiles} />
-          <TopicAnalysisChart topics={dash.combinedTopicAnalysis} isDark={isDark} />
+        {/* Row 3: Activity heatmap */}
+        <ActivityHeatmap loading={loading} heatmapData={heatmapData} />
+
+        {/* Row 4: Rating + Topics */}
+        <div className="grid grid-cols-2 gap-3">
+          <RatingProgression loading={loading} cfRatingHistory={cfRatingHistory} lcRatingHistory={lcRatingHistory} />
+          <TopTopics loading={loading} topics={topics} />
         </div>
 
-        {/* Row 4: Awards */}
-        <AwardsCard awards={dash.combinedAwards} />
+        {/* Row 5: Contests + Upsolve */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <RecentContests loading={loading} contests={contests} />
+          <UpsolveQueue loading={loading} problems={upsolveProblems} />
+        </div>
 
+        {/* Row 6: Skill Mastery (full width) */}
+        <SkillGaps loading={loading} skills={skills} />
+
+        {/* Row 7: Achievements */}
+        <Achievements loading={loading} achievements={achievements} />
       </div>
     </div>
   );

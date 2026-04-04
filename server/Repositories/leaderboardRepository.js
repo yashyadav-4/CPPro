@@ -70,17 +70,47 @@ const getGlobalLeaderboardData = async()=>{
         },
         {
          // CPPro Score formula:
-         //cfRating + (cfSolved × 2) + floor(lcRating) + (lcSolved × 2)
+         /*
+            (CF Rating × 1.5)
+          + (LC Rating × 1.2)
+          + (CF Hard × 15) + (CF Medium × 8) + (CF Easy × 2)
+          + (LC Hard × 20) + (LC Medium × 8) + (LC Easy × 2)
+          + (Total Contests × 10)
+          + Bonus for consistency: (CF Max - CF Current) * 0.5
+          + Streak Bonus: min(streak * 2, 200)
+         */
             $addFields:{
                 cfRating:{ $ifNull:["$codeforcesDoc.currentRating", 0] },
                 cfSolved:{ $ifNull:["$codeforcesDoc.totalSolved", 0] },
+                lcRating:{ $ifNull:["$lcLatestRating", 0] },
+                cfStreak:{ $ifNull:["$codeforcesDoc.currentStreak", 0] },
+                lcStreak:{ $ifNull:["$lcDoc.calendar.streak", 0] },
+                cfContests:{ $ifNull:["$codeforcesDoc.contestsParticipated", 0] },
+                lcContests:{ $ifNull:["$lcDoc.contestCount", 0] },
+                cfMaxRating:{ $ifNull:["$codeforcesDoc.maxRating", 0] }
+            }
+        },
+        {
+            $addFields:{
                 cpScore:{
-                    $add:[
-                        { $ifNull:["$codeforcesDoc.currentRating", 0] },
-                        { $multiply:[{ $ifNull:["$codeforcesDoc.totalSolved", 0]}, 2] },
-                        { $floor:{ $ifNull:["$lcLatestRating", 0] } },
-                        { $multiply:[{ $ifNull:["$lcTotalSolved", 0]}, 2] }
-                    ]
+                    $floor: {
+                        $add:[
+                            { $multiply:["$cfRating", 1.5] },
+                            { $multiply:["$lcRating", 1.2] },
+                            { $multiply:[{ $ifNull:["$codeforcesDoc.hardSolved", 0] }, 15] },
+                            { $multiply:[{ $ifNull:["$codeforcesDoc.mediumSolved", 0] }, 8] },
+                            { $multiply:[{ $ifNull:["$codeforcesDoc.easySolved", 0] }, 2] },
+                            { $multiply:[{ $ifNull:["$lcDoc.profile.hardSolved", 0] }, 20] },
+                            { $multiply:[{ $ifNull:["$lcDoc.profile.mediumSolved", 0] }, 8] },
+                            { $multiply:[{ $ifNull:["$lcDoc.profile.easySolved", 0] }, 2] },
+                            { $multiply:[{ $add:["$cfContests", "$lcContests"]}, 10] },
+                            { $max:[0, { $multiply:[{ $subtract:["$cfMaxRating", "$cfRating"]}, 0.5] }] },
+                            { $min:[
+                                { $multiply:[{ $max:["$cfStreak", "$lcStreak"]}, 2] },
+                                200
+                            ]}
+                        ]
+                    }
                 }
             }
         },

@@ -8,10 +8,12 @@ const{
     getLcCalendar,
     getLcContestHistory,
     getLcRecentSubmissions,
+    getLcAggregateDashboard,
 }= require('../Controllers/lcDashboardController');
 
 router.use(verifyToken);
 
+router.get('/aggregate/:userId', getLcAggregateDashboard);
 router.get('/profile/:userId',getLcProfile);
 router.get('/skills/:userId', getLcSkillStats);
 router.get('/calendar/:userId',getLcCalendar);

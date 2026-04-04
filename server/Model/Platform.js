@@ -41,6 +41,7 @@ const platformSchema= new mongoose.Schema({
         rating:{type:Number},
         date:{type:Date},
         contestName:{type:String},
+        rank:{type:Number},
     }],
     totalSolved:{
         type:Number,
@@ -59,7 +60,13 @@ const platformSchema= new mongoose.Schema({
     lastSyncedAt:{
         type:Date,
         default:null
-    }
+    },
+    //CPScore analytics summary fields
+    easySolved:{ type:Number, default:0 },
+    mediumSolved:{ type:Number, default:0 },
+    hardSolved:{ type:Number, default:0 },
+    currentStreak:{ type:Number, default:0 },
+    contestsParticipated:{ type:Number, default:0 }
 } , {timestamps:true});
 
 platformSchema.index({ userId:1 , platform:1 });

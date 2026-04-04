@@ -47,7 +47,8 @@ const syncCodeforcesProfile =async(userId, handle)=>{
         const ratingHistory= ratingRes.data.result.map(r =>({
             rating: r.newRating,
             date: new Date(r.ratingUpdateTimeSeconds * 1000),
-            contestName:r.contestName
+            contestName:r.contestName,
+            rank: r.rank
         }));
 
         //3. fetching user info
@@ -56,12 +57,49 @@ const syncCodeforcesProfile =async(userId, handle)=>{
         );
         const userInfo=infoRes.data.result[0];
 
-        // 4. Counting  unique solved
-        const uniqueSolvedCount = await Submission.distinct('problemId', {
+        // 4. Counting  unique solved and difficulty buckets
+        const acSubmissions = await Submission.find({
             userId: userId,
             verdict: 'AC',
             platform: 'codeforces'
+        }).lean();
+
+        const uniqueSolvedSet = new Set();
+        let easy=0, medium=0, hard=0;
+        const solveDates = new Set();
+
+        acSubmissions.forEach(s => {
+            if (!uniqueSolvedSet.has(s.problemId)) {
+                uniqueSolvedSet.add(s.problemId);
+                const diff = parseInt(s.difficulty) || 0;
+                if (diff > 0) {
+                    if (diff < 1200) easy++;
+                    else if (diff < 1600) medium++;
+                    else hard++;
+                }
+            }
+            solveDates.add(new Date(s.submittedAt).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }));
         });
+
+        // Current Streak calculation
+        const sortedDates = [...solveDates].sort();
+        let currentStreak = 0;
+        if (sortedDates.length > 0) {
+            const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+            const yesterday = new Date(Date.now() - 86400000).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+            const lastDay = sortedDates[sortedDates.length - 1];
+
+            if (lastDay === today || lastDay === yesterday) {
+                let count = 1;
+                for (let i = sortedDates.length - 1; i > 0; i--) {
+                    const d1 = new Date(sortedDates[i]);
+                    const d2 = new Date(sortedDates[i - 1]);
+                    if ((d1 - d2) / 86400000 === 1) count++;
+                    else break;
+                }
+                currentStreak = count;
+            }
+        }
 
         // 5. Update Platform doc
         await Platform.findOneAndUpdate(
@@ -75,7 +113,12 @@ const syncCodeforcesProfile =async(userId, handle)=>{
                     maxRank: userInfo.maxRank || 'unrated',
                     contribution: userInfo.contribution || 0,
                     ratedHistory: ratingHistory,
-                    totalSolved: uniqueSolvedCount.length,
+                    totalSolved: uniqueSolvedSet.size,
+                    easySolved: easy,
+                    mediumSolved: medium,
+                    hardSolved: hard,
+                    currentStreak: currentStreak,
+                    contestsParticipated: ratingHistory.length,
                     lastSyncedAt: new Date()
                 }
             },

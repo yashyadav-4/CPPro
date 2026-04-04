@@ -61,7 +61,7 @@ export default function Header() {
         }
     };
     
-    const navItems = ['Home', 'Dashboard', 'Leaderboard', 'Code Snippet', 'Community'];
+    const navItems = ['Home', 'Dashboard', 'Leaderboard', 'Learning', 'Level-up', 'Code Snippet', 'Community'];
 
     return (
         <header className="sticky top-0 z-50 w-full bg-white border-b border-gray-200 shadow-sm transition-colors duration-200">

@@ -174,7 +174,7 @@ export default function LeaderBoard() {
         {/* Score formula explanation */}
         <div className="mt-4 p-4 bg-gray-100 rounded-lg border border-gray-200">
           <p className="text-xs text-gray-500 text-center">
-            <strong>Score Formula:</strong> CF Rating + (CF Solved × 2) + LC Contest Rating + (LC Solved × 2)
+            <strong>Score Formula:</strong> (CF Rating × 1.5) + (LC Rating × 1.2) + Difficulty Weighting + Contest Bonus + Max Rating Bonus + Streak Bonus
           </p>
         </div>
       </div>
