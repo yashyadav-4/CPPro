@@ -12,7 +12,6 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "concurrently": "^9.2.1",
-    "lucide-react": "^0.563.0"
+    "concurrently": "^9.2.1"
   }
 }

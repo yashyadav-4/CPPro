@@ -29,10 +29,7 @@ const router = createBrowserRouter([
                 path: "leaderboard",
                 element: <ProtectedRoute><LeaderBoard /></ProtectedRoute>
             },
-            {
-                path: "learning",
-                element: <ProtectedRoute><LearningPage /></ProtectedRoute>
-            },
+
             {
                 path: "level-up",
                 element: <ProtectedRoute><LevelUpPage /></ProtectedRoute>
@@ -48,6 +45,10 @@ const router = createBrowserRouter([
             {
                 path: "verify-codeforces",
                 element: <ProtectedRoute><VerifyCodeforces /></ProtectedRoute>
+            },
+            {
+                path: "learning",
+                element: <ProtectedRoute><LearningPage /></ProtectedRoute>
             }
         ]
     },

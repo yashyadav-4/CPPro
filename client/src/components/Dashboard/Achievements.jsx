@@ -4,7 +4,6 @@ const Skeleton = ({ className = '' }) => (
 );
 
 const PLATFORM_CONFIG = {
-  codeforces: { label: 'CF', badge: 'bg-blue-50 dark:bg-blue-950/40 text-blue-500' },
   codeforces: { label: 'CF', badge: 'bg-blue-50 dark:bg-[#1e293b] text-blue-500' },
   leetcode: { label: 'LC', badge: 'bg-amber-50 dark:bg-[#2d2416] text-amber-500' },
   combined: { label: '⚡', badge: 'bg-indigo-50 dark:bg-[#1e1b4b] text-indigo-500' },
