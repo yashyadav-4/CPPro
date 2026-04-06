@@ -1,38 +1,52 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
+import axios from 'axios';
 import { TREE, getAllTrackableIds } from '../data/learningTreeData';
 
-const STORAGE_KEY = 'cppro_tree_v2';
-
-function loadState() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : {};
-  } catch {
-    return {};
-  }
-}
-
-function saveState(state) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch { /* silently fail */ }
-}
-
 export function useLearningTree() {
-  const [progress, setProgress] = useState(loadState);
+  const [progress, setProgress] = useState({});
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch from the new backend on mount
+  useEffect(() => {
+    const fetchProgress = async () => {
+      try {
+        const { data } = await axios.get('/api/learning/progress', { withCredentials: true });
+        if (data && data.progress) {
+          setProgress(data.progress);
+        }
+      } catch (err) {
+        console.error('Failed to fetch learning progress:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchProgress();
+  }, []);
 
   const getState = useCallback((id) => progress[id] || 0, [progress]);
 
-  const toggleState = useCallback((id, targetValue) => {
+  const toggleState = useCallback(async (id, targetValue) => {
+    // 1. Calculate the new state local update
+    const currentStatus = progress[id] || 0;
+    const nextStatus = currentStatus === targetValue ? Math.max(0, targetValue - 1) : targetValue;
+
+    // 2. Perform optimistic update locally
     setProgress(prev => {
-      const current = prev[id] || 0;
-      const next = current === targetValue ? Math.max(0, targetValue - 1) : targetValue;
-      const updated = { ...prev, [id]: next };
-      if (next === 0) delete updated[id];
-      saveState(updated);
+      const updated = { ...prev, [id]: nextStatus };
+      if (nextStatus === 0) delete updated[id];
       return updated;
     });
-  }, []);
+
+    // 3. Push to backend
+    try {
+      await axios.patch('/api/learning/progress', 
+        { topicId: id, status: nextStatus }, 
+        { withCredentials: true }
+      );
+    } catch (err) {
+      console.error('Failed to save learning progress:', err);
+    }
+  }, [progress]);
 
   // Compute stats
   const stats = useMemo(() => {
@@ -100,5 +114,5 @@ export function useLearningTree() {
     return { total, mastered, inProgress, touched, tierCompletion, nodeCompletion };
   }, [progress]);
 
-  return { progress, getState, toggleState, stats };
+  return { progress, getState, toggleState, stats, isLoading };
 }
