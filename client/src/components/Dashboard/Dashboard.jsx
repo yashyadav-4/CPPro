@@ -147,13 +147,25 @@ export default function Dashboard() {
   const cf = cfData || {};
   const lc = lcData || {};
 
-  // StatCards
+  // StatCards - computed early where possible
   const totalSolved = (cf.cfSolved ?? 0) + (lc.lcSolved ?? 0);
   const totalSubmissions = (cf.cfTotalSubmissions ?? 0);
-  const activeDays = (cf.cfActiveDays ?? 0) + (lc.lcActiveDays ?? 0);
-  const activeDaysThisMonth = (cf.cfActiveDaysThisMonth ?? 0);
   const solvedThisMonth = (cf.cfSolvedThisMonth ?? 0) + (lc.lcSolvedThisMonth ?? 0);
   const solvedLastMonth = (cf.cfSolvedLastMonth ?? 0) + (lc.lcSolvedLastMonth ?? 0);
+
+  // Heatmap (merge CF + LC)
+  const heatmapData = mergeHeatmaps(cf.cfHeatmap, lc.lcCalendarParsed);
+
+  // Active Days (deduplicated across platforms from heatmap)
+  const activeDays = heatmapData.length;
+  const now = new Date();
+  const monthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  
+  const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const lastMonthStr = `${lastMonthDate.getFullYear()}-${String(lastMonthDate.getMonth() + 1).padStart(2, '0')}`;
+
+  const activeDaysThisMonth = heatmapData.filter(d => d.date.startsWith(monthStr)).length;
+  const activeDaysLastMonth = heatmapData.filter(d => d.date.startsWith(lastMonthStr)).length;
 
   // Unified streak (from LC endpoint which merged both)
   const currentStreak = lc.currentStreak ?? cf.cfCurrentStreak ?? 0;
@@ -189,9 +201,6 @@ export default function Dashboard() {
 
   // Last 7 days (merge CF + LC)
   const last7Days = mergeLast7Days(cf.cfLast7Days, lc.lcLast7Days);
-
-  // Heatmap (merge)
-  const heatmapData = mergeHeatmaps(cf.cfHeatmap, lc.lcCalendarParsed);
 
   // Rating histories
   const cfRatingHistory = cf.cfRatingHistory || [];
@@ -268,8 +277,8 @@ export default function Dashboard() {
             bestStreak={bestStreak}
             bestStreakPlatform={bestStreakPlatform}
             last7Days={last7Days}
-            solvedThisMonth={solvedThisMonth}
-            solvedLastMonth={solvedLastMonth}
+            activeDaysThisMonth={activeDaysThisMonth}
+            activeDaysLastMonth={activeDaysLastMonth}
           />
         </div>
 

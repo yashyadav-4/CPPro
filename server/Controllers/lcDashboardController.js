@@ -3,14 +3,25 @@ const Platform = require('../Model/Platform');
 const Submission = require('../Model/Submissions');
 const mongoose = require('mongoose');
 
+// Helper to strictly format dates as YYYY-MM-DD in IST
+function getISTDate(dateInput) {
+    // Convert input date into a string formatted in IST using en-US to guarantee parsability
+    const istString = new Date(dateInput).toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
+    const d = new Date(istString);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 // ── Helper: parse LC submissionCalendar to {date, count}[] ──────────────────
 function parseLcCalendar(submissionCalendar) {
     try {
         const obj = JSON.parse(submissionCalendar || '{}');
-        return Object.entries(obj).map(([ts, count]) => ({
-            date: new Date(Number(ts) * 1000).toISOString().split('T')[0],
-            count: Number(count),
-        }));
+        return Object.entries(obj).map(([ts, count]) => {
+            const dateStr = getISTDate(Number(ts) * 1000);
+            return {
+                date: dateStr,
+                count: Number(count),
+            };
+        });
     } catch { return []; }
 }
 
@@ -20,14 +31,14 @@ function computeStreakFromSet(daySet) {
     if (sorted.length === 0) return { currentStreak: 0, bestStreak: 0 };
     let best = 1, cur = 1;
     for (let i = 1; i < sorted.length; i++) {
-        const diff = (new Date(sorted[i]) - new Date(sorted[i - 1])) / 86400000;
+        const diff = Math.round((new Date(sorted[i]) - new Date(sorted[i - 1])) / 86400000);
         if (diff === 1) { cur++; best = Math.max(best, cur); }
         else if (diff > 1) cur = 1;
     }
-    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+    const today = getISTDate(new Date());
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-    const yStr = yesterday.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+    const yStr = getISTDate(yesterday);
     const last = sorted[sorted.length - 1];
     return { currentStreak: (last === today || last === yStr) ? cur : 0, bestStreak: best };
 }
@@ -147,9 +158,13 @@ async function getLcAggregateDashboard(req, res) {
 
         let lcSolvedThisMonth = 0;
         let lcSolvedLastMonth = 0;
+        let lcActiveDaysThisMonth = 0;
         lcCalendarParsed.forEach(d => {
             const ym = d.date.slice(0, 7);
-            if (ym === monthStr) lcSolvedThisMonth += d.count;
+            if (ym === monthStr) {
+                lcSolvedThisMonth += d.count;
+                if (d.count > 0) lcActiveDaysThisMonth++;
+            }
             if (ym === lastMonthStr) lcSolvedLastMonth += d.count;
         });
 
@@ -205,6 +220,8 @@ async function getLcAggregateDashboard(req, res) {
                     rank: c.ranking || null,
                     ratingChange: Math.round((c.rating || 0) - (prevRating || 0)),
                     rating: Math.round(c.rating || 0),
+                    solved: c.problemsSolved,
+                    total: c.totalProblems,
                     date: c.contestStartTime ? new Date(c.contestStartTime * 1000).toISOString().split('T')[0] : '',
                     url: `https://leetcode.com/contest/${slug}`
                 };
@@ -223,7 +240,7 @@ async function getLcAggregateDashboard(req, res) {
         for (let i = 6; i >= 0; i--) {
             const d = new Date();
             d.setDate(d.getDate() - i);
-            const dateStr = d.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+            const dateStr = getISTDate(d);
             lcLast7Days.push({ date: dateStr, solved: lcDaySet.has(dateStr) });
         }
 
@@ -289,6 +306,7 @@ async function getLcAggregateDashboard(req, res) {
                 lcHard,
                 // Stats
                 lcActiveDays: calendar.totalActiveDays || 0,
+                lcActiveDaysThisMonth,
                 lcSolvedThisMonth,
                 lcSolvedLastMonth,
                 lcAcceptanceRate,

@@ -3,11 +3,10 @@ const Skeleton = ({ className = '' }) => (
   <div className={`animate-pulse bg-gray-100 dark:bg-white/5 rounded ${className}`} />
 );
 
-const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 export default function WeekStreak({
   loading, currentStreak, bestStreak, bestStreakPlatform,
-  last7Days, solvedThisMonth, solvedLastMonth,
+  last7Days, activeDaysThisMonth, activeDaysLastMonth,
 }) {
   if (loading) {
     return (
@@ -28,12 +27,17 @@ export default function WeekStreak({
 
   return (
     <div className="bg-white dark:bg-[#242424] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4">
-      <p className="text-[11px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4">This Week</p>
+      <p className="text-[11px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4">Last 7 Days</p>
 
       {/* 7-day dot row */}
       <div className="flex justify-between mb-4">
-        {DAY_LABELS.map((label, i) => {
+        {[...Array(7)].map((_, i) => {
           const day = days[i] || { solved: false };
+          // Calculate day label dynamically (where index 6 is today)
+          const d = new Date();
+          d.setDate(d.getDate() - (6 - i));
+          const dayName = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()];
+          
           return (
             <div key={i} className="flex flex-col items-center gap-1.5">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
@@ -45,7 +49,7 @@ export default function WeekStreak({
                   </svg>
                 )}
               </div>
-              <span className="text-[10px] text-gray-400 dark:text-gray-500 font-normal">{label[0]}</span>
+              <span className="text-[10px] text-gray-400 dark:text-gray-500 font-normal">{dayName[0]}</span>
             </div>
           );
         })}
@@ -68,12 +72,12 @@ export default function WeekStreak({
           </p>
         </div>
         <div>
-          <p className="text-[11px] text-gray-400 dark:text-gray-500 font-normal mb-0.5">This Month</p>
-          <p className="text-2xl font-medium text-gray-900 dark:text-[#F9FAFB] tabular-nums">{solvedThisMonth ?? 0}</p>
+          <p className="text-[11px] text-gray-400 dark:text-gray-500 font-normal mb-0.5">Active This Month</p>
+          <p className="text-2xl font-medium text-gray-900 dark:text-[#F9FAFB] tabular-nums">{activeDaysThisMonth ?? 0}</p>
         </div>
         <div>
-          <p className="text-[11px] text-gray-400 dark:text-gray-500 font-normal mb-0.5">Last Month</p>
-          <p className="text-2xl font-medium text-gray-900 dark:text-[#F9FAFB] tabular-nums">{solvedLastMonth ?? 0}</p>
+          <p className="text-[11px] text-gray-400 dark:text-gray-500 font-normal mb-0.5">Active Last Month</p>
+          <p className="text-2xl font-medium text-gray-900 dark:text-[#F9FAFB] tabular-nums">{activeDaysLastMonth ?? 0}</p>
         </div>
       </div>
     </div>

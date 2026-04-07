@@ -1,10 +1,17 @@
 const mongoose = require('mongoose');
 const Submission = require('../Model/Submissions');
 const Platform = require('../Model/Platform');
+const User = require('../Model/User');
 
-// ── Helper: today string in IST ──────────────────────────────────────────────
+function getISTDate(dateInput) {
+    if (!dateInput) return null;
+    const istString = new Date(dateInput).toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
+    const d = new Date(istString);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 function todayIST() {
-    return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+    return getISTDate(new Date());
 }
 
 // ── 1. CF stat fields from Submission collection ─────────────────────────────
@@ -48,14 +55,15 @@ const getCfStats = async (userId) => {
     const acThisMonth = new Set();
     const acLastMonth = new Set();
 
+    // We iterate the submissions and add to valid days, using exactly YYYY-MM-DD.
     all.forEach(s => {
-        const dateStr = new Date(s.submittedAt).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+        const dateStr = getISTDate(s.submittedAt);
         const ym = dateStr.slice(0, 7);
         if (ym === monthStr) {
             thisMonthDaySet.add(dateStr);
-            if (s.verdict === 'AC') acThisMonth.add(s.problemId);
+            if (s.verdict === 'OK') acThisMonth.add(s.problemId);
         }
-        if (ym === lastMonthStr && s.verdict === 'AC') acLastMonth.add(s.problemId);
+        if (ym === lastMonthStr && s.verdict === 'OK') acLastMonth.add(s.problemId);
     });
     cfSolvedThisMonth = acThisMonth.size;
     cfSolvedLastMonth = acLastMonth.size;
@@ -85,7 +93,7 @@ const computeCfStreak = (cfDaySet) => {
     for (let i = 1; i < sorted.length; i++) {
         const prev = new Date(sorted[i - 1]);
         const next = new Date(sorted[i]);
-        const diff = (next - prev) / 86400000;
+        const diff = Math.round((next - prev) / 86400000);
         if (diff === 1) { cur++; best = Math.max(best, cur); }
         else if (diff > 1) cur = 1;
     }
@@ -94,7 +102,7 @@ const computeCfStreak = (cfDaySet) => {
     const today = todayIST();
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+    const yesterdayStr = getISTDate(yesterday);
     const lastDay = sorted[sorted.length - 1];
     const activeCurrent = (lastDay === today || lastDay === yesterdayStr) ? cur : 0;
 
@@ -161,9 +169,9 @@ const getRecentCfContests = async (userId) => {
 
     const history = [...platform.ratedHistory].sort((a, b) => new Date(b.date) - new Date(a.date));
 
-    // Fetch submissions to map contestId by date proximity
+    // Fetch submissions to map contestId by date proximity and count solved problems
     const subs = await Submission.find({ userId: platform.userId, platform: 'codeforces' })
-        .select('contestId submittedAt').lean();
+        .select('contestId submittedAt verdict problemId').lean();
 
     return history.slice(0, 15).map((h, i) => {
         const prevRating = i < history.length - 1 ? history[i + 1].rating : h.rating;
@@ -181,12 +189,21 @@ const getRecentCfContests = async (userId) => {
             }
         });
 
+        let solved = 0;
+        if (cid) {
+            solved = new Set(
+                subs.filter(s => String(s.contestId) === String(cid) && s.verdict === 'AC')
+                    .map(s => s.problemId)
+            ).size;
+        }
+
         return {
             platform: 'codeforces',
             name: h.contestName || 'CF Contest',
             rank: h.rank || null,
             ratingChange: h.rating - prevRating,
             rating: h.rating,
+            solved,
             date: new Date(h.date).toISOString().split('T')[0],
             url: cid ? `https://codeforces.com/contest/${cid}` : `https://codeforces.com/contests`,
         };
@@ -270,9 +287,9 @@ const getUpsolveQueue = async (userId) => {
         lastContestProblems = []; // can be populated in future with CF API
     }
 
-    // Merge and deduplicate, cap at 10
+    // Merge and deduplicate, sort least rating to most rating, cap at 10
     const combined = [...notSolved, ...lastContestProblems]
-        .sort((a, b) => (b.rating || 0) - (a.rating || 0))
+        .sort((a, b) => (a.rating || 0) - (b.rating || 0))
         .slice(0, 10);
 
     return combined;
@@ -352,14 +369,14 @@ const getCfLast7Days = async (userId) => {
     }).select('submittedAt').lean();
 
     const daySet = new Set(
-        subs.map(s => new Date(s.submittedAt).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }))
+        subs.map(s => getISTDate(s.submittedAt))
     );
 
     const days = [];
     for (let i = 6; i >= 0; i--) {
         const d = new Date();
         d.setDate(d.getDate() - i);
-        const dateStr = d.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+        const dateStr = getISTDate(d);
         days.push({ date: dateStr, solved: daySet.has(dateStr) });
     }
     return days;

@@ -55,7 +55,14 @@ export default function RecentContests({ loading, contests }) {
               {/* Name */}
               <div className="min-w-0 flex-1 pl-1">
                 <p className="text-xs text-gray-700 dark:text-[#E5E7EB] font-normal truncate">{c.name}</p>
-                <p className="text-[10px] text-gray-500 dark:text-[#9CA3AF] font-normal mt-0.5">{c.date}</p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <p className="text-[10px] text-gray-500 dark:text-[#9CA3AF] font-normal">{c.date}</p>
+                  {c.solved !== undefined && (
+                    <span className="text-[10px] text-gray-400 dark:text-[#6B7280] bg-gray-50 dark:bg-white/5 px-1.5 rounded">
+                      {c.solved}{c.total ? `/${c.total}` : ''} solved
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="flex flex-col items-end shrink-0 pl-3">
                 <span className={`text-sm font-medium tabular-nums ${c.delta > 0 ? 'text-green-500' : c.delta < 0 ? 'text-red-500' : 'text-gray-400'}`}>
