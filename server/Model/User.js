@@ -58,6 +58,11 @@ const userSchema = new mongoose.Schema({
             default:'',
         }
     },
+    college:{
+        type:String,
+        default:'',
+        trim:true,
+    },
     linkedAccounts:{
         codeforces:{type:String , default:''},
         leetcode :{ type:String , default:''},
@@ -93,7 +98,8 @@ const userSchema = new mongoose.Schema({
 
 
 
-userSchema.index({"location.country":1 , "location.city":1} , {sparse:true}); // using sparse to make sure the document which contains the indexed field only are inlcuded in index
+userSchema.index({"location.country":1} , {partialFilterExpression: {"location.country": {$ne: ''}}});
+userSchema.index({college:1} , {partialFilterExpression: {college: {$ne: ''}}});
 
 const User= mongoose.model('User' , userSchema);
 

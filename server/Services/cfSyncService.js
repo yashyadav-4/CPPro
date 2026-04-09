@@ -1,145 +1,81 @@
-const {Yaxios}= require('../Utils/nexusProxy');
-const {bouncer} =require('../Utils/bouncer');
-const syncRepo = require('../Repositories/cfSyncRepository');
-const Platform = require('../Model/Platform');
-const Submission = require('../Model/Submissions');
+const axios = require('axios');
 const User = require('../Model/User');
 
-const TEN_MINUTES = 10 * 60 * 1000;
+const CF_SYNC_API = process.env.CF_SYNC_API || 'http://localhost:3001';
+const CF_SYNC_SECRET = process.env.CF_SYNC_SECRET || '';
 
-//first checks for 10 min timer
-const getCodeforcesData = async (userId, handle) => {
-    const user =await User.findById(userId).lean();
-    const timeSinceUpdate = user.lastCfUpdate? (Date.now() -new Date(user.lastCfUpdate).getTime()): Infinity;
+const FIFTEEN_MINUTES = 15 * 60 * 1000;
+const ADMIN_COOLDOWN = 10 * 1000; // 10 seconds for admins
 
-    if (timeSinceUpdate <TEN_MINUTES) {
-        const remainingMs =TEN_MINUTES -timeSinceUpdate;
-        const remainingSeconds= Math.ceil(remainingMs/ 1000);
+/**
+ * Returns the appropriate cooldown duration based on user role.
+ * Admins get a 10-second cooldown; everyone else gets 15 minutes.
+ */
+function getCooldown(role) {
+    return role === 'admin' ? ADMIN_COOLDOWN : FIFTEEN_MINUTES;
+}
+
+/**
+ * Freshness gate — checks lastCfUpdate against role-based cooldown.
+ * Stamps lastCfUpdate IMMEDIATELY on dispatch to prevent duplicate syncs.
+ * @param {string} userId
+ * @param {string} handle
+ * @param {string} role - user role ('user' | 'admin' | 'moderator')
+ */
+const getCodeforcesData = async (userId, handle, role = 'user') => {
+    const user = await User.findById(userId).lean();
+    const cooldown = getCooldown(role);
+    const timeSinceUpdate = user.lastCfUpdate ? (Date.now() - new Date(user.lastCfUpdate).getTime()) : Infinity;
+
+    if (timeSinceUpdate < cooldown) {
+        const remainingMs = cooldown - timeSinceUpdate;
+        const remainingSeconds = Math.ceil(remainingMs / 1000);
         console.log(`[LEAN-NEXUS] >> ${handle} | Fresh | Served | ${remainingSeconds}s remaining`);
-        return { freshness:'fresh',remainingSeconds};
+        return { freshness: 'fresh', remainingSeconds };
     }
-    //stale -> when scheduling background update
+
     console.log(`[LEAN-NEXUS] >> ${handle} | Stale | Updating`);
-    //background sync with bouncer  
+
+    // IMMEDIATELY stamp lastCfUpdate to prevent duplicate dispatches
+    // from concurrent requests hitting the stale window
+    await User.findByIdAndUpdate(userId, { $set: { lastCfUpdate: new Date() } });
+
+    // background sync — fire-and-forget to worker service
     syncCodeforcesProfile(userId, handle)
-        .then(()=> console.log(`[LEAN-NEXUS] >> ${handle} | Background update complete`))
-        .catch(err =>console.error(`[LEAN-NEXUS] >> ${handle} | Background update failed:`,err.message));
-
-    return {freshness:'updating'};
-};
-
-//all calls goes through global bouncer and proxies
-const syncCodeforcesProfile =async(userId, handle)=>{
-    try {
-        console.log(`[LEAN-NEXUS] syncing profile for: ${handle}`);
-
-        //1. fetch submissions via bouncer-scheduled proxy call
-        const statusRes= await bouncer.schedule(()=>
-            Yaxios.get(`https://codeforces.com/api/user.status?handle=${handle}`)
-        );
-        const submissions =statusRes.data.result;
-        await syncRepo.processAndSaveSubmissions(userId, submissions);
-
-        //2. fetching rating history
-        const ratingRes =await bouncer.schedule(()=>
-            Yaxios.get(`https://codeforces.com/api/user.rating?handle=${handle}`)
-        );
-        const ratingHistory= ratingRes.data.result.map(r =>({
-            rating: r.newRating,
-            date: new Date(r.ratingUpdateTimeSeconds * 1000),
-            contestName:r.contestName,
-            rank: r.rank
-        }));
-
-        //3. fetching user info
-        const infoRes =await bouncer.schedule(() =>
-            Yaxios.get(`https://codeforces.com/api/user.info?handles=${handle}`)
-        );
-        const userInfo=infoRes.data.result[0];
-
-        // 4. Counting  unique solved and difficulty buckets
-        const acSubmissions = await Submission.find({
-            userId: userId,
-            verdict: 'AC',
-            platform: 'codeforces'
-        }).lean();
-
-        const uniqueSolvedSet = new Set();
-        let easy=0, medium=0, hard=0;
-        const solveDates = new Set();
-
-        acSubmissions.forEach(s => {
-            if (!uniqueSolvedSet.has(s.problemId)) {
-                uniqueSolvedSet.add(s.problemId);
-                const diff = parseInt(s.difficulty) || 0;
-                if (diff > 0) {
-                    if (diff < 1200) easy++;
-                    else if (diff < 1600) medium++;
-                    else hard++;
-                }
-            }
-            solveDates.add(new Date(s.submittedAt).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }));
+        .then(() => console.log(`[LEAN-NEXUS] >> ${handle} | Background update dispatched`))
+        .catch(async (err) => {
+            console.error(`[LEAN-NEXUS] >> ${handle} | Background update failed:`, err.message);
+            // rollback the timestamp so the user can retry
+            await User.findByIdAndUpdate(userId, { $set: { lastCfUpdate: user.lastCfUpdate || null } });
         });
 
-        // Current Streak calculation
-        const sortedDates = [...solveDates].sort();
-        let currentStreak = 0;
-        if (sortedDates.length > 0) {
-            const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
-            const yesterday = new Date(Date.now() - 86400000).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
-            const lastDay = sortedDates[sortedDates.length - 1];
+    return { freshness: 'updating' };
+};
 
-            if (lastDay === today || lastDay === yesterday) {
-                let count = 1;
-                for (let i = sortedDates.length - 1; i > 0; i--) {
-                    const d1 = new Date(sortedDates[i]);
-                    const d2 = new Date(sortedDates[i - 1]);
-                    if ((d1 - d2) / 86400000 === 1) count++;
-                    else break;
-                }
-                currentStreak = count;
-            }
+//delegates sync to the Codeforces-Api Server worker via HTTP
+const syncCodeforcesProfile = async (userId, handle) => {
+    try {
+        console.log(`[LEAN-NEXUS] dispatching sync to worker for: ${handle}`);
+
+        const headers = { 'Content-Type': 'application/json' };
+        if (CF_SYNC_SECRET) {
+            headers['Authorization'] = `Bearer ${CF_SYNC_SECRET}`;
         }
 
-        // 5. Update Platform doc
-        await Platform.findOneAndUpdate(
-            { userId: userId, platform: 'codeforces' },
-            {
-                $set: {
-                    platformUsername: handle,
-                    currentRating: userInfo.rating || 0,
-                    maxRating: userInfo.maxRating || 0,
-                    currentRank: userInfo.rank || 'unrated',
-                    maxRank: userInfo.maxRank || 'unrated',
-                    contribution: userInfo.contribution || 0,
-                    ratedHistory: ratingHistory,
-                    totalSolved: uniqueSolvedSet.size,
-                    easySolved: easy,
-                    mediumSolved: medium,
-                    hardSolved: hard,
-                    currentStreak: currentStreak,
-                    contestsParticipated: ratingHistory.length,
-                    lastSyncedAt: new Date()
-                }
-            },
-            { upsert: true, new: true }
-        );
+        const { data } = await axios.post(`${CF_SYNC_API}/sync`, {
+            userId: userId.toString(),
+            cfHandle: handle,
+        }, { headers, timeout: 10000 });
 
-        //6.stamp lastCfUpdate on User 
-        await User.findByIdAndUpdate(userId,{$set:{lastCfUpdate:new Date()}});
-
-        console.log(`[LEAN-NEXUS] >> ${handle} | Sync complete`);
-        return {success: true, message:'sync done'};
+        console.log(`[LEAN-NEXUS] >> ${handle} | Worker accepted job: ${data.jobId || 'unknown'}`);
+        return { success: true, jobId: data.jobId };
     } catch (error) {
-        console.error(`[LEAN-NEXUS] >> ${handle} | Sync error:`, error.message);
-        if (error.response && error.response.status=== 400) {
-            throw new Error('invalid codeforces handle');
-        }
-        throw new Error('codeforces API is currently unavailable');
+        console.error(`[LEAN-NEXUS] >> ${handle} | Worker dispatch error:`, error.message);
+        throw new Error('Codeforces sync worker is currently unavailable');
     }
 };
 
-module.exports={
+module.exports = {
     syncCodeforcesProfile,
     getCodeforcesData,
 };

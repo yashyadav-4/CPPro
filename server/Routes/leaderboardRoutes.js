@@ -1,7 +1,9 @@
-const express= require('express');
-const router= express.Router();
+const express = require('express');
+const router = express.Router();
 
-const {getGlobalLeaderboard}= require('../Controllers/leaderboardController');
+const { optionalAuth } = require('../Middlewares/auth');
+const { getGlobalLeaderboard } = require('../Controllers/leaderboardController');
 
-router.get('/' , getGlobalLeaderboard);
-module.exports= router;
+router.get('/', optionalAuth, getGlobalLeaderboard);
+
+module.exports = router;

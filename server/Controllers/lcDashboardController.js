@@ -244,6 +244,49 @@ async function getLcAggregateDashboard(req, res) {
             lcLast7Days.push({ date: dateStr, solved: lcDaySet.has(dateStr) });
         }
 
+        // ── LC Upsolve Queue (from recentSubmissions) ───────────────────────
+        const recentSubmissions = lcData.recentSubmissions || [];
+        const lcProblemMap = {};
+        recentSubmissions.forEach(s => {
+            if (!lcProblemMap[s.titleSlug]) {
+                lcProblemMap[s.titleSlug] = {
+                    problemId: s.titleSlug,
+                    title: s.title,
+                    rating: 0,
+                    attempts: 0,
+                    hasAC: false,
+                    verdicts: []
+                };
+            }
+            lcProblemMap[s.titleSlug].attempts++;
+            
+            const statusMap = {
+                "Wrong Answer": "WA",
+                "Time Limit Exceeded": "TLE",
+                "Memory Limit Exceeded": "MLE",
+                "Runtime Error": "RE",
+                "Compile Error": "CE",
+                "Accepted": "AC"
+            };
+            const st = statusMap[s.statusDisplay] || 'OTHER';
+            lcProblemMap[s.titleSlug].verdicts.push(st);
+            if (st === 'AC' || s.statusDisplay === 'Accepted') {
+                lcProblemMap[s.titleSlug].hasAC = true;
+            }
+        });
+
+        const lcUpsolveQueue = Object.values(lcProblemMap)
+            .filter(p => !p.hasAC && p.attempts > 0)
+            .map(p => ({
+                platform: 'leetcode',
+                problemId: p.problemId,
+                title: p.title,
+                contestName: 'Practice',
+                rating: 0,
+                attempts: p.attempts,
+                failReason: p.verdicts[0] || 'WA',
+            }));
+
         // ── Achievements (combined CF + LC) ──────────────────────────────────
         const cfRating = cfPlatform?.currentRating || 0;
         const cfMaxRating = cfPlatform?.maxRating || 0;
@@ -322,6 +365,7 @@ async function getLcAggregateDashboard(req, res) {
                 recentLcContests,
                 lcTopics,
                 achievements,
+                upsolveQueue: lcUpsolveQueue,
                 // Raw CF data for combined stats in frontend
                 cfSolved,
             }

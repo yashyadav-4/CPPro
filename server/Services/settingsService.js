@@ -158,10 +158,57 @@ const unlinkLeetcode= async(userId) =>{
     return {message: "LeetCode account unlinked successfully"};
 };
 
+const getProfile = async(userId) => {
+    const user = await User.findById(userId).select(
+        'name username email profilePic gender age location college linkedAccounts preferences'
+    ).lean();
+    if(!user){
+        const err = new Error('User not found');
+        err.status = 404;
+        throw err;
+    }
+    return user;
+};
+
+const updateUserProfile = async(userId, fields) =>{
+    const updateSet = {};
+    // identity
+    if(fields.name !== undefined && fields.name.trim()) updateSet['name'] = fields.name.trim();
+    if(fields.gender !== undefined && ['Male','Female'].includes(fields.gender)) updateSet['gender'] = fields.gender;
+    if(fields.age !== undefined) {
+        const a = Number(fields.age);
+        if(a >= 1 && a <= 100) updateSet['age'] = a;
+    }
+    if(fields.profilePic !== undefined) updateSet['profilePic'] = fields.profilePic.trim();
+    // location
+    if(fields.country !== undefined) updateSet["location.country"] = fields.country.trim();
+    if(fields.state !== undefined) updateSet["location.state"] = fields.state.trim();
+    if(fields.city !== undefined) updateSet["location.city"] = fields.city.trim();
+    if(fields.college !== undefined) updateSet["college"] = fields.college.trim();
+    // preferences
+    if(fields.public !== undefined) updateSet["preferences.public"] = Boolean(fields.public);
+
+    if(Object.keys(updateSet).length === 0){
+        const err = new Error("No valid fields provided");
+        err.status = 400;
+        throw err;
+    }
+
+    const updated = await User.findByIdAndUpdate(
+        userId,
+        { $set: updateSet },
+        { new: true, runValidators: true }
+    ).select('-password');
+
+    return updated;
+};
+
 module.exports ={
     generateCode,
     verifyAndLinkCodeforces,
     unlinkCodeforces,
     verifyAndLinkLeetcode,
     unlinkLeetcode,
+    getProfile,
+    updateUserProfile,
 };

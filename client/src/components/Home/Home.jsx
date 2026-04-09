@@ -44,7 +44,7 @@ const SAMPLE_CODE = `void dijkstra(int start, vector<pair<int,int>> adj[]) {
 
 export default function Home() {
     return (
-        <div className="bg-gray-50 min-h-screen">
+        <div className="bg-gray-50 dark:bg-[#1A1A1A] min-h-screen">
             {/* HERO SECTION */}
             <section className="relative pt-24 pb-32 px-4 sm:px-6 lg:px-8 text-center overflow-hidden">
                 {/* Background decorative elements */}
@@ -56,12 +56,12 @@ export default function Home() {
                         ✦ Competitive Programming Toolkit
                     </div>
 
-                    <h1 className="text-5xl md:text-6xl font-extrabold text-gray-900 tracking-tight leading-tight mb-6">
+                    <h1 className="text-5xl md:text-6xl font-extrabold text-gray-900 dark:text-white tracking-tight leading-tight mb-6">
                         Master Your <br className="hidden sm:block" />
                         <span className="text-indigo-600">Competitive Coding</span> Journey
                     </h1>
 
-                    <p className="max-w-2xl mx-auto text-lg md:text-xl text-gray-600 mb-10 leading-relaxed">
+                    <p className="max-w-2xl mx-auto text-lg md:text-xl text-gray-600 dark:text-gray-400 mb-10 leading-relaxed">
                         Track your progress, manage code snippets, and climb the global leaderboards with the ultimate toolkit for competitive programmers.
                     </p>
 
@@ -69,27 +69,27 @@ export default function Home() {
                         <Link to="/dashboard" className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-all shadow-md hover:shadow-lg">
                             Start Coding Now <ArrowRight size={18} />
                         </Link>
-                        <Link to="/leaderboard" className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-white text-gray-700 border border-gray-300 rounded-lg font-semibold hover:bg-gray-50 hover:text-gray-900 transition-all shadow-sm">
+                        <Link to="/leaderboard" className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-white dark:bg-[#242424] text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-white/[0.12] rounded-lg font-semibold hover:bg-gray-50 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-white transition-all shadow-sm">
                             View Leaderboard
                         </Link>
                     </div>
 
                     {/* Browser Mockup Card */}
-                    <div className="relative mx-auto max-w-4xl bg-white rounded-xl border border-gray-200 shadow-2xl overflow-hidden">
-                        <div className="bg-gray-100 border-b border-gray-200 px-4 py-3 flex items-center gap-2">
+                    <div className="relative mx-auto max-w-4xl bg-white dark:bg-[#242424] rounded-xl border border-gray-200 dark:border-white/[0.08] shadow-2xl overflow-hidden">
+                        <div className="bg-gray-100 dark:bg-[#1A1A1A] border-b border-gray-200 dark:border-white/[0.08] px-4 py-3 flex items-center gap-2">
                             <div className="flex gap-1.5">
                                 <div className="w-3 h-3 rounded-full bg-red-400"></div>
                                 <div className="w-3 h-3 rounded-full bg-amber-400"></div>
                                 <div className="w-3 h-3 rounded-full bg-green-400"></div>
                             </div>
-                            <div className="mx-auto bg-white rounded-md border border-gray-200 px-32 py-1 flex items-center justify-center">
+                            <div className="mx-auto bg-white dark:bg-[#242424] rounded-md border border-gray-200 dark:border-white/[0.08] px-32 py-1 flex items-center justify-center">
                                 <span className="text-xs text-gray-400">cppro.app/dashboard</span>
                             </div>
                         </div>
-                        <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8 text-left bg-gray-50">
+                        <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8 text-left bg-gray-50 dark:bg-[#1A1A1A]">
                             {/* Left: Activity Graph */}
-                            <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
-                                <h3 className="text-sm font-semibold text-gray-700 mb-4">Activity Pulse</h3>
+                            <div className="bg-white dark:bg-[#242424] border border-gray-200 dark:border-white/[0.08] rounded-lg p-6 shadow-sm">
+                                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Activity Pulse</h3>
                                 <div className="flex items-end gap-2 h-32">
                                     {[30, 50, 20, 70, 40, 90, 60, 80, 45, 65, 85, 55].map((h, i) => (
                                         <div 
@@ -107,19 +107,19 @@ export default function Home() {
 
                             {/* Right: Recent Snippets */}
                             <div className="flex flex-col gap-3">
-                                <h3 className="text-sm font-semibold text-gray-700 mb-1">Recent Snippets</h3>
+                                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Recent Snippets</h3>
                                 {[
                                     { name: "Segment Tree", lang: "C++", color: "text-indigo-600", bg: "bg-indigo-50" },
                                     { name: "Graph BFS", lang: "Python", color: "text-green-600", bg: "bg-green-50" },
                                     { name: "DP Template", lang: "C++", color: "text-teal-600", bg: "bg-teal-50" },
                                 ].map((s, i) => (
-                                    <div key={i} className="flex items-center gap-4 bg-white border border-gray-200 rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow cursor-pointer">
+                                    <div key={i} className="flex items-center gap-4 bg-white dark:bg-[#242424] border border-gray-200 dark:border-white/[0.08] rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow cursor-pointer">
                                         <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${s.bg} ${s.color}`}>
                                             <Code2 size={20} />
                                         </div>
                                         <div>
-                                            <div className="text-sm font-semibold text-gray-900">{s.name}</div>
-                                            <div className="text-xs text-gray-500">{s.lang} • Updated recently</div>
+                                            <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{s.name}</div>
+                                            <div className="text-xs text-gray-500 dark:text-gray-400">{s.lang} • Updated recently</div>
                                         </div>
                                     </div>
                                 ))}
@@ -130,15 +130,15 @@ export default function Home() {
             </section>
 
             {/* FEATURES SECTION */}
-            <section className="py-24 bg-white border-y border-gray-200 text-center px-4 sm:px-6 lg:px-8">
+            <section className="py-24 bg-white dark:bg-[#242424] border-y border-gray-200 dark:border-white/[0.08] text-center px-4 sm:px-6 lg:px-8">
                 <div className="max-w-7xl mx-auto">
-                    <span className="inline-block py-1 px-3 rounded-full bg-gray-100 text-gray-600 text-xs font-bold tracking-wider uppercase mb-4">
+                    <span className="inline-block py-1 px-3 rounded-full bg-gray-100 dark:bg-[#1A1A1A] text-gray-600 dark:text-gray-300 text-xs font-bold tracking-wider uppercase mb-4">
                         Features
                     </span>
-                    <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+                    <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
                         Everything you need to improve
                     </h2>
-                    <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-16">
+                    <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto mb-16">
                         Built by competitive programmers, for competitive programmers.
                     </p>
 
@@ -157,10 +157,10 @@ export default function Home() {
             </section>
 
             {/* ALGORITHM LIBRARY SECTION */}
-            <section className="py-24 bg-gray-50 px-4 sm:px-6 lg:px-8">
+            <section className="py-24 bg-gray-50 dark:bg-[#1A1A1A] px-4 sm:px-6 lg:px-8">
                 <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
                     <div>
-                        <h2 className="text-3xl md:text-4xl font-bold text-gray-900 leading-tight mb-6">
+                        <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white leading-tight mb-6">
                             Your personal algorithm library.<br/>
                             <span className="text-indigo-600">Organized &amp; Ready.</span>
                         </h2>
@@ -170,7 +170,7 @@ export default function Home() {
                                 "Fast search by title, language, or tag",
                                 "One-click copy to clipboard",
                             ].map((item, i) => (
-                                <li key={i} className="flex items-center gap-3 text-gray-700">
+                                <li key={i} className="flex items-center gap-3 text-gray-700 dark:text-gray-300">
                                     <div className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center flex-shrink-0">
                                         <Check size={14} strokeWidth={3} />
                                     </div>
@@ -178,7 +178,7 @@ export default function Home() {
                                 </li>
                             ))}
                         </ul>
-                        <Link to="/codesnippet" className="text-indigo-600 font-semibold inline-flex items-center gap-2 hover:gap-3 hover:text-indigo-700 transition-all">
+                        <Link to="/codesnippet" className="text-indigo-600 dark:text-indigo-400 font-semibold inline-flex items-center gap-2 hover:gap-3 hover:text-indigo-700 dark:hover:text-indigo-300 transition-all">
                             Explore Snippets <ArrowRight size={16} />
                         </Link>
                     </div>

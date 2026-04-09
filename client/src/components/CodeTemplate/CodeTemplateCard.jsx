@@ -66,21 +66,21 @@ export default function CodeTemplateCard({ snippet, onViewSnippet }) {
     const langIconColor = BG_COLOR[language?.toLowerCase()] || "bg-indigo-50 text-indigo-600"
 
     return (
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 flex flex-col h-full overflow-hidden group">
+        <div className="bg-white dark:bg-[#242424] border border-gray-200 dark:border-white/[0.08] rounded-xl shadow-sm hover:shadow-md transition-all duration-300 flex flex-col h-full overflow-hidden group">
             
             <div className="p-5 flex items-start gap-4 flex-grow">
                 <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${langIconColor}`}>
                     <Code2 size={20} />
                 </div>
                 <div className="flex-grow min-w-0">
-                    <h3 className="text-base font-bold text-gray-900 truncate pr-2" title={title}>{title}</h3>
-                    <div className="text-xs text-gray-500 mt-1">
+                    <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 truncate pr-2" title={title}>{title}</h3>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                         {LANG_LABEL[language?.toLowerCase()] || language} • Updated {timeAgo(updatedAt)}
                     </div>
                 </div>
                 <button 
                     onClick={handleCopy}
-                    className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors flex-shrink-0"
+                    className="p-1.5 text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-md transition-colors flex-shrink-0"
                     title="Copy code"
                 >
                     {copied ? <Check size={16} className="text-green-500" /> : <Copy size={16} />}
@@ -88,28 +88,28 @@ export default function CodeTemplateCard({ snippet, onViewSnippet }) {
             </div>
 
             {code && (
-                <div className="bg-gray-50 mx-4 rounded-lg overflow-hidden border border-gray-200 h-28 relative shadow-inner">
-                    <pre className="p-3 text-xs font-mono text-gray-700 h-full overflow-hidden">
+                <div className="bg-gray-50 dark:bg-[#1A1A1A] mx-4 rounded-lg overflow-hidden border border-gray-200 dark:border-white/[0.08] h-28 relative shadow-inner">
+                    <pre className="p-3 text-xs font-mono text-gray-700 dark:text-gray-300 h-full overflow-hidden">
                         <code>{code}</code>
                     </pre>
                     {/* Fading overlay at the bottom */}
-                    <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-gray-50 to-transparent pointer-events-none" />
+                    <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-gray-50 dark:from-[#1A1A1A] to-transparent pointer-events-none" />
                 </div>
             )}
 
             <div className="px-5 py-4 pb-2 flex-grow-0 flex flex-wrap gap-1.5">
                 {tags && tags.length > 0 && tags.map((tag, i) => (
-                    <span key={i} className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-gray-100 text-gray-600 border border-gray-200">
+                    <span key={i} className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-white/[0.08]">
                         #{tag}
                     </span>
                 ))}
             </div>
 
-            <div className="px-5 py-3 border-t border-gray-100 flex justify-between items-center mt-auto bg-gray-50/50">
-                <span className="text-xs text-gray-400 font-medium">Created {createdDate}</span>
+            <div className="px-5 py-3 border-t border-gray-100 dark:border-white/[0.08] flex justify-between items-center mt-auto bg-gray-50/50 dark:bg-[#1A1A1A]">
+                <span className="text-xs text-gray-400 dark:text-gray-500 font-medium">Created {createdDate}</span>
                 <button 
                     onClick={handleViewDetails}
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors"
                 >
                     View Details <ExternalLink size={12} />
                 </button>

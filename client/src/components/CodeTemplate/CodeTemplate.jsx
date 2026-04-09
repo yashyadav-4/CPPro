@@ -114,13 +114,13 @@ export default function CodeTemplate() {
     }, [searchQuery, activeFilter])
 
     return (
-        <div className="min-h-screen bg-gray-50 py-10 px-4 sm:px-6 lg:px-8">
+        <div className="min-h-screen bg-gray-50 dark:bg-[#1A1A1A] py-10 px-4 sm:px-6 lg:px-8">
             <div className="max-w-7xl mx-auto">
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-10">
                     <div>
-                        <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">My Code Snippets</h1>
-                        <p className="mt-2 text-gray-600">Save, organize, and quickly access your frequently used algorithms and templates.</p>
+                        <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">My Code Snippets</h1>
+                        <p className="mt-2 text-gray-600 dark:text-gray-400">Save, organize, and quickly access your frequently used algorithms and templates.</p>
                     </div>
                     <button 
                         onClick={() => setShowAddModal(true)}
@@ -142,7 +142,7 @@ export default function CodeTemplate() {
                             placeholder="Search by title, language, or tag..."
                             value={searchQuery}
                             onChange={e => setSearchQuery(e.target.value)}
-                            className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm shadow-sm transition-colors"
+                            className="block w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-white/[0.12] rounded-lg leading-5 bg-white dark:bg-[#242424] text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm shadow-sm transition-colors"
                         />
                     </div>
 
@@ -154,7 +154,7 @@ export default function CodeTemplate() {
                                 className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors border ${
                                     activeFilter === f.value 
                                     ? "bg-indigo-600 text-white border-indigo-600" 
-                                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                                    : "bg-white dark:bg-[#242424] text-gray-700 dark:text-gray-200 border-gray-300 dark:border-white/[0.12] hover:bg-gray-50 dark:hover:bg-white/10"
                                 }`}
                             >
                                 {f.label}
@@ -167,7 +167,7 @@ export default function CodeTemplate() {
                                 className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors border ${
                                     activeFilter === tag 
                                     ? "bg-indigo-600 text-white border-indigo-600" 
-                                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                                    : "bg-white dark:bg-[#242424] text-gray-700 dark:text-gray-200 border-gray-300 dark:border-white/[0.12] hover:bg-gray-50 dark:hover:bg-white/10"
                                 }`}
                             >
                                 {tag.charAt(0).toUpperCase() + tag.slice(1)}

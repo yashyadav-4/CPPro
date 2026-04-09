@@ -1,77 +1,88 @@
 const { Yaxios } = require('../Utils/nexusProxy');
-const { bouncer } = require('../Utils/bouncer');
 const lcSyncRepo = require('../Repositories/lcSyncRepository');
 const User = require('../Model/User');
 
-const TEN_MINUTES = 10 * 60 * 1000;
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const FIFTEEN_MINUTES = 15 * 60 * 1000;
+const ADMIN_COOLDOWN = 10 * 1000; // 10 seconds for admins
 const LC_API = process.env.LEETCODE_API;
 
+/**
+ * Returns the appropriate cooldown duration based on user role.
+ */
+function getCooldown(role) {
+    return role === 'admin' ? ADMIN_COOLDOWN : FIFTEEN_MINUTES;
+}
+
 // ═══════════════════════════════════════════════════════════════════════
-// 10-minute freshness gate — mirrors getCodeforcesData() in cfSyncService
+// Role-based freshness gate — 15 min for users, 10s for admins
 // ═══════════════════════════════════════════════════════════════════════
-const getLeetcodeData = async (userId, handle) => {
+const getLeetcodeData = async (userId, handle, role = 'user') => {
     const user = await User.findById(userId).lean();
+    const cooldown = getCooldown(role);
     const timeSinceUpdate = user.lastLcUpdate
         ? (Date.now() - new Date(user.lastLcUpdate).getTime())
         : Infinity;
 
-    if (timeSinceUpdate < TEN_MINUTES) {
-        const remainingMs = TEN_MINUTES - timeSinceUpdate;
+    if (timeSinceUpdate < cooldown) {
+        const remainingMs = cooldown - timeSinceUpdate;
         const remainingSeconds = Math.ceil(remainingMs / 1000);
         console.log(`[LEAN-NEXUS-LC] >> ${handle} | Fresh | Served | ${remainingSeconds}s remaining`);
         return { freshness: 'fresh', remainingSeconds };
     }
 
     console.log(`[LEAN-NEXUS-LC] >> ${handle} | Stale | Updating`);
+
+    // IMMEDIATELY stamp lastLcUpdate to prevent duplicate dispatches
+    await User.findByIdAndUpdate(userId, { $set: { lastLcUpdate: new Date() } });
+
     // fire-and-forget background sync through the bouncer
     syncLeetcodeProfile(userId, handle)
         .then(() => console.log(`[LEAN-NEXUS-LC] >> ${handle} | Background update complete`))
-        .catch(err => console.error(`[LEAN-NEXUS-LC] >> ${handle} | Background update failed:`, err.message));
+        .catch(async (err) => {
+            console.error(`[LEAN-NEXUS-LC] >> ${handle} | Background update failed:`, err.message);
+            // rollback the timestamp so the user can retry
+            await User.findByIdAndUpdate(userId, { $set: { lastLcUpdate: user.lastLcUpdate || null } });
+        });
 
     return { freshness: 'updating' };
 };
 
 // ═══════════════════════════════════════════════════════════════════════
-// Full sync — 6 bouncer-scheduled calls to Alfa API via Yaxios proxy
+// Full sync — 6 sequential calls to Alfa API 
 // ═══════════════════════════════════════════════════════════════════════
 const syncLeetcodeProfile = async (userId, handle) => {
     try {
         console.log(`[LEAN-NEXUS-LC] syncing profile for: ${handle}`);
 
         // 1. Profile stats
-        const profileRes = await bouncer.schedule(() =>
-            Yaxios.get(`${LC_API}/${handle}/profile`)
-        );
+        const profileRes = await Yaxios.get(`${LC_API}/${handle}/profile`, { timeout: 10000 });
         const profileData = profileRes.data;
+        await delay(500);
 
         // 2. Skill stats
-        const skillRes = await bouncer.schedule(() =>
-            Yaxios.get(`${LC_API}/${handle}/skill`)
-        );
+        const skillRes = await Yaxios.get(`${LC_API}/${handle}/skill`, { timeout: 10000 });
         const skillData = skillRes.data;
+        await delay(500);
 
         // 3. Solved breakdown
-        const solvedRes = await bouncer.schedule(() =>
-            Yaxios.get(`${LC_API}/${handle}/solved`)
-        );
+        const solvedRes = await Yaxios.get(`${LC_API}/${handle}/solved`, { timeout: 10000 });
         const solvedData = solvedRes.data;
+        await delay(500);
 
         // 4. Calendar / heatmap
-        const calendarRes = await bouncer.schedule(() =>
-            Yaxios.get(`${LC_API}/${handle}/calendar`)
-        );
+        const calendarRes = await Yaxios.get(`${LC_API}/${handle}/calendar`, { timeout: 10000 });
         const calendarData = calendarRes.data;
+        await delay(500);
 
         // 5. Contest history
-        const contestRes = await bouncer.schedule(() =>
-            Yaxios.get(`${LC_API}/${handle}/contest/history`)
-        );
+        const contestRes = await Yaxios.get(`${LC_API}/${handle}/contest/history`, { timeout: 10000 });
         const contestData = contestRes.data;
+        await delay(500);
 
         // 6. Recent submissions (limit=20)
-        const submissionRes = await bouncer.schedule(() =>
-            Yaxios.get(`${LC_API}/${handle}/submission?limit=20`)
-        );
+        const submissionRes = await Yaxios.get(`${LC_API}/${handle}/submission?limit=20`, { timeout: 10000 });
         const submissionData = submissionRes.data;
 
         // ── Transform & merge into our schema shape ──

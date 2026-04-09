@@ -17,6 +17,11 @@ import UpsolveQueue from './UpsolveQueue';
 import SkillGaps from './SkillGaps';
 import Achievements from './Achievements';
 
+const REFRESH_STATE_KEY_PREFIX = 'dashboard_refresh_state_';
+const ADMIN_COOLDOWN_SECONDS = 10;
+const USER_COOLDOWN_SECONDS = 15 * 60;
+const REFRESH_WINDOW_SECONDS = 7;
+
 // ── Merge two day arrays into combined last-7-days ───────────────────────────
 function mergeLast7Days(cfDays, lcDays) {
   const result = [];
@@ -60,23 +65,92 @@ function mergeContests(cfContests, lcContests) {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { cfData, lcData, userId, linkedAccounts, loading, error, refetch } = useDashboardData();
+  const { cfData, lcData, userId, userRole, linkedAccounts, loading, error, refetch } = useDashboardData();
 
   const [refreshing, setRefreshing] = useState(false);
   const [cooldown, setCooldown] = useState(0);
 
+  const defaultCooldownSeconds = userRole === 'admin' ? ADMIN_COOLDOWN_SECONDS : USER_COOLDOWN_SECONDS;
+  const refreshStateKey = userId ? `${REFRESH_STATE_KEY_PREFIX}${userId}` : null;
+
+  const persistRefreshState = useCallback((state) => {
+    if (!refreshStateKey) return;
+    localStorage.setItem(refreshStateKey, JSON.stringify(state));
+  }, [refreshStateKey]);
+
+  const clearRefreshState = useCallback(() => {
+    if (!refreshStateKey) return;
+    localStorage.removeItem(refreshStateKey);
+  }, [refreshStateKey]);
+
+  const applyCooldown = useCallback((seconds) => {
+    const safeSeconds = Math.max(0, Math.ceil(seconds || 0));
+    setCooldown(safeSeconds);
+    if (safeSeconds > 0) {
+      persistRefreshState({
+        cooldownUntil: Date.now() + (safeSeconds * 1000),
+        refreshingUntil: 0,
+      });
+    } else {
+      clearRefreshState();
+    }
+  }, [persistRefreshState, clearRefreshState]);
+
+  useEffect(() => {
+    if (!refreshStateKey) return;
+
+    let parsed;
+    try {
+      parsed = JSON.parse(localStorage.getItem(refreshStateKey) || '{}');
+    } catch {
+      parsed = {};
+    }
+
+    const nowTs = Date.now();
+    const cooldownLeft = parsed.cooldownUntil ? Math.max(0, Math.ceil((parsed.cooldownUntil - nowTs) / 1000)) : 0;
+
+    if (cooldownLeft > 0) {
+      setCooldown(cooldownLeft);
+    }
+
+    if (parsed.refreshingUntil && parsed.refreshingUntil > nowTs) {
+      setRefreshing(true);
+      const waitMs = parsed.refreshingUntil - nowTs;
+      const t = setTimeout(async () => {
+        await refetch(true);
+        setRefreshing(false);
+        applyCooldown(defaultCooldownSeconds);
+      }, waitMs);
+      return () => clearTimeout(t);
+    }
+  }, [refreshStateKey, refetch, defaultCooldownSeconds, applyCooldown]);
+
   // Cooldown timer
   useEffect(() => {
     if (cooldown <= 0) return;
-    const t = setInterval(() => setCooldown(p => p <= 1 ? (clearInterval(t), 0) : p - 1), 1000);
+    const t = setInterval(() => {
+      setCooldown(p => {
+        if (p <= 1) {
+          clearInterval(t);
+          clearRefreshState();
+          return 0;
+        }
+        return p - 1;
+      });
+    }, 1000);
     return () => clearInterval(t);
-  }, [cooldown]);
+  }, [cooldown, clearRefreshState]);
 
   const formatCooldown = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
   const handleRefresh = useCallback(async () => {
     if (cooldown > 0 || !userId) return;
     setRefreshing(true);
+    persistRefreshState({
+      cooldownUntil: 0,
+      refreshingUntil: Date.now() + (REFRESH_WINDOW_SECONDS * 1000),
+    });
+
     try {
       const config = { withCredentials: true };
       const promises = [];
@@ -86,7 +160,7 @@ export default function Dashboard() {
       const fresh = results.find(r => r.status === 'fulfilled' && r.value.data?.freshness === 'fresh');
       
       if (fresh) {
-        setCooldown(fresh.value.data.remainingSeconds || 600);
+        applyCooldown(fresh.value.data.remainingSeconds || defaultCooldownSeconds);
         setRefreshing(false);
       } else {
         // Backend started a background sync. Fetch current, then wait 6s to fetch new.
@@ -94,14 +168,15 @@ export default function Dashboard() {
         setTimeout(async () => {
           await refetch(true);
           setRefreshing(false);
-          setCooldown(600);
+          applyCooldown(defaultCooldownSeconds);
         }, 6000);
       }
     } catch (err) {
       console.error(err);
       setRefreshing(false);
+      clearRefreshState();
     }
-  }, [cooldown, userId, linkedAccounts, refetch]);
+  }, [cooldown, userId, linkedAccounts, refetch, persistRefreshState, applyCooldown, defaultCooldownSeconds, clearRefreshState]);
 
   // ── Not linked ──────────────────────────────────────────────────────────────
   if (!loading && !linkedAccounts.codeforces && !linkedAccounts.leetcode && !error) {
@@ -213,7 +288,18 @@ export default function Dashboard() {
   const contests = mergeContests(cf.recentCfContests, lc.recentLcContests);
 
   // Upsolve queue
-  const upsolveProblems = cf.upsolveQueue || [];
+  // Upsolve queue: blend CF and LC
+  const cfUpsolve = (cf.upsolveQueue || []).sort((a, b) => (a.rating || 0) - (b.rating || 0));
+  const lcUpsolve = (lc.upsolveQueue || []).sort((a, b) => b.attempts - a.attempts);
+
+  const half = 5;
+  let cfTake = Math.min(cfUpsolve.length, half);
+  let lcTake = Math.min(lcUpsolve.length, half);
+  
+  if (cfTake < half) lcTake = Math.min(lcUpsolve.length, 10 - cfTake);
+  if (lcTake < half) cfTake = Math.min(cfUpsolve.length, 10 - lcTake);
+
+  const upsolveProblems = [...cfUpsolve.slice(0, cfTake), ...lcUpsolve.slice(0, lcTake)];
 
   // Skill gaps
   const skills = cf.skillGaps || [];
@@ -238,15 +324,15 @@ export default function Dashboard() {
             onClick={handleRefresh}
             disabled={refreshing || cooldown > 0}
             className={`flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg text-white transition-colors ${
-              cooldown > 0
-                ? 'bg-amber-500 cursor-not-allowed'
-                : refreshing
+              refreshing
                   ? 'bg-indigo-400 cursor-not-allowed'
+                : cooldown > 0
+                  ? 'bg-amber-500 cursor-not-allowed'
                   : 'bg-indigo-600 hover:bg-indigo-700'
             }`}
           >
             <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
-            {cooldown > 0 ? `${formatCooldown(cooldown)}` : refreshing ? 'Refreshing...' : 'Refresh'}
+            {refreshing ? 'Refreshing...' : cooldown > 0 ? `${formatCooldown(cooldown)}` : 'Refresh'}
           </button>
         </div>
 

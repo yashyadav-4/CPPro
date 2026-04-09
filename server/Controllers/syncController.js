@@ -13,8 +13,9 @@ async function handleManualRefresh(req, res) {
             return res.status(400).json({ success: false, message:'no codeforces account linked' });
         }
         const handle = user.linkedAccounts.codeforces;
+        const role = user.role || 'user';
 
-        const { freshness, remainingSeconds } = await syncService.getCodeforcesData(userId, handle);
+        const { freshness, remainingSeconds } = await syncService.getCodeforcesData(userId, handle, role);
         const profileData = await dashboardService.getProfileSummary(userId);
 
         return res.status(200).json({
@@ -22,7 +23,7 @@ async function handleManualRefresh(req, res) {
             freshness,
             remainingSeconds: remainingSeconds || 0,
             message: freshness === 'fresh'
-                ? 'Data is up to date (< 10 min old)'
+                ? `Data is up to date (cooldown: ${role === 'admin' ? '10s' : '15min'})`
                 : 'Returning current data — background update in progress',
             data: profileData
         });
@@ -41,8 +42,9 @@ async function handleLcManualRefresh(req, res) {
             return res.status(400).json({ success: false, message: 'no leetcode account linked' });
         }
         const handle = user.linkedAccounts.leetcode;
+        const role = user.role || 'user';
 
-        const { freshness, remainingSeconds } = await lcSyncService.getLeetcodeData(userId, handle);
+        const { freshness, remainingSeconds } = await lcSyncService.getLeetcodeData(userId, handle, role);
 
         //return whatever cached data we have right now
         const lcData = await LeetCodeData.findOne({ userId }).lean();
@@ -52,7 +54,7 @@ async function handleLcManualRefresh(req, res) {
             freshness,
             remainingSeconds: remainingSeconds || 0,
             message: freshness === 'fresh'
-                ? 'LeetCode data is up to date (< 10 min old)'
+                ? `LeetCode data is up to date (cooldown: ${role === 'admin' ? '10s' : '15min'})`
                 : 'Returning current data — background update in progress',
             data: lcData
         });

@@ -114,7 +114,7 @@ function LeetCodeSection() {
   const isLcLoading = lcState === LC_STATE.GENERATING_CODE || lcState === LC_STATE.VERIFYING;
 
   if (lcState === LC_STATE.LOADING) return (
-    <div className="bg-white dark:bg-[#13131d] border border-gray-200 dark:border-[#1e1e2e] rounded-xl p-6 shadow-sm flex justify-center">
+    <div className="bg-white dark:bg-[#242424] border border-gray-200 dark:border-white/[0.08] rounded-xl p-6 shadow-sm flex justify-center">
       <RefreshCw size={20} className="animate-spin text-amber-500" />
     </div>
   );
@@ -122,7 +122,7 @@ function LeetCodeSection() {
   /* LINKED STATE */
   if (lcState === LC_STATE.LINKED) return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-      className="bg-white dark:bg-[#13131d] border border-gray-200 dark:border-[#1e1e2e] rounded-xl shadow-sm overflow-hidden">
+      className="bg-white dark:bg-[#242424] border border-gray-200 dark:border-white/[0.08] rounded-xl shadow-sm overflow-hidden">
       <div className="p-6">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-full bg-green-50 dark:bg-green-500/15 border border-green-200 dark:border-green-500/30 flex items-center justify-center">
@@ -138,7 +138,7 @@ function LeetCodeSection() {
           </div>
         </div>
       </div>
-      <div className="px-6 py-4 bg-gray-50 dark:bg-[#0e0e18] border-t border-gray-200 dark:border-[#1e1e2e]">
+      <div className="px-6 py-4 bg-gray-50 dark:bg-[#1A1A1A] border-t border-gray-200 dark:border-white/[0.08]">
         {!showUnlinkConfirm ? (
           <button onClick={() => setShowUnlinkConfirm(true)}
             className="inline-flex items-center gap-2 text-sm font-medium text-red-600 hover:text-red-700 transition-colors">
@@ -148,7 +148,7 @@ function LeetCodeSection() {
           <div className="flex items-center gap-3 flex-wrap">
             <span className="text-sm text-red-600 flex items-center gap-2"><AlertTriangle size={14} /> Remove LeetCode link?</span>
             <button onClick={handleUnlink} className="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors">Yes, unlink</button>
-            <button onClick={() => setShowUnlinkConfirm(false)} className="px-4 py-1.5 border border-gray-200 dark:border-[#2a2a3a] text-gray-600 dark:text-gray-400 text-sm font-medium rounded-lg transition-colors">Cancel</button>
+            <button onClick={() => setShowUnlinkConfirm(false)} className="px-4 py-1.5 border border-gray-200 dark:border-white/[0.15] text-gray-600 dark:text-gray-300 text-sm font-medium rounded-lg transition-colors">Cancel</button>
           </div>
         )}
       </div>
@@ -161,12 +161,12 @@ function LeetCodeSection() {
       <div className="lg:col-span-3 space-y-6">
         {/* Handle Input */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.05 }}
-          className="bg-white dark:bg-[#13131d] border border-gray-200 dark:border-[#1e1e2e] rounded-xl p-6 shadow-sm">
+          className="bg-white dark:bg-[#242424] border border-gray-200 dark:border-white/[0.08] rounded-xl p-6 shadow-sm">
           <label htmlFor="lc-handle-input" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">LeetCode Username</label>
           <input id="lc-handle-input" type="text" value={handle} onChange={e => setHandle(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && lcState === LC_STATE.IDLE && handleGenerateCode()}
             placeholder="e.g. your_leetcode_id" disabled={lcState !== LC_STATE.IDLE}
-            className="w-full bg-gray-50 dark:bg-[#0e0e18] border border-gray-200 dark:border-[#1e1e2e] text-gray-900 dark:text-white text-sm rounded-lg py-3 px-4 outline-none placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed" />
+            className="w-full bg-gray-50 dark:bg-[#1A1A1A] border border-gray-200 dark:border-white/[0.08] text-gray-900 dark:text-white text-sm rounded-lg py-3 px-4 outline-none placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed" />
 
           <AnimatePresence>
             {error && <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} className="mt-3 flex items-center gap-2 text-red-600 text-sm"><XCircle size={14} /> <span>{error}</span></motion.div>}
@@ -198,7 +198,7 @@ function LeetCodeSection() {
             )}
             {lcState !== LC_STATE.IDLE && (
               <button onClick={handleReset}
-                className="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-200 dark:border-[#2a2a3a] text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-[#1a1a28] text-sm font-medium rounded-lg transition-colors">
+                className="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-200 dark:border-white/[0.15] text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/10 text-sm font-medium rounded-lg transition-colors">
                 Start Over
               </button>
             )}
@@ -209,16 +209,16 @@ function LeetCodeSection() {
         <AnimatePresence>
           {secretCode && (
             <motion.div initial={{ opacity: 0, y: 20, height: 0 }} animate={{ opacity: 1, y: 0, height: 'auto' }} exit={{ opacity: 0, y: -10, height: 0 }} transition={{ duration: 0.4 }}
-              className="bg-white dark:bg-[#13131d] border border-gray-200 dark:border-[#1e1e2e] rounded-xl shadow-sm overflow-hidden">
+              className="bg-white dark:bg-[#242424] border border-gray-200 dark:border-white/[0.08] rounded-xl shadow-sm overflow-hidden">
               <div className="p-6">
                 <div className="flex items-center gap-2 mb-4">
                   <Terminal size={16} className="text-amber-600 dark:text-amber-400" />
                   <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Your Verification Code</h3>
                 </div>
-                <div className="flex items-center justify-between gap-3 bg-gray-50 dark:bg-[#0e0e18] border border-gray-200 dark:border-[#1e1e2e] rounded-lg p-4 mb-5">
+                <div className="flex items-center justify-between gap-3 bg-gray-50 dark:bg-[#1A1A1A] border border-gray-200 dark:border-white/[0.08] rounded-lg p-4 mb-5">
                   <code className="font-mono text-xl sm:text-2xl font-bold text-amber-600 dark:text-amber-400 tracking-wider select-all">{secretCode}</code>
                   <button onClick={copyCode}
-                    className={`shrink-0 p-2 rounded-lg border transition-all duration-200 ${copied ? 'border-green-300 text-green-600 bg-green-50 dark:bg-green-500/15' : 'border-gray-200 dark:border-[#2a2a3a] text-gray-400 hover:text-amber-600 hover:border-amber-200'}`}>
+                    className={`shrink-0 p-2 rounded-lg border transition-all duration-200 ${copied ? 'border-green-300 text-green-600 bg-green-50 dark:bg-green-500/15' : 'border-gray-200 dark:border-white/[0.15] text-gray-400 hover:text-amber-600 hover:border-amber-200'}`}>
                     {copied ? <CheckCircle size={16} /> : <Copy size={16} />}
                   </button>
                 </div>
@@ -272,7 +272,7 @@ function LeetCodeSection() {
       {/* Steps Sidebar */}
       <div className="lg:col-span-2">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.15 }}
-          className="bg-white dark:bg-[#13131d] border border-gray-200 dark:border-[#1e1e2e] rounded-xl p-6 shadow-sm sticky top-24">
+          className="bg-white dark:bg-[#242424] border border-gray-200 dark:border-white/[0.08] rounded-xl p-6 shadow-sm sticky top-24">
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-5">How it works</h3>
           <div className="space-y-1">
             {LC_STEPS.map((s, i) => {
@@ -284,7 +284,7 @@ function LeetCodeSection() {
                   <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-all ${
                     status === 'done' ? 'bg-green-100 dark:bg-green-500/20 text-green-600 dark:text-green-400'
                     : status === 'active' ? 'bg-amber-500 text-white'
-                    : 'bg-gray-100 dark:bg-[#1a1a28] text-gray-400'
+                    : 'bg-gray-100 dark:bg-[#1A1A1A] text-gray-400'
                   }`}>
                     {status === 'done' ? '✓' : s.step}
                   </div>
@@ -297,7 +297,7 @@ function LeetCodeSection() {
               );
             })}
           </div>
-          <div className="mt-6 pt-4 border-t border-gray-100 dark:border-[#1e1e2e]">
+          <div className="mt-6 pt-4 border-t border-gray-100 dark:border-white/[0.08]">
             <div className="flex items-center gap-2">
               <div className={`w-2 h-2 rounded-full ${isVerified ? 'bg-green-500' : isLcLoading ? 'bg-yellow-400 animate-pulse' : 'bg-gray-300 dark:bg-gray-600'}`} />
               <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
@@ -402,14 +402,14 @@ export default function VerifyCodeforces() {
 
   if (state === STATE.LOADING) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-[#0a0a0f] flex justify-center items-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-[#1A1A1A] flex justify-center items-center">
         <RefreshCw size={24} className="animate-spin text-indigo-500" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#0a0a0f] py-8 px-4 sm:px-6 lg:px-8 transition-colors">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#1A1A1A] py-8 px-4 sm:px-6 lg:px-8 transition-colors">
       <div className="max-w-4xl mx-auto">
 
         {/* Page Header */}
@@ -444,7 +444,7 @@ export default function VerifyCodeforces() {
             {/* LINKED STATE */}
             {state === STATE.LINKED && (
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="space-y-4">
-                <div className="bg-white dark:bg-[#13131d] border border-gray-200 dark:border-[#1e1e2e] rounded-xl shadow-sm overflow-hidden">
+                <div className="bg-white dark:bg-[#242424] border border-gray-200 dark:border-white/[0.08] rounded-xl shadow-sm overflow-hidden">
                   <div className="p-6">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
@@ -462,7 +462,7 @@ export default function VerifyCodeforces() {
                       </div>
                     </div>
                   </div>
-                  <div className="px-6 py-4 bg-gray-50 dark:bg-[#0e0e18] border-t border-gray-200 dark:border-[#1e1e2e]">
+                  <div className="px-6 py-4 bg-gray-50 dark:bg-[#1A1A1A] border-t border-gray-200 dark:border-white/[0.08]">
                     {!showUnlinkConfirm ? (
                       <button onClick={() => setShowUnlinkConfirm(true)}
                         className="inline-flex items-center gap-2 text-sm font-medium text-red-600 hover:text-red-700 transition-colors">
@@ -472,7 +472,7 @@ export default function VerifyCodeforces() {
                       <div className="flex items-center gap-3 flex-wrap">
                         <span className="text-sm text-red-600 flex items-center gap-2"><AlertTriangle size={14} /> This will remove your linked Codeforces data. Continue?</span>
                         <button onClick={handleUnlink} className="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors">Yes, unlink</button>
-                        <button onClick={() => setShowUnlinkConfirm(false)} className="px-4 py-1.5 border border-gray-200 dark:border-[#2a2a3a] text-gray-600 dark:text-gray-400 text-sm font-medium rounded-lg transition-colors">Cancel</button>
+                        <button onClick={() => setShowUnlinkConfirm(false)} className="px-4 py-1.5 border border-gray-200 dark:border-white/[0.15] text-gray-600 dark:text-gray-300 text-sm font-medium rounded-lg transition-colors">Cancel</button>
                       </div>
                     )}
                   </div>
@@ -485,12 +485,12 @@ export default function VerifyCodeforces() {
               <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
                 <div className="lg:col-span-3 space-y-6">
                   <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.05 }}
-                    className="bg-white dark:bg-[#13131d] border border-gray-200 dark:border-[#1e1e2e] rounded-xl p-6 shadow-sm">
+                    className="bg-white dark:bg-[#242424] border border-gray-200 dark:border-white/[0.08] rounded-xl p-6 shadow-sm">
                     <label htmlFor="cf-handle-input" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Codeforces Handle</label>
                     <input id="cf-handle-input" type="text" value={handle} onChange={e => setHandle(e.target.value)}
                       onKeyDown={e => e.key === 'Enter' && state === STATE.IDLE && handleGenerateCode()}
                       placeholder="e.g. tourist" disabled={state !== STATE.IDLE}
-                      className="w-full bg-gray-50 dark:bg-[#0e0e18] border border-gray-200 dark:border-[#1e1e2e] text-gray-900 dark:text-white text-sm rounded-lg py-3 px-4 outline-none placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed" />
+                      className="w-full bg-gray-50 dark:bg-[#1A1A1A] border border-gray-200 dark:border-white/[0.08] text-gray-900 dark:text-white text-sm rounded-lg py-3 px-4 outline-none placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed" />
 
                     <AnimatePresence>
                       {error && (
@@ -530,7 +530,7 @@ export default function VerifyCodeforces() {
                       )}
                       {state !== STATE.IDLE && (
                         <button onClick={handleReset}
-                          className="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-200 dark:border-[#2a2a3a] text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-[#1a1a28] text-sm font-medium rounded-lg transition-colors">
+                          className="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-200 dark:border-white/[0.15] text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/10 text-sm font-medium rounded-lg transition-colors">
                           Start Over
                         </button>
                       )}
@@ -541,16 +541,16 @@ export default function VerifyCodeforces() {
                   <AnimatePresence>
                     {secretCode && (
                       <motion.div initial={{ opacity: 0, y: 20, height: 0 }} animate={{ opacity: 1, y: 0, height: 'auto' }} exit={{ opacity: 0, y: -10, height: 0 }} transition={{ duration: 0.4 }}
-                        className="bg-white dark:bg-[#13131d] border border-gray-200 dark:border-[#1e1e2e] rounded-xl shadow-sm overflow-hidden">
+                        className="bg-white dark:bg-[#242424] border border-gray-200 dark:border-white/[0.08] rounded-xl shadow-sm overflow-hidden">
                         <div className="p-6">
                           <div className="flex items-center gap-2 mb-4">
                             <Terminal size={16} className="text-indigo-600 dark:text-indigo-400" />
                             <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Your Verification Code</h3>
                           </div>
-                          <div className="flex items-center justify-between gap-3 bg-gray-50 dark:bg-[#0e0e18] border border-gray-200 dark:border-[#1e1e2e] rounded-lg p-4 mb-5">
+                          <div className="flex items-center justify-between gap-3 bg-gray-50 dark:bg-[#1A1A1A] border border-gray-200 dark:border-white/[0.08] rounded-lg p-4 mb-5">
                             <code className="font-mono text-xl sm:text-2xl font-bold text-indigo-600 dark:text-indigo-400 tracking-wider select-all">{secretCode}</code>
                             <button onClick={copyCode}
-                              className={`shrink-0 p-2 rounded-lg border transition-all duration-200 ${copied ? 'border-green-300 text-green-600 bg-green-50 dark:bg-green-500/15' : 'border-gray-200 dark:border-[#2a2a3a] text-gray-400 hover:text-indigo-600 hover:border-indigo-200'}`}>
+                              className={`shrink-0 p-2 rounded-lg border transition-all duration-200 ${copied ? 'border-green-300 text-green-600 bg-green-50 dark:bg-green-500/15' : 'border-gray-200 dark:border-white/[0.15] text-gray-400 hover:text-indigo-600 hover:border-indigo-200'}`}>
                               {copied ? <CheckCircle size={16} /> : <Copy size={16} />}
                             </button>
                           </div>
@@ -599,7 +599,7 @@ export default function VerifyCodeforces() {
                 {/* Steps Sidebar */}
                 <div className="lg:col-span-2">
                   <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.15 }}
-                    className="bg-white dark:bg-[#13131d] border border-gray-200 dark:border-[#1e1e2e] rounded-xl p-6 shadow-sm sticky top-24">
+                    className="bg-white dark:bg-[#242424] border border-gray-200 dark:border-white/[0.08] rounded-xl p-6 shadow-sm sticky top-24">
                     <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-5">How it works</h3>
                     <div className="space-y-1">
                       {CF_STEPS.map((s, i) => {
@@ -611,7 +611,7 @@ export default function VerifyCodeforces() {
                             <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-all ${
                               status === 'done' ? 'bg-green-100 dark:bg-green-500/20 text-green-600 dark:text-green-400'
                               : status === 'active' ? 'bg-indigo-600 text-white'
-                              : 'bg-gray-100 dark:bg-[#1a1a28] text-gray-400'
+                              : 'bg-gray-100 dark:bg-[#1A1A1A] text-gray-400'
                             }`}>
                               {status === 'done' ? '✓' : s.step}
                             </div>
@@ -624,7 +624,7 @@ export default function VerifyCodeforces() {
                         );
                       })}
                     </div>
-                    <div className="mt-6 pt-4 border-t border-gray-100 dark:border-[#1e1e2e]">
+                    <div className="mt-6 pt-4 border-t border-gray-100 dark:border-white/[0.08]">
                       <div className="flex items-center gap-2">
                         <div className={`w-2 h-2 rounded-full ${isVerified ? 'bg-green-500' : isLoading ? 'bg-yellow-400 animate-pulse' : 'bg-gray-300 dark:bg-gray-600'}`} />
                         <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
@@ -642,7 +642,7 @@ export default function VerifyCodeforces() {
           </div>
 
           {/* Divider */}
-          <div className="border-t border-gray-200 dark:border-[#1e1e2e]" />
+          <div className="border-t border-gray-200 dark:border-white/[0.08]" />
 
           {/* ═══════ LEETCODE SECTION ═══════ */}
           <div>

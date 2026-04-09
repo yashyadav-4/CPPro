@@ -1,16 +1,24 @@
-const leaderboardRepo= require('../Repositories/leaderboardRepository');
+const leaderboardRepo = require('../Repositories/leaderboardRepository');
 
-const getLeaderboard= async()=>{
-    const rawLeaderboard= await leaderboardRepo.getGlobalLeaderboardData();
+const getLeaderboard = async ({ scope, scopeValue, category, currentUserId }) => {
+    // Fetch top 100
+    const rawLeaderboard = await leaderboardRepo.getLeaderboardData(scope, scopeValue, category);
 
-    //giving ranks to users(top 100 only)
-    const rankedLeaderboard= rawLeaderboard.map((user , index)=>({
-        rank:index+1,
+    // Assign display ranks
+    const leaderboard = rawLeaderboard.map((user, index) => ({
+        rank: index + 1,
         ...user
     }));
-    return rankedLeaderboard;
+
+    // Fetch current user's rank if authenticated
+    let currentUser = null;
+    if (currentUserId) {
+        currentUser = await leaderboardRepo.getUserRank(currentUserId, scope, scopeValue, category);
+    }
+
+    return { leaderboard, currentUser };
 };
 
-module.exports={
+module.exports = {
     getLeaderboard,
 };

@@ -61,10 +61,14 @@ export default function UpsolveQueue({ loading, problems }) {
         {list.map((p, i) => {
           const dotColor = VERDICT_COLOR[p.failReason] || 'bg-gray-400';
           const verdictLabel = VERDICT_LABEL[p.failReason] || p.failReason;
+          const href = p.platform === 'leetcode'
+            ? `https://leetcode.com/problems/${p.problemId}/`
+            : p.problemId ? `https://codeforces.com/problemset/problem/${p.problemId.replace(/([A-Z].*)/, '/$1')}` : '#';
+            
           return (
             <a 
               key={i} 
-              href={p.problemId ? `https://codeforces.com/problemset/problem/${p.problemId.replace(/([A-Z].*)/, '/$1')}` : '#'}
+              href={href}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-start gap-2.5 py-2.5 first:pt-0 last:pb-0 hover:bg-black/[0.02] dark:hover:bg-white/[0.02] px-1 -mx-1 rounded transition-colors group cursor-pointer"

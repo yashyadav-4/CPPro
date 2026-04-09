@@ -11,6 +11,7 @@ import Community from './components/Community Page/Community.jsx'
 import VerifyCodeforces from './components/VerifyCodeforces/VerifyCodeforces.jsx'
 import LearningPage from './components/Learning/LearningPage.jsx'
 import LevelUpPage from './components/LevelUp/LevelUpPage.jsx'
+import Settings from './components/Settings/Settings.jsx'
 
 const router = createBrowserRouter([
     {
@@ -27,7 +28,7 @@ const router = createBrowserRouter([
             },
             {
                 path: "leaderboard",
-                element: <ProtectedRoute><LeaderBoard /></ProtectedRoute>
+                element: <LeaderBoard />
             },
 
             {
@@ -49,6 +50,10 @@ const router = createBrowserRouter([
             {
                 path: "learning",
                 element: <ProtectedRoute><LearningPage /></ProtectedRoute>
+            },
+            {
+                path: "settings",
+                element: <ProtectedRoute><Settings /></ProtectedRoute>
             }
         ]
     },

@@ -158,6 +158,44 @@ export default function RatingProgression({ loading, cfRatingHistory, lcRatingHi
     800
   );
 
+  let cfMaxIndex = -1;
+  let cfMax = -1;
+  let lcMaxIndex = -1;
+  let lcMax = -1;
+
+  for (let i = 0; i < data.length; i++) {
+    // If it's the last generated point for prediction, skip it for peak calculation
+    if ((cfPrediction || lcPrediction) && i === data.length - 1) continue;
+    
+    if (data[i].cf != null && data[i].cf > cfMax) {
+      cfMax = data[i].cf;
+      cfMaxIndex = i;
+    }
+    if (data[i].lc != null && data[i].lc > lcMax) {
+      lcMax = data[i].lc;
+      lcMaxIndex = i;
+    }
+  }
+
+  const renderPeakLabel = (props, maxIndex, bgColor) => {
+    const { x, y, index, value } = props;
+    if (index === maxIndex) {
+      return (
+        <g style={{ zIndex: 100 }}>
+          <rect x={x - 20} y={y - 30} width="40" height="20" fill={bgColor} rx="4" opacity={0.9} />
+          {/* Arrow pointing down to the dot */}
+          <polygon points={`${x-4},${y-10} ${x+4},${y-10} ${x},${y-4}`} fill={bgColor} opacity={0.9} />
+          <text x={x} y={y - 16} fill="#fff" fontSize={11} textAnchor="middle" fontWeight="bold">
+            {value}
+          </text>
+          {/* White dot with colored border to highlight the peak */}
+          <circle cx={x} cy={y} r={4} fill="#fff" stroke={bgColor} strokeWidth={2} />
+        </g>
+      );
+    }
+    return null;
+  };
+
   return (
     <div className="bg-white dark:bg-[#242424] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4">
       <div className="flex items-center justify-between mb-4">
@@ -176,7 +214,7 @@ export default function RatingProgression({ loading, cfRatingHistory, lcRatingHi
         </div>
       </div>
       <ResponsiveContainer width="100%" height={240}>
-        <LineChart data={data} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
+        <LineChart data={data} margin={{ top: 36, right: 16, bottom: 0, left: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="rgba(128,128,128,0.1)" />
           <XAxis
             dataKey="date"
@@ -200,13 +238,13 @@ export default function RatingProgression({ loading, cfRatingHistory, lcRatingHi
           />
           {hasCf && (
             <>
-              <Line type="monotone" dataKey="cf" name="Codeforces" stroke="#3b82f6" strokeWidth={2} dot={false} activeDot={{ r: 4 }} connectNulls />
+              <Line type="monotone" dataKey="cf" name="Codeforces" stroke="#3b82f6" strokeWidth={2} dot={false} activeDot={{ r: 4 }} connectNulls label={(p) => renderPeakLabel(p, cfMaxIndex, '#3b82f6')} />
               <Line type="monotone" dataKey="cfPred" name="Codeforces" legendType="none" stroke="#3b82f6" strokeWidth={2} strokeDasharray="4 4" dot={{ r: 2 }} activeDot={{ r: 4 }} connectNulls />
             </>
           )}
           {hasLc && (
             <>
-              <Line type="monotone" dataKey="lc" name="LeetCode" stroke="#f59e0b" strokeWidth={2} dot={false} activeDot={{ r: 4 }} connectNulls />
+              <Line type="monotone" dataKey="lc" name="LeetCode" stroke="#f59e0b" strokeWidth={2} dot={false} activeDot={{ r: 4 }} connectNulls label={(p) => renderPeakLabel(p, lcMaxIndex, '#f59e0b')} />
               <Line type="monotone" dataKey="lcPred" name="LeetCode" legendType="none" stroke="#f59e0b" strokeWidth={2} strokeDasharray="4 4" dot={{ r: 2 }} activeDot={{ r: 4 }} connectNulls />
             </>
           )}

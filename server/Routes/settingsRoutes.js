@@ -7,6 +7,8 @@ const {
     unlinkCodeforcesAccount,
     verifyLeetcodeAccount,
     unlinkLeetcodeAccount,
+    getProfile,
+    updateProfile,
 } = require('../Controllers/settingsController');
 
 router.use(verifyToken);
@@ -21,5 +23,9 @@ router.delete('/unlink-cf', unlinkCodeforcesAccount);
 //leetcode
 router.post('/verify-lc', verifyLeetcodeAccount);
 router.delete('/unlink-lc', unlinkLeetcodeAccount);
+
+//profile settings
+router.get('/profile', getProfile);
+router.patch('/profile', updateProfile);
 
 module.exports = router;

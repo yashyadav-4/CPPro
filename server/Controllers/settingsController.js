@@ -59,10 +59,35 @@ const unlinkLeetcodeAccount = async (req, res) => {
     }
 };
 
+const getProfile = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const profile = await settingsService.getProfile(userId);
+        return res.status(200).json({ success: true, data: profile });
+    } catch (error) {
+        return res.status(error.status || 500).json({ success: false, message: error.message });
+    }
+};
+
+const updateProfile = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { name, gender, age, profilePic, country, state, city, college, public: isPublic } = req.body;
+        const updatedUser = await settingsService.updateUserProfile(userId, {
+            name, gender, age, profilePic, country, state, city, college, public: isPublic
+        });
+        return res.status(200).json({ success: true, message: 'Profile updated', user: updatedUser });
+    } catch (error) {
+        return res.status(error.status || 500).json({ success: false, message: error.message || 'Failed to update profile' });
+    }
+};
+
 module.exports = {
     getVerificationCode,
     verifyCodeforcesAccount,
     unlinkCodeforcesAccount,
     verifyLeetcodeAccount,
     unlinkLeetcodeAccount,
+    getProfile,
+    updateProfile,
 };

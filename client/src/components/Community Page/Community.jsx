@@ -257,13 +257,13 @@ export default function Community() {
   const currentUserId = currentUser?._id || "localUser";
 
   return (
-    <div className="min-h-screen bg-gray-50 py-10 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#1A1A1A] py-10 px-4 sm:px-6 lg:px-8">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-10">
           <div>
-            <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Global CPPro Community</h1>
-            <p className="mt-2 text-gray-600">Discuss, share insights, and find help on competitive programming problems, contests, and algorithms.</p>
+            <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">Global CPPro Community</h1>
+            <p className="mt-2 text-gray-600 dark:text-gray-400">Discuss, share insights, and find help on competitive programming problems, contests, and algorithms.</p>
           </div>
           <button 
             onClick={() => setIsNewModalOpen(true)}
@@ -284,7 +284,7 @@ export default function Community() {
               placeholder="Search discussions, questions, or tags..."
               value={search}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm shadow-sm transition-colors"
+              className="block w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-white/[0.12] rounded-lg leading-5 bg-white dark:bg-[#242424] text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm shadow-sm transition-colors"
             />
           </div>
 
@@ -295,7 +295,7 @@ export default function Community() {
                 className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors border ${
                   activeFilter === f 
                   ? "bg-indigo-600 text-white border-indigo-600 shadow-sm" 
-                  : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                  : "bg-white dark:bg-[#242424] text-gray-700 dark:text-gray-200 border-gray-300 dark:border-white/[0.12] hover:bg-gray-50 dark:hover:bg-white/10"
                 }`}
                 onClick={() => {
                   setActiveFilter(f);
@@ -312,27 +312,27 @@ export default function Community() {
         {loading && posts.length === 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {[1, 2, 3, 4].map(i => (
-                  <div key={i} className="animate-pulse bg-white border border-gray-200 rounded-2xl h-64 p-6 flex flex-col justify-between">
+                  <div key={i} className="animate-pulse bg-white dark:bg-[#242424] border border-gray-200 dark:border-white/[0.08] rounded-2xl h-64 p-6 flex flex-col justify-between">
                      <div className="flex items-center gap-3">
-                         <div className="w-10 h-10 bg-gray-200 rounded-full" />
-                         <div className="w-24 h-4 bg-gray-200 rounded" />
+                         <div className="w-10 h-10 bg-gray-200 dark:bg-[#1A1A1A] rounded-full" />
+                         <div className="w-24 h-4 bg-gray-200 dark:bg-[#1A1A1A] rounded" />
                      </div>
                      <div className="space-y-3 mt-4">
-                         <div className="w-3/4 h-6 bg-gray-200 rounded" />
-                         <div className="w-full h-4 bg-gray-200 rounded" />
-                         <div className="w-5/6 h-4 bg-gray-200 rounded" />
+                         <div className="w-3/4 h-6 bg-gray-200 dark:bg-[#1A1A1A] rounded" />
+                         <div className="w-full h-4 bg-gray-200 dark:bg-[#1A1A1A] rounded" />
+                         <div className="w-5/6 h-4 bg-gray-200 dark:bg-[#1A1A1A] rounded" />
                      </div>
-                     <div className="w-full h-8 bg-gray-200 rounded mt-6" />
+                    <div className="w-full h-8 bg-gray-200 dark:bg-[#1A1A1A] rounded mt-6" />
                   </div>
               ))}
           </div>
         ) : posts.length === 0 ? (
-          <div className="bg-white border text-center border-gray-200 rounded-2xl p-16 shadow-sm flex flex-col items-center justify-center">
-             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 mb-4">
+           <div className="bg-white dark:bg-[#242424] border text-center border-gray-200 dark:border-white/[0.08] rounded-2xl p-16 shadow-sm flex flex-col items-center justify-center">
+             <div className="w-16 h-16 bg-gray-100 dark:bg-[#1A1A1A] rounded-full flex items-center justify-center text-gray-400 mb-4">
                 <MessageCircle size={32} />
              </div>
-             <h3 className="text-xl font-bold text-gray-900 mb-2">No discussions found</h3>
-             <p className="text-gray-500 max-w-sm">We couldn't find any discussions matching your criteria. Try adjusting your filters or search term, or start a new discussion!</p>
+             <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No discussions found</h3>
+             <p className="text-gray-500 dark:text-gray-400 max-w-sm">We couldn't find any discussions matching your criteria. Try adjusting your filters or search term, or start a new discussion!</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -343,7 +343,7 @@ export default function Community() {
 
                return (
                 <div 
-                   className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group cursor-pointer" 
+                   className="bg-white dark:bg-[#242424] border border-gray-200 dark:border-white/[0.08] rounded-2xl p-6 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group cursor-pointer" 
                    key={post._id}
                    onClick={() => setSelectedPost(post)}
                 >
@@ -355,13 +355,13 @@ export default function Community() {
                                 {(post.authorName || "?")[0].toUpperCase()}
                             </div>
                             <div>
-                                <div className="font-bold text-gray-900 text-sm hover:text-indigo-600 transition-colors">{post.authorName || "Anonymous"}</div>
-                                <div className="text-xs text-gray-500 font-medium">{timeAgo(post.createdAt)}</div>
+                                <div className="font-bold text-gray-900 dark:text-gray-100 text-sm hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">{post.authorName || "Anonymous"}</div>
+                                <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">{timeAgo(post.createdAt)}</div>
                             </div>
                           </div>
                       </div>
 
-                      <h3 className="text-xl font-extrabold text-gray-900 mb-2 leading-tight group-hover:text-indigo-600 transition-colors line-clamp-2">
+                      <h3 className="text-xl font-extrabold text-gray-900 dark:text-gray-100 mb-2 leading-tight group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-2">
                           {post.title}
                       </h3>
                       
@@ -372,38 +372,38 @@ export default function Community() {
                             </span>
                         )}
                         {post.tags && post.tags.slice(0, 3).map((t) => (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-600 border border-gray-200 uppercase tracking-wide" key={t}>
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-white/[0.08] uppercase tracking-wide" key={t}>
                               #{t}
                           </span>
                         ))}
                         {post.tags && post.tags.length > 3 && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-600 border border-gray-200">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-white/[0.08]">
                                 +{post.tags.length - 3}
                             </span>
                         )}
                       </div>
 
-                      <p className="text-gray-600 text-sm leading-relaxed mb-6 line-clamp-3">
+                      <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed mb-6 line-clamp-3">
                         {post.content}
                       </p>
                   </div>
 
                   {/* Card Footer */}
-                  <div className="flex items-center justify-between pt-4 border-t border-gray-100 mt-auto" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-white/[0.08] mt-auto" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-1 bg-gray-50 border border-gray-200 rounded-full p-1">
+                        <div className="flex items-center gap-1 bg-gray-50 dark:bg-[#1A1A1A] border border-gray-200 dark:border-white/[0.08] rounded-full p-1">
                             <button 
-                               className={`flex items-center justify-center w-7 h-7 rounded-full transition-colors ${upvoted ? 'bg-indigo-100 text-indigo-600' : 'text-gray-500 hover:bg-gray-200 hover:text-gray-700'}`}
+                               className={`flex items-center justify-center w-7 h-7 rounded-full transition-colors ${upvoted ? 'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10 hover:text-gray-700 dark:hover:text-gray-200'}`}
                                onClick={(e) => { e.stopPropagation(); handleVote(post._id, 'upvote'); }}
                                title="Upvote"
                             >
                               <ArrowUp size={14} /> 
                             </button>
-                            <span className={`text-xs font-bold min-w-[20px] text-center ${upvoted ? 'text-indigo-600' : downvoted ? 'text-orange-600' : 'text-gray-700'}`}>
+                            <span className={`text-xs font-bold min-w-[20px] text-center ${upvoted ? 'text-indigo-600 dark:text-indigo-400' : downvoted ? 'text-orange-600 dark:text-orange-400' : 'text-gray-700 dark:text-gray-300'}`}>
                                 {voteScore}
                             </span>
                             <button 
-                               className={`flex items-center justify-center w-7 h-7 rounded-full transition-colors ${downvoted ? 'bg-orange-100 text-orange-600' : 'text-gray-500 hover:bg-gray-200 hover:text-gray-700'}`}
+                               className={`flex items-center justify-center w-7 h-7 rounded-full transition-colors ${downvoted ? 'bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10 hover:text-gray-700 dark:hover:text-gray-200'}`}
                                onClick={(e) => { e.stopPropagation(); handleVote(post._id, 'downvote'); }}
                                title="Downvote"
                             >
@@ -411,7 +411,7 @@ export default function Community() {
                             </button>
                         </div>
                         
-                        <div className="flex items-center gap-1.5 text-gray-500 hover:text-gray-700 transition-colors font-medium text-xs px-2 py-1 rounded-md hover:bg-gray-50">
+                        <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors font-medium text-xs px-2 py-1 rounded-md hover:bg-gray-50 dark:hover:bg-white/10">
                           <MessageCircle size={15} /> 
                           {post.commentCount || 0}
                         </div>
@@ -420,7 +420,7 @@ export default function Community() {
                     <div className="flex items-center gap-2">
                         {currentUserId === post.authorId && (
                           <button 
-                            className="text-xs font-semibold text-red-500 hover:text-red-700 hover:bg-red-50 px-3 py-1.5 rounded-md transition-colors" 
+                            className="text-xs font-semibold text-red-500 hover:text-red-700 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 px-3 py-1.5 rounded-md transition-colors" 
                             onClick={(e) => { e.stopPropagation(); handleDeletePost(post._id); }}
                           >
                             Delete
@@ -443,7 +443,7 @@ export default function Community() {
         {!loading && posts.length > 0 && totalPages > 1 && (
           <div className="flex justify-center items-center gap-2 mt-10">
             <button 
-              className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-300 dark:border-white/[0.12] bg-white dark:bg-[#242424] text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               onClick={() => setPage(p => Math.max(1, p - 1))}
               disabled={page === 1}
             >
@@ -456,7 +456,7 @@ export default function Community() {
                  className={`w-10 h-10 flex items-center justify-center rounded-lg text-sm font-medium transition-colors ${
                      page === i + 1 
                      ? 'bg-indigo-600 text-white border border-indigo-600 shadow-sm' 
-                     : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                     : 'bg-white dark:bg-[#242424] text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-white/[0.12] hover:bg-gray-50 dark:hover:bg-white/10'
                  }`}
                  onClick={() => setPage(i+1)}
               >
@@ -465,7 +465,7 @@ export default function Community() {
             ))}
             
             <button 
-               className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+               className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-300 dark:border-white/[0.12] bg-white dark:bg-[#242424] text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                disabled={page === totalPages}
             >
