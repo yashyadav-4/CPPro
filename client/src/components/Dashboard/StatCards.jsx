@@ -1,6 +1,6 @@
 // StatCards.jsx — 3-column grid of key stats, improved readability
 const Skeleton = () => (
-  <div className="bg-white dark:bg-[#242424] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4">
+  <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4">
     <div className="animate-pulse space-y-2">
       <div className="h-3 w-20 bg-gray-100 dark:bg-white/5 rounded" />
       <div className="h-8 w-24 bg-gray-100 dark:bg-white/5 rounded" />

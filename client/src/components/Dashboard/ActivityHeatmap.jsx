@@ -38,7 +38,7 @@ function generateLifetimeDates(firstDateStr) {
 export default function ActivityHeatmap({ loading, heatmapData }) {
   if (loading) {
     return (
-      <div className="bg-white dark:bg-[#242424] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4">
+      <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4">
         <Skeleton className="h-3 w-28 mb-4" />
         <Skeleton className="h-16 w-full rounded" />
       </div>
@@ -94,7 +94,7 @@ export default function ActivityHeatmap({ loading, heatmapData }) {
   const totalActive = Object.values(map).filter(c => c > 0).length;
 
   return (
-    <div className="bg-white dark:bg-[#242424] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4">
+    <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4">
       <div className="flex items-center justify-between mb-3">
         <p className="text-xs text-gray-400 dark:text-[#9CA3AF] font-normal uppercase tracking-wide">Activity — Last 2 Years</p>
         <span className="text-xs text-gray-400 dark:text-[#9CA3AF] font-normal">{totalActive} active days</span>

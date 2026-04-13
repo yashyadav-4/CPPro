@@ -6,7 +6,7 @@ const Skeleton = ({ className = '' }) => (
 export default function RecentContests({ loading, contests }) {
   if (loading) {
     return (
-      <div className="bg-white dark:bg-[#242424] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4">
+      <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4">
         <Skeleton className="h-3 w-32 mb-4" />
         {[...Array(6)].map((_, i) => (
           <div key={i} className="flex items-center gap-3 mb-3">
@@ -23,14 +23,14 @@ export default function RecentContests({ loading, contests }) {
 
   if (list.length === 0) {
     return (
-      <div className="bg-white dark:bg-[#242424] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4 flex items-center justify-center">
+      <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4 flex items-center justify-center">
         <span className="text-sm text-gray-400 font-normal">No contest history</span>
       </div>
     );
   }
 
   return (
-    <div className="bg-white dark:bg-[#242424] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4 flex flex-col h-full max-h-[400px]">
+    <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4 flex flex-col h-full max-h-[400px]">
       <p className="text-xs text-gray-400 dark:text-gray-500 font-normal uppercase tracking-wide mb-3 shrink-0">Recent Contests</p>
       <div className="flex flex-col divide-y divide-gray-100 dark:divide-white/[0.04] overflow-y-auto custom-scrollbar pr-1">
         {list.map((c, i) => {

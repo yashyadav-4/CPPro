@@ -7,9 +7,9 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-const INPUT_CLASS = "w-full bg-gray-50 dark:bg-[#1A1A1A] border border-gray-200 dark:border-white/[0.08] text-gray-900 dark:text-white text-sm rounded-lg py-3 px-4 outline-none placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all disabled:opacity-50";
+const INPUT_CLASS = "w-full bg-white dark:bg-[#0a0a0a] border border-gray-200 dark:border-white/[0.08] text-gray-900 dark:text-white text-sm rounded-lg py-3 px-4 outline-none placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all disabled:opacity-50";
 const LABEL_CLASS = "block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5";
-const CARD_CLASS = "bg-white dark:bg-[#242424] border border-gray-200 dark:border-white/[0.08] rounded-xl p-6 shadow-sm";
+const CARD_CLASS = "bg-white dark:bg-[#111111] border border-gray-200 dark:border-white/[0.08] rounded-xl p-6 shadow-sm";
 
 export default function Settings() {
   const [loading, setLoading] = useState(true);
@@ -81,20 +81,20 @@ export default function Settings() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-[#1A1A1A] flex justify-center items-center">
-        <RefreshCw size={24} className="animate-spin text-indigo-500" />
+      <div className="min-h-screen bg-white dark:bg-[#0a0a0a] flex justify-center items-center">
+        <RefreshCw size={24} className="animate-spin text-emerald-500" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#1A1A1A] py-8 px-4 sm:px-6 lg:px-8 transition-colors">
+    <div className="min-h-screen bg-white dark:bg-[#0a0a0a] py-8 px-4 sm:px-6 lg:px-8 transition-colors">
       <div className="max-w-3xl mx-auto">
 
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
           <div className="flex items-center gap-3 mb-1">
-            <div className="w-10 h-10 rounded-lg bg-indigo-50 dark:bg-indigo-500/15 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+            <div className="w-10 h-10 rounded-lg bg-emerald-50 dark:bg-emerald-500/15 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
               <SettingsIcon size={22} />
             </div>
             <div>
@@ -109,17 +109,17 @@ export default function Settings() {
           {/* ── Section 1: Personal Info ── */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className={CARD_CLASS}>
             <div className="flex items-center gap-2 mb-5">
-              <User size={18} className="text-indigo-500" />
+              <User size={18} className="text-emerald-500" />
               <h2 className="text-base font-semibold text-gray-900 dark:text-white">Personal Information</h2>
             </div>
 
             {/* Avatar Preview */}
             <div className="flex items-center gap-4 mb-6">
-              <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-indigo-200 dark:border-indigo-500/30 flex-shrink-0">
+              <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-emerald-200 dark:border-emerald-500/30 flex-shrink-0">
                 {form.profilePic ? (
                   <img src={form.profilePic} alt="Avatar" className="w-full h-full object-cover" />
                 ) : (
-                  <div className="w-full h-full bg-indigo-100 dark:bg-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 text-2xl font-bold">
+                  <div className="w-full h-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 text-2xl font-bold">
                     {(form.name || 'U').charAt(0).toUpperCase()}
                   </div>
                 )}
@@ -162,7 +162,7 @@ export default function Settings() {
           {/* ── Section 2: Location & Education ── */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className={CARD_CLASS}>
             <div className="flex items-center gap-2 mb-5">
-              <MapPin size={18} className="text-indigo-500" />
+              <MapPin size={18} className="text-emerald-500" />
               <h2 className="text-base font-semibold text-gray-900 dark:text-white">Location & Education</h2>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -197,11 +197,11 @@ export default function Settings() {
           {/* ── Section 3: Linked Accounts ── */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className={CARD_CLASS}>
             <div className="flex items-center gap-2 mb-5">
-              <Link2 size={18} className="text-indigo-500" />
+              <Link2 size={18} className="text-emerald-500" />
               <h2 className="text-base font-semibold text-gray-900 dark:text-white">Linked Accounts</h2>
             </div>
             <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-[#1A1A1A] rounded-lg border border-gray-100 dark:border-white/[0.06]">
+              <div className="flex items-center justify-between p-3 bg-white dark:bg-[#0a0a0a] rounded-lg border border-gray-100 dark:border-white/[0.06]">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-md bg-blue-500 flex items-center justify-center">
                     <span className="text-white text-xs font-black">CF</span>
@@ -219,12 +219,12 @@ export default function Settings() {
                   </span>
                 ) : (
                   <Link to="/verify-codeforces"
-                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium rounded-lg transition-colors">
+                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium rounded-lg transition-colors">
                     <Shield size={12} /> Link
                   </Link>
                 )}
               </div>
-              <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-[#1A1A1A] rounded-lg border border-gray-100 dark:border-white/[0.06]">
+              <div className="flex items-center justify-between p-3 bg-white dark:bg-[#0a0a0a] rounded-lg border border-gray-100 dark:border-white/[0.06]">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-md bg-amber-500 flex items-center justify-center">
                     <span className="text-white text-xs font-black">LC</span>
@@ -254,7 +254,7 @@ export default function Settings() {
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className={CARD_CLASS}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                {form.public ? <Eye size={18} className="text-indigo-500" /> : <EyeOff size={18} className="text-gray-400" />}
+                {form.public ? <Eye size={18} className="text-emerald-500" /> : <EyeOff size={18} className="text-gray-400" />}
                 <div>
                   <h2 className="text-base font-semibold text-gray-900 dark:text-white">Profile Visibility</h2>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -266,7 +266,7 @@ export default function Settings() {
               </div>
               <button
                 onClick={() => handleChange('public', !form.public)}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${form.public ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-600'}`}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${form.public ? 'bg-emerald-600' : 'bg-gray-300 dark:bg-gray-600'}`}
               >
                 <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ${form.public ? 'translate-x-6' : 'translate-x-1'}`} />
               </button>
@@ -291,7 +291,7 @@ export default function Settings() {
             <button
               onClick={handleSave}
               disabled={saving}
-              className="inline-flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors shadow-sm"
+              className="inline-flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors shadow-sm"
             >
               {saving ? <RefreshCw size={16} className="animate-spin" /> : <Save size={16} />}
               {saving ? 'Saving...' : 'Save Changes'}
@@ -303,3 +303,4 @@ export default function Settings() {
     </div>
   );
 }
+

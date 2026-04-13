@@ -10,7 +10,7 @@ export default function WeekStreak({
 }) {
   if (loading) {
     return (
-      <div className="bg-white dark:bg-[#242424] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4">
+      <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4">
         <Skeleton className="h-3 w-24 mb-4" />
         <div className="flex justify-between mb-5">
           {[...Array(7)].map((_, i) => <Skeleton key={i} className="h-9 w-9 rounded-full" />)}
@@ -26,7 +26,7 @@ export default function WeekStreak({
   const platformLabel = bestStreakPlatform === 'codeforces' ? 'CF' : bestStreakPlatform === 'leetcode' ? 'LC' : '';
 
   return (
-    <div className="bg-white dark:bg-[#242424] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4">
+    <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4">
       <p className="text-[11px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4">Last 7 Days</p>
 
       {/* 7-day dot row */}

@@ -9,7 +9,7 @@ import LeaderBoard from './components/Leaderboard/Leaderboard.jsx'
 import CodeTemplate from './components/CodeTemplate/CodeTemplate.jsx'
 import Community from './components/Community Page/Community.jsx'
 import VerifyCodeforces from './components/VerifyCodeforces/VerifyCodeforces.jsx'
-import LearningPage from './components/Learning/LearningPage.jsx'
+import LearningPage from './components/LearningTree/LearningPage.jsx'
 import LevelUpPage from './components/LevelUp/LevelUpPage.jsx'
 import Settings from './components/Settings/Settings.jsx'
 

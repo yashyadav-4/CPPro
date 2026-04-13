@@ -13,15 +13,15 @@ const RANK_COLORS = {
 };
 
 const STATUS_COLORS = {
-  weak: 'bg-red-500/10 text-red-600 dark:bg-red-500/20 dark:text-red-400',
-  fair: 'bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400',
-  strong: 'bg-green-500/10 text-green-600 dark:bg-green-500/20 dark:text-green-400'
+  weak: 'bg-rose-500/10 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400 border-rose-200/50 dark:border-rose-500/30',
+  fair: 'bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400 border-amber-200/50 dark:border-amber-500/30',
+  strong: 'bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400 border-emerald-200/50 dark:border-emerald-500/30'
 };
 
 const STATUS_DOTS = {
-  weak: 'bg-red-500',
+  weak: 'bg-rose-500',
   fair: 'bg-amber-500',
-  strong: 'bg-green-500'
+  strong: 'bg-emerald-500'
 };
 
 const Skeleton = ({ className = '' }) => (
@@ -55,7 +55,7 @@ export default function NextTarget({ userId }) {
 
   if (loading) {
     return (
-      <div className="bg-white dark:bg-[#242424] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-5">
+      <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-6 shadow-sm">
         <Skeleton className="h-4 w-32 mb-6" />
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="space-y-4">
@@ -75,8 +75,8 @@ export default function NextTarget({ userId }) {
 
   if (data.isPeak) {
     return (
-      <div className="bg-white dark:bg-[#242424] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-5 flex flex-col items-center justify-center min-h-[200px]">
-        <span className="text-4xl mb-2">🏆</span>
+      <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-8 flex flex-col items-center justify-center min-h-[240px] shadow-sm">
+        <span className="text-5xl mb-4">🏆</span>
         <h3 className={`text-lg font-bold ${RANK_COLORS[data.currentRank]}`}>Peak Bracket: {data.currentRank}</h3>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Rating: {data.currentRating}</p>
         <p className="text-xs text-gray-400 mt-2">You've reached the highest tracked bracket. Maintain your dominance!</p>
@@ -104,14 +104,14 @@ export default function NextTarget({ userId }) {
   const TopicGrid = ({ topics, isStretch }) => {
     if (!topics || topics.length === 0) return null;
     return (
-      <div className="grid grid-cols-2 gap-2 mb-4">
+      <div className="grid grid-cols-2 gap-3 mb-5">
         {topics.map((topicStat, i) => (
-          <div key={i} className={`flex items-center justify-between p-2 rounded-md ${isStretch ? 'bg-gray-50/50 dark:bg-white/[0.02] border-amber-500/30' : STATUS_COLORS[topicStat.status]} border dark:border-white/5 opacity-${isStretch ? '70' : '100'}`}>
-            <div className="flex items-center gap-2 min-w-0">
-              <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${STATUS_DOTS[topicStat.status]} ${isStretch && 'opacity-50'}`} />
-              <span className="text-[11px] font-medium truncate capitalize">{topicStat.topic}</span>
+          <div key={i} className={`flex items-center justify-between p-2.5 rounded-lg ${isStretch ? 'bg-gray-50/50 dark:bg-white/[0.02] border-gray-200 dark:border-white/5' : STATUS_COLORS[topicStat.status]} border transition-all duration-200 hover:scale-[1.02] opacity-${isStretch ? '70' : '100'}`}>
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className={`w-2 h-2 rounded-full shrink-0 ${STATUS_DOTS[topicStat.status]} ${isStretch && 'opacity-50'}`} />
+              <span className="text-[11px] font-bold text-gray-700 dark:text-gray-200 truncate capitalize">{topicStat.topic}</span>
             </div>
-            <span className="text-[10px] font-bold opacity-80 shrink-0 ml-1">{topicStat.solvedCount}</span>
+            <span className="text-[10px] font-black opacity-60 shrink-0 ml-1 tabular-nums">{topicStat.solvedCount}</span>
           </div>
         ))}
       </div>
@@ -119,22 +119,22 @@ export default function NextTarget({ userId }) {
   };
 
   return (
-    <div className="bg-white dark:bg-[#242424] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-5">
+    <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-2xl p-6 lg:p-8 shadow-sm">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
         {/* Left Column: Progress & Momentum */}
         <div className="flex flex-col">
-          <div className="mb-4">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-[10px] text-gray-500 dark:text-gray-400 font-medium tracking-wide uppercase px-1.5 py-0.5 bg-gray-100 dark:bg-white/5 rounded">
+          <div className="mb-6">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold tracking-wider uppercase px-2 py-1 bg-gray-100 dark:bg-white/5 rounded-md border border-gray-200/50 dark:border-white/5">
                 Micro-Bracket: {data.bracketStart} — {data.bracketEnd}
               </span>
               {data.rankBoundaryChange && (
-                <span className="text-[10px] font-bold tracking-wide uppercase px-1.5 py-0.5 bg-purple-100 text-purple-600 dark:bg-purple-500/20 dark:text-purple-400 rounded border border-purple-200 dark:border-purple-500/30">
+                <span className="text-[10px] font-black tracking-wider uppercase px-2 py-1 bg-emerald-500 text-white rounded-md shadow-sm shadow-emerald-500/20">
                   New Rank Next!
                 </span>
               )}
             </div>
-            <h2 className={`text-2xl font-bold tracking-tight ${rankColor}`}>
+            <h2 className={`text-4xl font-black tracking-tighter ${rankColor} uppercase italic`}>
               {data.currentRank}
             </h2>
           </div>
@@ -147,49 +147,49 @@ export default function NextTarget({ userId }) {
                   const isCurrent = segStart === data.bracketStart;
                   
                   let bgClass = "bg-gray-100 dark:bg-white/5";
-                  if (isPast) bgClass = "bg-green-500 dark:bg-green-600";
-                  if (isCurrent) bgClass = "bg-blue-500 dark:bg-blue-600 relative";
+                  if (isPast) bgClass = "bg-emerald-500 dark:bg-emerald-600";
+                  if (isCurrent) bgClass = "bg-emerald-600 dark:bg-emerald-500 relative";
                   
                   return (
-                    <div key={step} className={`flex-1 rounded-sm ${bgClass}`}>
+                    <div key={step} className={`flex-1 rounded-full ${bgClass}`}>
                        {isCurrent && (
-                          <div className="absolute -top-6 left-1/2 -translate-x-1/2 flex flex-col items-center">
-                             <span className="text-xs font-bold text-gray-900 tabular-nums">{data.currentRating}</span>
-                             <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1 shadow-[0_0_8px_rgba(59,130,246,0.8)]"></div>
+                          <div className="absolute -top-7 left-1/2 -translate-x-1/2 flex flex-col items-center">
+                             <span className="text-xs font-black text-gray-900 dark:text-white tabular-nums bg-white dark:bg-[#111111] px-1 rounded shadow-sm">{data.currentRating}</span>
+                             <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 mt-1 shadow-[0_0_12px_rgba(16,185,129,0.8)] border-2 border-white dark:border-[#111111]"></div>
                           </div>
                        )}
                     </div>
                   );
                 })}
              </div>
-             <div className="flex justify-between text-[10px] font-medium text-gray-400 dark:text-gray-500 px-1">
+             <div className="flex justify-between text-[10px] font-black text-gray-400 dark:text-gray-500 px-1 uppercase tracking-widest leading-none">
                <span>{data.bracketStart}</span>
                <span>{data.bracketStart + 200}</span>
              </div>
-             <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mt-2">
-               <span className="text-green-500 font-bold tabular-nums">+{data.pointsNeeded} pts</span> to {data.nextMilestone}
+             <p className="text-sm font-bold text-gray-800 dark:text-gray-200 mt-4">
+               <span className="text-emerald-500 font-black tabular-nums">+{data.pointsNeeded} pts</span> to {data.nextMilestone}
              </p>
           </div>
 
-          <div className="mt-auto bg-gray-50 dark:bg-white/[0.02] rounded-lg p-3 border border-black/[0.05] dark:border-white/[0.05]">
-             <div className="flex justify-between items-center mb-2">
+          <div className="mt-auto bg-gray-50 dark:bg-white/[0.03] rounded-xl p-4 border border-black/[0.05] dark:border-white/[0.05]">
+             <div className="flex justify-between items-center mb-3">
                <div className="flex items-center gap-2">
-                 <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Momentum</span>
-                 <span className="text-xs font-bold text-gray-700 dark:text-gray-200">
-                    {data.momentum === 'rising' ? '🟢 Rising' : data.momentum === 'falling' ? '🔴 Falling' : '⚪ Stable'}
+                 <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Momentum</span>
+                 <span className={`text-xs font-black uppercase tracking-wide px-2 py-0.5 rounded-full ${data.momentum === 'rising' ? 'bg-emerald-500/10 text-emerald-600' : data.momentum === 'falling' ? 'bg-rose-500/10 text-rose-600' : 'bg-gray-100 text-gray-500'}`}>
+                    {data.momentum === 'rising' ? '↗ Rising' : data.momentum === 'falling' ? '↘ Falling' : '→ Stable'}
                  </span>
                </div>
-               <div className="flex gap-1">
+               <div className="flex gap-1.5">
                   {data.recentContestDeltas && data.recentContestDeltas.map((d, i) => (
-                    <span key={i} className={`text-[10px] font-bold px-1.5 py-0.5 rounded-sm ${d > 0 ? 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400' : d < 0 ? 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400' : 'bg-gray-200 text-gray-700 dark:bg-white/10 dark:text-gray-300'}`}>
+                    <span key={i} className={`text-[10px] font-black px-2 py-0.5 rounded-md ${d > 0 ? 'bg-emerald-500 text-white' : d < 0 ? 'bg-rose-500 text-white' : 'bg-gray-400 text-white'}`}>
                       {d > 0 ? `+${d}` : d}
                     </span>
                   ))}
                </div>
              </div>
-             <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400">
-                <span>Avg Δ (last 10): <strong className="text-gray-900">{data.avgDeltaLast10 > 0 ? `+${data.avgDeltaLast10}` : data.avgDeltaLast10}</strong></span>
-                <span>Est. contests: <strong className="text-gray-900">{data.estimatedContests}</strong></span>
+             <div className="flex justify-between text-[11px] font-bold text-gray-600 dark:text-gray-400 uppercase tracking-tight">
+                <span>Avg Δ (last 10): <strong className="text-gray-900 dark:text-white ml-1">{data.avgDeltaLast10 > 0 ? `+${data.avgDeltaLast10}` : data.avgDeltaLast10}</strong></span>
+                <span>Est. contests: <strong className="text-gray-900 dark:text-white ml-1">{data.estimatedContests}</strong></span>
              </div>
           </div>
         </div>
@@ -219,22 +219,23 @@ export default function NextTarget({ userId }) {
             </div>
           )}
 
-          <div className="mt-auto bg-indigo-50/50 dark:bg-indigo-500/[0.03] border border-indigo-100 dark:border-indigo-500/10 rounded-lg p-3">
-             <p className="text-xs text-indigo-900 dark:text-indigo-200 leading-relaxed">
+          <div className="mt-auto bg-emerald-500/5 dark:bg-emerald-500/[0.03] border border-emerald-500/20 dark:border-emerald-500/10 rounded-xl p-4 shadow-sm backdrop-blur-[2px]">
+             <p className="text-[11px] font-bold text-emerald-900 dark:text-emerald-200 uppercase tracking-wider mb-1.5">Coach Intelligence</p>
+             <p className="text-xs text-emerald-800 dark:text-emerald-300 leading-relaxed font-medium">
                {masterWeak.length > 0 ? (
-                 <>Don't skip ahead — you still have gaps in <strong className="font-semibold text-indigo-700 dark:text-indigo-300">{data.bracketStart - 50}</strong> topics. Fix foundations first.</>
+                 <>Don't skip ahead — you still have gaps in <strong className="font-black text-emerald-600 dark:text-emerald-400">{data.bracketStart - 50}</strong> topics. Fix foundations first.</>
                ) : currentWeakTopics.length > 0 ? (
-                 <>Good foundation. Now grind <strong className="font-semibold text-indigo-700 dark:text-indigo-300">{currentWeakTopics[0]}</strong>{currentWeakTopics[1] ? <> and <strong className="font-semibold text-indigo-700 dark:text-indigo-300">{currentWeakTopics[1]}</strong></> : ''} in your active zone.</>
+                 <>Good foundation. Now grind <strong className="font-black text-emerald-600 dark:text-emerald-400">{currentWeakTopics[0]}</strong>{currentWeakTopics[1] ? <> and <strong className="font-black text-emerald-600 dark:text-emerald-400">{currentWeakTopics[1]}</strong></> : ''} in your active zone.</>
                ) : (
-                 <>You're ready to peek at <strong className="font-semibold text-indigo-700 dark:text-indigo-300">{data.bracketStart + 50}</strong> topics. Try 1–2 stretch problems per session.</>
+                 <>You're ready to peek at <strong className="font-black text-emerald-600 dark:text-emerald-400">{data.bracketStart + 50}</strong> topics. Try 1–2 stretch problems per session.</>
                )}
              </p>
           </div>
 
           {data.rankBoundaryChange && (
-            <div className="mt-3 flex items-center justify-center p-2 rounded bg-gray-50 dark:bg-white/[0.02] border border-black/[0.05] dark:border-white/[0.05]">
-               <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">
-                 ⭐ Reaching {data.nextMilestone} promotes you to <strong className={`font-bold ${nextRankColor}`}>{data.nextRank}</strong>
+            <div className="mt-4 flex items-center justify-center p-3 rounded-xl bg-gray-50 dark:bg-white/[0.02] border border-black/[0.05] dark:border-white/[0.05]">
+               <span className="text-[11px] text-gray-600 dark:text-gray-300 font-bold uppercase tracking-wide">
+                 ⭐ Reaching {data.nextMilestone} promotes you to <strong className={`font-black uppercase italic ${nextRankColor} ml-1`}>{data.nextRank}</strong>
                </span>
             </div>
           )}

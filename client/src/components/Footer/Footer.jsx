@@ -17,14 +17,14 @@ export default function Footer() {
   };
 
   return (
-    <footer className="bg-white dark:bg-[#242424] border-t border-gray-200 dark:border-white/[0.08] pt-16 pb-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <footer className="bg-white dark:bg-[#111111] border-t border-gray-200 dark:border-white/[0.08] py-16">
+      <div className="max-w-[1120px] mx-auto px-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
           
           {/* Column 1: Brand */}
-          <div className="space-y-6">
+          <div className="space-y-8">
             <div className="flex items-center gap-2">
-              <span className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">
+              <span className="text-xl font-bold text-emerald-600 dark:text-emerald-400 tracking-tight">
                 &lt;/&gt; CPPro
               </span>
             </div>
@@ -32,15 +32,15 @@ export default function Footer() {
               Track your progress, manage code snippets, and climb the global leaderboards with the ultimate toolkit for competitive programmers.
             </p>
             <div className="flex items-center gap-4">
-              <a href="#" className="p-2 -ml-2 text-gray-400 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-full transition-all">
+              <a href="#" className="p-2 -ml-2 text-gray-400 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-full transition-all">
                 <span className="sr-only">GitHub</span>
                 <Github className="h-5 w-5" />
               </a>
-              <a href="#" className="p-2 text-gray-400 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-full transition-all">
+              <a href="#" className="p-2 text-gray-400 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-full transition-all">
                 <span className="sr-only">Twitter</span>
                 <Twitter className="h-5 w-5" />
               </a>
-              <a href="#" className="p-2 text-gray-400 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-full transition-all">
+              <a href="#" className="p-2 text-gray-400 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-full transition-all">
                 <span className="sr-only">Email</span>
                 <Mail className="h-5 w-5" />
               </a>
@@ -50,10 +50,10 @@ export default function Footer() {
           {/* Column 2: Product */}
           <div>
             <h3 className="text-sm font-semibold text-gray-900 dark:text-white tracking-wider uppercase mb-4">Product</h3>
-            <ul className="space-y-3">
+            <ul className="space-y-5">
               {['Features', 'Pricing', 'Changelog', 'Roadmap'].map((item) => (
                 <li key={item}>
-                  <a href="#" className="text-sm text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                  <a href="#" className="text-sm text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
                     {item}
                   </a>
                 </li>
@@ -64,10 +64,10 @@ export default function Footer() {
           {/* Column 3: Resources */}
           <div>
             <h3 className="text-sm font-semibold text-gray-900 dark:text-white tracking-wider uppercase mb-4">Resources</h3>
-            <ul className="space-y-3">
+            <ul className="space-y-5">
               {['Documentation', 'API Reference', 'Community', 'Blog'].map((item) => (
                 <li key={item}>
-                  <a href="#" className="text-sm text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                  <a href="#" className="text-sm text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
                     {item}
                   </a>
                 </li>
@@ -86,13 +86,13 @@ export default function Footer() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Enter your email"
-                className="w-full px-4 py-2 text-sm border border-gray-300 dark:border-white/15 bg-white dark:bg-[#1A1A1A] text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-500 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+                className="w-full px-4 py-2 text-sm border border-gray-300 dark:border-white/15 bg-white dark:bg-[#0a0a0a] text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-500 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
               />
               <button
                 type="submit"
                 disabled={isSubscribed}
                 className={`w-full py-2 px-4 text-sm font-medium rounded-md text-white transition-colors ${
-                  isSubscribed ? 'bg-green-500' : 'bg-indigo-600 hover:bg-indigo-700'
+                  isSubscribed ? 'bg-green-500' : 'bg-emerald-600 hover:bg-emerald-700'
                 }`}
               >
                 {isSubscribed ? 'Subscribed!' : 'Subscribe'}

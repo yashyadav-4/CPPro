@@ -35,12 +35,12 @@ export default function NewPostModal({ onClose, onSubmit }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/35 backdrop-blur-md transition-opacity" onClick={onClose}>
       <div
-        className="bg-white/75 dark:bg-[#242424]/65 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/50 dark:border-white/10 w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200"
+        className="bg-white/75 dark:bg-[#111111]/65 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/50 dark:border-white/10 w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-6 py-4 border-b border-gray-100/70 dark:border-white/[0.08] flex items-center justify-between bg-white/35 dark:bg-white/[0.03]">
            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-md bg-indigo-50 text-indigo-600 flex flex-shrink-0 items-center justify-center">
+              <div className="w-8 h-8 rounded-md bg-emerald-50 text-emerald-600 flex flex-shrink-0 items-center justify-center">
                   <MessageSquarePlus size={18} />
               </div>
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">New Discussion</h2>
@@ -55,7 +55,7 @@ export default function NewPostModal({ onClose, onSubmit }) {
 
         <div className="p-6 overflow-y-auto hidden-scrollbar">
           <form id="new-post-form" onSubmit={handleSubmit} className="space-y-5">
-            <div className="space-y-1.5 focus-within:text-indigo-600">
+            <div className="space-y-1.5 focus-within:text-emerald-600">
               <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Title <span className="text-red-500">*</span></label>
               <input
                 type="text"
@@ -63,17 +63,17 @@ export default function NewPostModal({ onClose, onSubmit }) {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 required
-                className="w-full px-4 py-2.5 text-sm bg-white/55 dark:bg-white/[0.03] border border-gray-200/80 dark:border-white/[0.10] rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors placeholder:text-gray-400 dark:placeholder:text-gray-500 backdrop-blur-sm"
+                className="w-full px-4 py-2.5 text-sm bg-white/55 dark:bg-white/[0.03] border border-gray-200/80 dark:border-white/[0.10] rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors placeholder:text-gray-400 dark:placeholder:text-gray-500 backdrop-blur-sm"
               />
             </div>
 
-            <div className="space-y-1.5 focus-within:text-indigo-600">
+            <div className="space-y-1.5 focus-within:text-emerald-600">
               <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Type</label>
               <div className="relative">
                   <select 
                       value={type} 
                       onChange={(e) => setType(e.target.value)}
-                      className="w-full px-4 py-2.5 text-sm bg-white/55 dark:bg-white/[0.03] border border-gray-200/80 dark:border-white/[0.10] rounded-lg text-gray-900 dark:text-gray-100 appearance-none focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors cursor-pointer capitalize backdrop-blur-sm"
+                      className="w-full px-4 py-2.5 text-sm bg-white/55 dark:bg-white/[0.03] border border-gray-200/80 dark:border-white/[0.10] rounded-lg text-gray-900 dark:text-gray-100 appearance-none focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors cursor-pointer capitalize backdrop-blur-sm"
                   >
                       <option value="discussion">Discussion</option>
                       <option value="blog">Blog</option>
@@ -85,7 +85,7 @@ export default function NewPostModal({ onClose, onSubmit }) {
               </div>
             </div>
 
-            <div className="space-y-1.5 focus-within:text-indigo-600">
+            <div className="space-y-1.5 focus-within:text-emerald-600">
               <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex justify-between">
                 <span>Content <span className="text-red-500">*</span></span>
               </label>
@@ -95,18 +95,18 @@ export default function NewPostModal({ onClose, onSubmit }) {
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 required
-                className="w-full px-4 py-3 text-sm leading-relaxed bg-white/55 dark:bg-white/[0.03] border border-gray-200/80 dark:border-white/[0.10] rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 custom-scrollbar resize-none placeholder:text-gray-400 dark:placeholder:text-gray-500 backdrop-blur-sm"
+                className="w-full px-4 py-3 text-sm leading-relaxed bg-white/55 dark:bg-white/[0.03] border border-gray-200/80 dark:border-white/[0.10] rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 custom-scrollbar resize-none placeholder:text-gray-400 dark:placeholder:text-gray-500 backdrop-blur-sm"
               ></textarea>
             </div>
 
-            <div className="space-y-1.5 focus-within:text-indigo-600">
+            <div className="space-y-1.5 focus-within:text-emerald-600">
               <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Tags (comma-separated)</label>
               <input
                 type="text"
                 placeholder="e.g. dp, graphs, codeforces"
                 value={tags}
                 onChange={(e) => setTags(e.target.value)}
-                className="w-full px-4 py-2.5 text-sm bg-white/55 dark:bg-white/[0.03] border border-gray-200/80 dark:border-white/[0.10] rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors placeholder:text-gray-400 dark:placeholder:text-gray-500 backdrop-blur-sm"
+                className="w-full px-4 py-2.5 text-sm bg-white/55 dark:bg-white/[0.03] border border-gray-200/80 dark:border-white/[0.10] rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors placeholder:text-gray-400 dark:placeholder:text-gray-500 backdrop-blur-sm"
               />
             </div>
           </form>
@@ -123,7 +123,7 @@ export default function NewPostModal({ onClose, onSubmit }) {
           <button
             type="submit"
             form="new-post-form"
-            className="px-6 py-2.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm flex items-center gap-2"
+            className="px-6 py-2.5 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm flex items-center gap-2"
             disabled={isSubmitting || !title.trim() || !content.trim()}
           >
             {isSubmitting ? "Posting..." : "Post Discussion"}

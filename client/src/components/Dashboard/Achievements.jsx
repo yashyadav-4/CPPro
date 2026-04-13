@@ -6,7 +6,7 @@ const Skeleton = ({ className = '' }) => (
 const PLATFORM_CONFIG = {
   codeforces: { label: 'CF', badge: 'bg-blue-50 dark:bg-[#1e293b] text-blue-500' },
   leetcode: { label: 'LC', badge: 'bg-amber-50 dark:bg-[#2d2416] text-amber-500' },
-  combined: { label: '⚡', badge: 'bg-indigo-50 dark:bg-[#1e1b4b] text-indigo-500' },
+  combined: { label: '⚡', badge: 'bg-emerald-50 dark:bg-[#1e1b4b] text-emerald-500' },
 };
 
 function AchievementCard({ icon, label, platform, earned, progress }) {
@@ -29,7 +29,7 @@ function AchievementCard({ icon, label, platform, earned, progress }) {
       {!earned && (
         <div className="w-full bg-gray-200 dark:bg-[#333333] rounded-full h-1 overflow-hidden">
           <div
-            className="h-full rounded-full bg-indigo-400 dark:bg-indigo-500 transition-all duration-500"
+            className="h-full rounded-full bg-emerald-400 dark:bg-emerald-500 transition-all duration-500"
             style={{ width: `${pct}%` }}
           />
         </div>
@@ -44,7 +44,7 @@ function AchievementCard({ icon, label, platform, earned, progress }) {
 export default function Achievements({ loading, achievements }) {
   if (loading) {
     return (
-      <div className="bg-white dark:bg-[#242424] border border-black/[0.07] dark:border-[#404040] rounded-xl p-4">
+      <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-[#404040] rounded-xl p-4">
         <Skeleton className="h-3 w-28 mb-4" />
         <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
           {[...Array(12)].map((_, i) => <Skeleton key={i} className="h-24 rounded-lg" />)}
@@ -59,7 +59,7 @@ export default function Achievements({ loading, achievements }) {
   const earnedCount = earned.length;
 
   return (
-    <div className="bg-white dark:bg-[#242424] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4">
+    <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4">
       <div className="flex items-center justify-between mb-4">
         <p className="text-[11px] font-medium text-gray-400 dark:text-[#9CA3AF] uppercase tracking-widest">Achievements</p>
         <span className="text-xs text-gray-400 dark:text-[#9CA3AF] font-normal">{earnedCount} / {list.length} earned</span>

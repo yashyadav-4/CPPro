@@ -68,7 +68,7 @@ function PlatformCard({ platform, handle, rating, maxRating, rank, colorClass, i
 export default function PlatformProfiles({ loading, cfHandle, cfRating, cfMaxRating, cfRank, lcHandle, lcRating, lcMaxRating, lcRank }) {
   if (loading) {
     return (
-      <div className="bg-white dark:bg-[#242424] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4">
+      <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4">
         <Skeleton className="h-3 w-28 mb-4" />
         <div className="flex gap-6">
           {[0, 1].map(i => (
@@ -87,13 +87,13 @@ export default function PlatformProfiles({ loading, cfHandle, cfRating, cfMaxRat
   const hasLc = !!lcHandle;
 
   if (!hasCf && !hasLc) return (
-    <div className="bg-white dark:bg-[#242424] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4 flex items-center justify-center">
+    <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4 flex items-center justify-center">
       <span className="text-sm text-gray-400 font-normal">No platforms linked</span>
     </div>
   );
 
   return (
-    <div className="bg-white dark:bg-[#242424] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4">
+    <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4">
       <p className="text-[11px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4">Platform Profiles</p>
       <div className="flex gap-4">
         {hasCf && (

@@ -257,7 +257,7 @@ export default function Community() {
   const currentUserId = currentUser?._id || "localUser";
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#1A1A1A] py-10 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#0a0a0a] py-10 px-4 sm:px-6 lg:px-8">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-10">
@@ -267,7 +267,7 @@ export default function Community() {
           </div>
           <button 
             onClick={() => setIsNewModalOpen(true)}
-            className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-5 py-2.5 rounded-lg shadow-sm transition-colors flex-shrink-0"
+            className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-5 py-2.5 rounded-lg shadow-sm transition-colors flex-shrink-0"
           >
             <Plus size={18} /> New Discussion
           </button>
@@ -284,7 +284,7 @@ export default function Community() {
               placeholder="Search discussions, questions, or tags..."
               value={search}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="block w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-white/[0.12] rounded-lg leading-5 bg-white dark:bg-[#242424] text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm shadow-sm transition-colors"
+              className="block w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-white/[0.12] rounded-lg leading-5 bg-white dark:bg-[#111111] text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm shadow-sm transition-colors"
             />
           </div>
 
@@ -294,8 +294,8 @@ export default function Community() {
                 key={f}
                 className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors border ${
                   activeFilter === f 
-                  ? "bg-indigo-600 text-white border-indigo-600 shadow-sm" 
-                  : "bg-white dark:bg-[#242424] text-gray-700 dark:text-gray-200 border-gray-300 dark:border-white/[0.12] hover:bg-gray-50 dark:hover:bg-white/10"
+                  ? "bg-emerald-600 text-white border-emerald-600 shadow-sm" 
+                  : "bg-white dark:bg-[#111111] text-gray-700 dark:text-gray-200 border-gray-300 dark:border-white/[0.12] hover:bg-gray-50 dark:hover:bg-white/10"
                 }`}
                 onClick={() => {
                   setActiveFilter(f);
@@ -312,23 +312,23 @@ export default function Community() {
         {loading && posts.length === 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {[1, 2, 3, 4].map(i => (
-                  <div key={i} className="animate-pulse bg-white dark:bg-[#242424] border border-gray-200 dark:border-white/[0.08] rounded-2xl h-64 p-6 flex flex-col justify-between">
+                  <div key={i} className="animate-pulse bg-white dark:bg-[#111111] border border-gray-200 dark:border-white/[0.08] rounded-2xl h-64 p-6 flex flex-col justify-between">
                      <div className="flex items-center gap-3">
-                         <div className="w-10 h-10 bg-gray-200 dark:bg-[#1A1A1A] rounded-full" />
-                         <div className="w-24 h-4 bg-gray-200 dark:bg-[#1A1A1A] rounded" />
+                         <div className="w-10 h-10 bg-gray-200 dark:bg-[#0a0a0a] rounded-full" />
+                         <div className="w-24 h-4 bg-gray-200 dark:bg-[#0a0a0a] rounded" />
                      </div>
                      <div className="space-y-3 mt-4">
-                         <div className="w-3/4 h-6 bg-gray-200 dark:bg-[#1A1A1A] rounded" />
-                         <div className="w-full h-4 bg-gray-200 dark:bg-[#1A1A1A] rounded" />
-                         <div className="w-5/6 h-4 bg-gray-200 dark:bg-[#1A1A1A] rounded" />
+                         <div className="w-3/4 h-6 bg-gray-200 dark:bg-[#0a0a0a] rounded" />
+                         <div className="w-full h-4 bg-gray-200 dark:bg-[#0a0a0a] rounded" />
+                         <div className="w-5/6 h-4 bg-gray-200 dark:bg-[#0a0a0a] rounded" />
                      </div>
-                    <div className="w-full h-8 bg-gray-200 dark:bg-[#1A1A1A] rounded mt-6" />
+                    <div className="w-full h-8 bg-gray-200 dark:bg-[#0a0a0a] rounded mt-6" />
                   </div>
               ))}
           </div>
         ) : posts.length === 0 ? (
-           <div className="bg-white dark:bg-[#242424] border text-center border-gray-200 dark:border-white/[0.08] rounded-2xl p-16 shadow-sm flex flex-col items-center justify-center">
-             <div className="w-16 h-16 bg-gray-100 dark:bg-[#1A1A1A] rounded-full flex items-center justify-center text-gray-400 mb-4">
+           <div className="bg-white dark:bg-[#111111] border text-center border-gray-200 dark:border-white/[0.08] rounded-2xl p-16 shadow-sm flex flex-col items-center justify-center">
+             <div className="w-16 h-16 bg-gray-100 dark:bg-[#0a0a0a] rounded-full flex items-center justify-center text-gray-400 mb-4">
                 <MessageCircle size={32} />
              </div>
              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No discussions found</h3>
@@ -343,7 +343,7 @@ export default function Community() {
 
                return (
                 <div 
-                   className="bg-white dark:bg-[#242424] border border-gray-200 dark:border-white/[0.08] rounded-2xl p-6 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group cursor-pointer" 
+                   className="bg-white dark:bg-[#111111] border border-gray-200 dark:border-white/[0.08] rounded-2xl p-6 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group cursor-pointer" 
                    key={post._id}
                    onClick={() => setSelectedPost(post)}
                 >
@@ -351,23 +351,23 @@ export default function Community() {
                       <div className="flex items-center justify-between mb-4">
                           <div className="flex items-center gap-3">
                             {/* Initials avatar or mock image */}
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center text-indigo-700 font-bold border border-indigo-200 text-sm shadow-sm ring-2 ring-white">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-100 to-purple-100 flex items-center justify-center text-emerald-700 font-bold border border-emerald-200 text-sm shadow-sm ring-2 ring-white">
                                 {(post.authorName || "?")[0].toUpperCase()}
                             </div>
                             <div>
-                                <div className="font-bold text-gray-900 dark:text-gray-100 text-sm hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">{post.authorName || "Anonymous"}</div>
+                                <div className="font-bold text-gray-900 dark:text-gray-100 text-sm hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">{post.authorName || "Anonymous"}</div>
                                 <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">{timeAgo(post.createdAt)}</div>
                             </div>
                           </div>
                       </div>
 
-                      <h3 className="text-xl font-extrabold text-gray-900 dark:text-gray-100 mb-2 leading-tight group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-2">
+                      <h3 className="text-xl font-extrabold text-gray-900 dark:text-gray-100 mb-2 leading-tight group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors line-clamp-2">
                           {post.title}
                       </h3>
                       
                       <div className="flex flex-wrap gap-1.5 mb-4">
                         {post.types && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100 uppercase tracking-wide">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-100 uppercase tracking-wide">
                               {Array.isArray(post.types) ? post.types[0] : post.types}
                             </span>
                         )}
@@ -391,15 +391,15 @@ export default function Community() {
                   {/* Card Footer */}
                   <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-white/[0.08] mt-auto" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-1 bg-gray-50 dark:bg-[#1A1A1A] border border-gray-200 dark:border-white/[0.08] rounded-full p-1">
+                        <div className="flex items-center gap-1 bg-gray-50 dark:bg-[#0a0a0a] border border-gray-200 dark:border-white/[0.08] rounded-full p-1">
                             <button 
-                               className={`flex items-center justify-center w-7 h-7 rounded-full transition-colors ${upvoted ? 'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10 hover:text-gray-700 dark:hover:text-gray-200'}`}
+                               className={`flex items-center justify-center w-7 h-7 rounded-full transition-colors ${upvoted ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10 hover:text-gray-700 dark:hover:text-gray-200'}`}
                                onClick={(e) => { e.stopPropagation(); handleVote(post._id, 'upvote'); }}
                                title="Upvote"
                             >
                               <ArrowUp size={14} /> 
                             </button>
-                            <span className={`text-xs font-bold min-w-[20px] text-center ${upvoted ? 'text-indigo-600 dark:text-indigo-400' : downvoted ? 'text-orange-600 dark:text-orange-400' : 'text-gray-700 dark:text-gray-300'}`}>
+                            <span className={`text-xs font-bold min-w-[20px] text-center ${upvoted ? 'text-emerald-600 dark:text-emerald-400' : downvoted ? 'text-orange-600 dark:text-orange-400' : 'text-gray-700 dark:text-gray-300'}`}>
                                 {voteScore}
                             </span>
                             <button 
@@ -427,7 +427,7 @@ export default function Community() {
                           </button>
                         )}
                         <button 
-                          className="flex items-center gap-1 text-xs font-bold text-indigo-600 group-hover:text-indigo-800 transition-colors bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-md"
+                          className="flex items-center gap-1 text-xs font-bold text-emerald-600 group-hover:text-emerald-800 transition-colors bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-md"
                           onClick={() => setSelectedPost(post)}
                         >
                           Join <TrendingUp size={12} className="ml-1 opacity-70 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
@@ -443,7 +443,7 @@ export default function Community() {
         {!loading && posts.length > 0 && totalPages > 1 && (
           <div className="flex justify-center items-center gap-2 mt-10">
             <button 
-              className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-300 dark:border-white/[0.12] bg-white dark:bg-[#242424] text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-300 dark:border-white/[0.12] bg-white dark:bg-[#111111] text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               onClick={() => setPage(p => Math.max(1, p - 1))}
               disabled={page === 1}
             >
@@ -455,8 +455,8 @@ export default function Community() {
                  key={i+1}
                  className={`w-10 h-10 flex items-center justify-center rounded-lg text-sm font-medium transition-colors ${
                      page === i + 1 
-                     ? 'bg-indigo-600 text-white border border-indigo-600 shadow-sm' 
-                     : 'bg-white dark:bg-[#242424] text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-white/[0.12] hover:bg-gray-50 dark:hover:bg-white/10'
+                     ? 'bg-emerald-600 text-white border border-emerald-600 shadow-sm' 
+                     : 'bg-white dark:bg-[#111111] text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-white/[0.12] hover:bg-gray-50 dark:hover:bg-white/10'
                  }`}
                  onClick={() => setPage(i+1)}
               >
@@ -465,7 +465,7 @@ export default function Community() {
             ))}
             
             <button 
-               className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-300 dark:border-white/[0.12] bg-white dark:bg-[#242424] text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+               className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-300 dark:border-white/[0.12] bg-white dark:bg-[#111111] text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                disabled={page === totalPages}
             >

@@ -26,7 +26,7 @@ export default function SnippetDetailModal({ snippet, onClose, onDelete }) {
     }
 
     const codeLines = code ? code.split("\n") : []
-    const langBadgeColor = BG_COLOR[language?.toLowerCase()] || "bg-indigo-50 text-indigo-600 border-indigo-100"
+    const langBadgeColor = BG_COLOR[language?.toLowerCase()] || "bg-emerald-50 text-emerald-600 border-emerald-100"
 
     function handleCopy() {
         navigator.clipboard.writeText(code).then(() => {

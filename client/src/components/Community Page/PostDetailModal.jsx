@@ -132,7 +132,7 @@ export default function PostDetailModal({ post, onClose, onVoteToggle, currentUs
       >
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50 shrink-0">
           <div className="flex items-center gap-3">
-             <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 border border-indigo-200 object-cover overflow-hidden">
+             <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 border border-emerald-200 object-cover overflow-hidden">
                 <User size={20} />
              </div>
              <div>
@@ -155,7 +155,7 @@ export default function PostDetailModal({ post, onClose, onVoteToggle, currentUs
               
               <div className="flex flex-wrap gap-2 mb-6">
                    {post.types && (
-                       <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100 capitalize">
+                       <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100 capitalize">
                          {Array.isArray(post.types) ? post.types.join(", ") : post.types}
                        </span>
                    )}
@@ -173,13 +173,13 @@ export default function PostDetailModal({ post, onClose, onVoteToggle, currentUs
               <div className="flex items-center gap-4 mt-8 pt-6 border-t border-gray-100">
                   <div className="flex items-center gap-1 bg-gray-50 border border-gray-200 rounded-full p-1">
                       <button 
-                         className={`flex items-center justify-center w-8 h-8 rounded-full transition-colors ${upvoted ? 'bg-indigo-100 text-indigo-600' : 'text-gray-500 hover:bg-gray-200 hover:text-gray-700'}`}
+                         className={`flex items-center justify-center w-8 h-8 rounded-full transition-colors ${upvoted ? 'bg-emerald-100 text-emerald-600' : 'text-gray-500 hover:bg-gray-200 hover:text-gray-700'}`}
                          onClick={() => onVoteToggle(post._id, 'upvote')}
                          title="Upvote"
                       >
                           <ArrowUp size={16} />
                       </button>
-                      <span className={`text-sm font-bold min-w-[20px] text-center ${upvoted ? 'text-indigo-600' : downvoted ? 'text-orange-600' : 'text-gray-700'}`}>
+                      <span className={`text-sm font-bold min-w-[20px] text-center ${upvoted ? 'text-emerald-600' : downvoted ? 'text-orange-600' : 'text-gray-700'}`}>
                           {(post.upVotes?.length || 0) - (post.downVotes?.length || 0)}
                       </span>
                       <button 
@@ -203,7 +203,7 @@ export default function PostDetailModal({ post, onClose, onVoteToggle, currentUs
                 <form className="relative mb-6 shrink-0" onSubmit={handleAddComment}>
                     <input 
                        type="text" 
-                       className="w-full pl-4 pr-12 py-3 bg-white border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors shadow-sm placeholder:text-gray-400"
+                       className="w-full pl-4 pr-12 py-3 bg-white border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors shadow-sm placeholder:text-gray-400"
                        placeholder="Add a comment..." 
                        value={newComment}
                        onChange={(e) => setNewComment(e.target.value)}
@@ -212,7 +212,7 @@ export default function PostDetailModal({ post, onClose, onVoteToggle, currentUs
                     <button 
                         type="submit" 
                         disabled={isSubmitting || !newComment.trim()}
-                        className="absolute right-2 top-1.5 bottom-1.5 w-9 flex items-center justify-center text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg disabled:bg-gray-300 disabled:text-gray-500 transition-colors"
+                        className="absolute right-2 top-1.5 bottom-1.5 w-9 flex items-center justify-center text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg disabled:bg-gray-300 disabled:text-gray-500 transition-colors"
                     >
                         <Send size={14} className="ml-0.5" />
                     </button>

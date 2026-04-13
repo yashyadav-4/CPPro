@@ -6,7 +6,7 @@ const Skeleton = ({ className = '' }) => (
 export default function TopTopics({ loading, topics }) {
   if (loading) {
     return (
-      <div className="bg-white dark:bg-[#242424] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4">
+      <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4">
         <Skeleton className="h-3 w-24 mb-4" />
         {[...Array(8)].map((_, i) => (
           <div key={i} className="flex items-center gap-3 mb-3">
@@ -24,14 +24,14 @@ export default function TopTopics({ loading, topics }) {
 
   if (top8.length === 0) {
     return (
-      <div className="bg-white dark:bg-[#242424] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4 flex items-center justify-center">
+      <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4 flex items-center justify-center">
         <span className="text-sm text-gray-400 font-normal">No topic data</span>
       </div>
     );
   }
 
   return (
-    <div className="bg-white dark:bg-[#242424] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4">
+    <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4">
       <p className="text-xs text-gray-400 dark:text-[#9CA3AF] font-normal uppercase tracking-wide mb-4">Top Topics</p>
       <div className="flex flex-col gap-3">
         {top8.map((t, i) => {
@@ -43,7 +43,7 @@ export default function TopTopics({ loading, topics }) {
               </span>
               <div className="flex-1 bg-gray-100 dark:bg-white/[0.06] rounded-full h-2 overflow-hidden mx-2">
                 <div
-                  className="bg-indigo-500 h-full rounded-full transition-all duration-300"
+                  className="bg-emerald-500 h-full rounded-full transition-all duration-300"
                   style={{ width: `${pct}%` }}
                 />
               </div>

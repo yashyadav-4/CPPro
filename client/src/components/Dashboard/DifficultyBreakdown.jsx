@@ -57,7 +57,7 @@ export default function DifficultyBreakdown({ loading, cfBands, lcBands }) {
 
   if (loading) {
     return (
-      <div className="bg-white dark:bg-[#242424] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4">
+      <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4">
         <Skeleton className="h-3 w-32 mb-4" />
         <div className="flex gap-1 mb-5">
           <Skeleton className="h-6 w-12 rounded-md" /><Skeleton className="h-6 w-12 rounded-md" />
@@ -78,7 +78,7 @@ export default function DifficultyBreakdown({ loading, cfBands, lcBands }) {
   const total = rows.reduce((s, r) => s + r.count, 0);
 
   return (
-    <div className="bg-white dark:bg-[#242424] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4 flex flex-col h-full max-h-[400px]">
+    <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4 flex flex-col h-full max-h-[400px]">
       {/* Header */}
       <div className="flex items-center justify-between mb-3 shrink-0">
         <p className="text-[11px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-widest">

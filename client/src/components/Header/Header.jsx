@@ -1,30 +1,15 @@
 import { useState, useEffect } from 'react'
 import { Link, NavLink, useNavigate } from "react-router-dom"
-import { Sun, Moon, LogOut, Menu, X, Shield, Settings } from 'lucide-react'
+import { LogOut, Menu, X, Shield, Settings, Sun, Moon } from 'lucide-react'
+import { useTheme } from '../../hooks/useTheme'
 
 export default function Header() {
-    const [isDarkMode, setIsDarkMode] = useState(() => {
-        const savedTheme = localStorage.getItem('theme');
-        return savedTheme === 'dark';
-    });
+    const { isDark, toggleTheme } = useTheme();
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [user, setUser] = useState({ name: 'User', email: '', initial: 'U' });
     const navigate = useNavigate();
-
-    useEffect(() => {
-        const root = document.documentElement;
-        if (isDarkMode) {
-            root.classList.add('dark');
-            localStorage.setItem('theme', 'dark');
-        } else {
-            root.classList.remove('dark');
-            localStorage.setItem('theme', 'light');
-        }
-    }, [isDarkMode]);
-
-    const toggleTheme = () => setIsDarkMode(prev => !prev);
 
     useEffect(() => {
         fetch('/api/auth/verify', { credentials: 'include' })
@@ -64,18 +49,20 @@ export default function Header() {
     const navItems = ['Home', 'Dashboard', 'Leaderboard', 'Learning', 'Level-up', 'Code Snippet', 'Community'];
 
     return (
-        <header className="sticky top-0 z-50 w-full bg-white dark:bg-[#242424] border-b border-black/[0.07] dark:border-white/[0.08] shadow-sm transition-colors duration-200">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex justify-between items-center h-16">
+        <header className="sticky top-0 z-50 w-full bg-white dark:bg-[#111111] border-b border-black/[0.07] dark:border-white/[0.08] shadow-lg shadow-emerald-500/15 dark:shadow-emerald-500/20 transition-colors duration-200">
+            <div className="max-w-[1120px] mx-auto px-6 md:px-12">
+                <div className="flex items-center justify-between h-16 w-full">
                     {/* Left Section - Logo */}
-                    <Link to='/' className="flex flex-shrink-0 items-center gap-2">
-                        <span className="text-xl font-bold text-indigo-600 dark:text-indigo-400 tracking-tight">
-                            &lt;/&gt; CPPro
-                        </span>
-                    </Link>
+                    <div className="flex-shrink-0 flex items-center">
+                        <Link to='/' className="flex flex-shrink-0 items-center gap-2">
+                            <span className="text-xl font-bold text-emerald-600 dark:text-emerald-400 tracking-tight">
+                                &lt;/&gt; CPPro
+                            </span>
+                        </Link>
+                    </div>
 
                     {/* Center Section - Navigation (Desktop) */}
-                    <nav className="hidden md:flex space-x-8">
+                    <nav className="hidden lg:flex flex-1 justify-center gap-4 xl:gap-8 px-4 xl:px-8">
                         {navItems.map((item) => {
                             const path = item === 'Home' ? '/' : `/${item.toLowerCase().replace(' ', '')}`;
                             return (
@@ -84,9 +71,9 @@ export default function Header() {
                                     to={path}
                                     end={item === 'Home'}
                                     className={({ isActive }) => 
-                                        `inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors ${
+                                        `inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors whitespace-nowrap ${
                                             isActive 
-                                            ? 'border-indigo-600 text-gray-900 dark:text-white' 
+                                            ? 'border-emerald-600 text-gray-900 dark:text-white' 
                                             : 'border-transparent text-gray-500 dark:text-gray-200 hover:text-gray-700 dark:hover:text-white hover:border-gray-300 dark:hover:border-white/25'
                                         }`
                                     }
@@ -98,30 +85,31 @@ export default function Header() {
                     </nav>
 
                     {/* Right Section - Actions & Profile */}
-                    <div className="hidden md:flex items-center gap-4">
-                        <button 
-                            className="p-2 text-gray-500 dark:text-gray-200 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-colors" 
+                    <div className="hidden md:flex flex-shrink-0 items-center justify-end gap-4 xl:gap-6">
+                        <button
                             onClick={toggleTheme}
-                            title="Toggle Theme"
+                            title={isDark ? 'Light mode' : 'Dark mode'}
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0"
                         >
-                            {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+                            {isDark ? <Sun size={16} className="flex-shrink-0" /> : <Moon size={16} className="flex-shrink-0" />}
+                            <span>{isDark ? 'Light' : 'Dark'}</span>
                         </button>
 
                         {isAuthenticated ? (
-                            <div className="relative">
+                            <div className="relative flex-shrink-0">
                                 <button 
                                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                                     onBlur={() => setTimeout(() => setIsDropdownOpen(false), 200)}
                                     className="flex items-center gap-2 focus:outline-none"
                                 >
-                                    <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-300 font-bold border border-indigo-200 dark:border-indigo-400/25">
+                                    <div className="w-8 h-8 flex-shrink-0 rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-300 font-bold border border-emerald-200 dark:border-emerald-400/25">
                                         {user.initial}
                                     </div>
-                                    <span className="text-sm font-medium text-gray-700 dark:text-gray-100">{user.name}</span>
+                                    <span className="text-sm font-medium text-gray-700 dark:text-gray-100 whitespace-nowrap">{user.name}</span>
                                 </button>
 
                                 {isDropdownOpen && (
-                                    <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-[#242424] rounded-md shadow-lg py-1 border border-black/[0.07] dark:border-white/[0.08] ring-1 ring-black/5 dark:ring-white/10 z-50">
+                                    <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-[#111111] rounded-md shadow-lg py-1 border border-black/[0.07] dark:border-white/[0.08] ring-1 ring-black/5 dark:ring-white/10 z-50">
                                         <div className="px-4 py-2 border-b border-gray-100 dark:border-white/[0.08]">
                                             <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Signed in as</p>
                                             <p className="text-sm text-gray-500 dark:text-gray-300 truncate" title={user.email}>{user.email}</p>
@@ -152,19 +140,19 @@ export default function Header() {
                             </div>
                         ) : (
                             <div className="flex items-center gap-3">
-                                <Link to="/login" className="text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Log in</Link>
-                                <Link to="/signup" className="text-sm font-medium bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors shadow-sm">Sign up</Link>
+                                <Link to="/login" className="text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">Log in</Link>
+                                <Link to="/signup" className="text-sm font-medium bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-500/15 dark:shadow-emerald-500/20">Sign up</Link>
                             </div>
                         )}
                     </div>
 
                     {/* Mobile menu button */}
-                    <div className="flex md:hidden items-center gap-4">
-                        <button 
-                            className="p-2 text-gray-500 dark:text-gray-300 rounded-full" 
+                    <div className="flex md:hidden flex-1 justify-end items-center gap-4">
+                        <button
                             onClick={toggleTheme}
+                            className="flex items-center gap-1 px-2 py-1 rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-gray-600 dark:text-gray-300 text-xs font-medium"
                         >
-                            {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+                            {isDark ? <Sun size={14} /> : <Moon size={14} />}
                         </button>
                         <button
                             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -178,7 +166,7 @@ export default function Header() {
 
             {/* Mobile Menu */}
             {isMobileMenuOpen && (
-                <div className="md:hidden bg-white dark:bg-[#242424] border-t border-black/[0.07] dark:border-white/[0.08]">
+                <div className="md:hidden bg-white dark:bg-[#111111] border-t border-black/[0.07] dark:border-white/[0.08]">
                     <div className="pt-2 pb-3 space-y-1">
                         {navItems.map((item) => {
                             const path = item === 'Home' ? '/' : `/${item.toLowerCase().replace(' ', '')}`;
@@ -191,7 +179,7 @@ export default function Header() {
                                     className={({ isActive }) => 
                                         `block pl-3 pr-4 py-2 border-l-4 text-base font-medium ${
                                             isActive 
-                                            ? 'border-indigo-600 text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-500/10' 
+                                            ? 'border-emerald-600 text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/10' 
                                             : 'border-transparent text-gray-500 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-white/10 hover:border-gray-300 dark:hover:border-white/20'
                                         }`
                                     }
@@ -232,8 +220,8 @@ export default function Header() {
                             </div>
                         ) : (
                             <div className="border-t border-gray-200 dark:border-white/[0.08] pt-4 pb-1 space-y-2 px-4">
-                                <Link to="/login" onClick={() => setIsMobileMenuOpen(false)} className="w-full flex justify-center items-center py-2 text-base font-medium text-gray-700 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400 border border-gray-300 dark:border-white/20 rounded-lg transition-colors">Log in</Link>
-                                <Link to="/signup" onClick={() => setIsMobileMenuOpen(false)} className="w-full flex justify-center items-center py-2 text-base font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors shadow-sm">Sign up</Link>
+                                <Link to="/login" onClick={() => setIsMobileMenuOpen(false)} className="w-full flex justify-center items-center py-2 text-base font-medium text-gray-700 dark:text-gray-200 hover:text-emerald-600 dark:hover:text-emerald-400 border border-gray-300 dark:border-white/20 rounded-lg transition-colors">Log in</Link>
+                                <Link to="/signup" onClick={() => setIsMobileMenuOpen(false)} className="w-full flex justify-center items-center py-2 text-base font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors shadow-lg shadow-emerald-500/15 dark:shadow-emerald-500/20">Sign up</Link>
                             </div>
                         )}
                     </div>

@@ -20,7 +20,7 @@ const CustomTooltip = ({ active, payload, label }) => {
   if (uniquePayload.length === 0) return null;
 
   return (
-    <div className="bg-white dark:bg-[#1a1a1a] border border-black/[0.07] dark:border-white/[0.08] rounded-lg px-3 py-2 shadow-lg text-xs leading-relaxed z-50">
+    <div className="bg-white dark:bg-[#0a0a0a] border border-black/[0.07] dark:border-white/[0.08] rounded-lg px-3 py-2 shadow-lg text-xs leading-relaxed z-50">
       <p className="text-gray-500 dark:text-gray-400 mb-1 font-normal">{label}</p>
       {uniquePayload.map((p, i) => (
         <p key={i} style={{ color: p.color }} className="font-medium">{p.name}: {p.value}</p>
@@ -110,7 +110,7 @@ function getLcPrediction(history) {
 export default function RatingProgression({ loading, cfRatingHistory, lcRatingHistory }) {
   if (loading) {
     return (
-      <div className="bg-white dark:bg-[#242424] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4">
+      <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4">
         <Skeleton className="h-3 w-36 mb-4" />
         <Skeleton className="h-44 w-full rounded" />
       </div>
@@ -122,7 +122,7 @@ export default function RatingProgression({ loading, cfRatingHistory, lcRatingHi
 
   if (!hasCf && !hasLc) {
     return (
-      <div className="bg-white dark:bg-[#242424] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4 flex items-center justify-center h-40">
+      <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4 flex items-center justify-center h-40">
         <span className="text-sm text-gray-400 font-normal">No contest history yet</span>
       </div>
     );
@@ -197,7 +197,7 @@ export default function RatingProgression({ loading, cfRatingHistory, lcRatingHi
   };
 
   return (
-    <div className="bg-white dark:bg-[#242424] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4">
+    <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4">
       <div className="flex items-center justify-between mb-4">
         <p className="text-xs text-gray-400 dark:text-[#9CA3AF] font-normal uppercase tracking-wide">Rating Progression</p>
         <div className="flex items-center gap-3 text-[10px]">

@@ -181,15 +181,15 @@ export default function Dashboard() {
   // ── Not linked ──────────────────────────────────────────────────────────────
   if (!loading && !linkedAccounts.codeforces && !linkedAccounts.leetcode && !error) {
     return (
-      <div className="min-h-screen bg-[#F5F5F3] dark:bg-[#1A1A1A] flex flex-col justify-center items-center p-6">
-        <div className="bg-white dark:bg-[#242424] border border-black/[0.07] dark:border-white/[0.08] text-center rounded-xl p-8 max-w-md w-full">
-          <div className="w-16 h-16 rounded-full bg-indigo-50 dark:bg-indigo-500/15 flex items-center justify-center mx-auto mb-5">
-            <LinkIcon size={28} className="text-indigo-600 dark:text-indigo-400" />
+      <div className="min-h-screen bg-[#ffffff] dark:bg-[#0a0a0a] flex flex-col justify-center items-center p-6">
+        <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] text-center rounded-xl p-8 max-w-md w-full">
+          <div className="w-16 h-16 rounded-full bg-emerald-50 dark:bg-emerald-500/15 flex items-center justify-center mx-auto mb-5">
+            <LinkIcon size={28} className="text-emerald-600 dark:text-emerald-400" />
           </div>
           <h2 className="text-xl font-medium text-gray-900 dark:text-white mb-2">Link Your Account</h2>
           <p className="text-gray-500 dark:text-gray-400 mb-6 font-normal">Link at least one platform to view your dashboard.</p>
           <button
-            className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+            className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
             onClick={() => navigate('/verify-codeforces')}
           >
             <Shield size={16} /> Go to Verification
@@ -202,13 +202,13 @@ export default function Dashboard() {
   // ── Error ────────────────────────────────────────────────────────────────────
   if (error && !cfData && !lcData) {
     return (
-      <div className="min-h-screen bg-[#F5F5F3] dark:bg-[#1A1A1A] flex flex-col justify-center items-center p-6">
-        <div className="bg-white dark:bg-[#242424] border border-black/[0.07] dark:border-white/[0.08] text-center rounded-xl p-8 max-w-md w-full">
+      <div className="min-h-screen bg-[#ffffff] dark:bg-[#0a0a0a] flex flex-col justify-center items-center p-6">
+        <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] text-center rounded-xl p-8 max-w-md w-full">
           <AlertTriangle size={48} className="text-red-500 mx-auto mb-4" />
           <h2 className="text-xl font-medium text-gray-900 dark:text-white mb-2">Something went wrong</h2>
           <p className="text-gray-500 dark:text-gray-400 mb-6 font-normal">{error}</p>
           <button
-            className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+            className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
             onClick={() => refetch()}
           >
             <RefreshCw size={16} /> Retry
@@ -308,7 +308,7 @@ export default function Dashboard() {
   const achievements = lc.achievements || [];
 
   return (
-    <div className="bg-[#F5F5F3] dark:bg-[#1A1A1A] px-6 py-6 min-h-screen">
+    <div className="bg-[#ffffff] dark:bg-[#0a0a0a] px-6 py-6 min-h-screen">
       <div className="max-w-[1400px] mx-auto space-y-3">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -325,10 +325,10 @@ export default function Dashboard() {
             disabled={refreshing || cooldown > 0}
             className={`flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg text-white transition-colors ${
               refreshing
-                  ? 'bg-indigo-400 cursor-not-allowed'
+                  ? 'bg-emerald-400 cursor-not-allowed'
                 : cooldown > 0
                   ? 'bg-amber-500 cursor-not-allowed'
-                  : 'bg-indigo-600 hover:bg-indigo-700'
+                  : 'bg-emerald-600 hover:bg-emerald-700'
             }`}
           >
             <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />

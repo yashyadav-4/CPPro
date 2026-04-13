@@ -32,7 +32,7 @@ const LIGHT_TIERS = {
   red:    { bg: '#ffe3e3', border: '#ff6b6b', text: '#c92a2a', accent: '#ffa8a8' },
 };
 
-export default function LearningTreeView() {
+export default function LearningPage() {
   const { progress, getState, toggleState, stats } = useLearningTree();
   const [hoveredNode, setHoveredNode] = useState(null);
   const [popNode, setPopNode] = useState(null);

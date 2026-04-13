@@ -4,7 +4,7 @@ import Footer from "./components/Footer/Footer";
 
 function Layout() {
     return (
-        <div className="min-h-screen bg-[#F5F5F3] dark:bg-[#1A1A1A] text-gray-900 dark:text-white">
+        <div className="min-h-screen bg-white dark:bg-[#0a0a0a] text-gray-900 dark:text-white">
             <Header />
             <main className="min-h-[calc(100vh-64px)]">
                 <Outlet />

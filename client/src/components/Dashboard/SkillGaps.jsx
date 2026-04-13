@@ -12,7 +12,7 @@ const STATUS_CONFIG = {
 export default function SkillGaps({ loading, skills }) {
   if (loading) {
     return (
-      <div className="bg-white dark:bg-[#242424] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4">
+      <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4">
         <Skeleton className="h-3 w-24 mb-4" />
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[...Array(8)].map((_, i) => (
@@ -29,7 +29,7 @@ export default function SkillGaps({ loading, skills }) {
 
   if (list.length === 0) {
     return (
-      <div className="bg-white dark:bg-[#242424] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4 flex items-center justify-center min-h-[120px]">
+      <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4 flex items-center justify-center min-h-[120px]">
         <span className="text-sm text-gray-400 font-normal">Solve more problems to see topic mastery</span>
       </div>
     );
@@ -38,7 +38,7 @@ export default function SkillGaps({ loading, skills }) {
   const maxSolved = Math.max(...list.map(s => s.solved || 0), 1);
 
   return (
-    <div className="bg-white dark:bg-[#242424] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4">
+    <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4">
       <div className="flex items-center justify-between mb-5">
         <p className="text-[11px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-widest">Topic Mastery</p>
         <div className="flex items-center gap-4">
@@ -66,7 +66,7 @@ export default function SkillGaps({ loading, skills }) {
           
           return (
             <div key={i} className="flex items-center justify-between group">
-              <span className="text-sm text-gray-700 dark:text-[#E5E7EB] font-normal truncate pr-2 group-hover:text-indigo-500 transition-colors" title={s.topic}>
+              <span className="text-sm text-gray-700 dark:text-[#E5E7EB] font-normal truncate pr-2 group-hover:text-emerald-500 transition-colors" title={s.topic}>
                 {s.topic}
               </span>
               <div className="flex items-center gap-3 shrink-0">

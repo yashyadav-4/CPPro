@@ -1,142 +1,106 @@
-# 🚀 CPPro: Competitive Programming Analytics Dashboard
+# 🚀 CPPro: The Unified Platform for Competitive Excellence
 
-**CPPro** is a centralized, high-performance dashboard built for competitive programmers who want to stop grinding blindly and start growing strategically. By aggregating data from platforms like Codeforces, CPPro provides deep insights into your solving patterns, topic mastery, and contest performance, while also providing a community space and snippet manager for your CP journey.
-
----
-
-## ✨ Key Features
-
-### 🛠 Core Analytics & Dashboard
-- **The "Upsolve" Bucket**: Automatically tracks problems you failed during contests and puts them in a "To-Do" list. Growth happens in the problems you couldn't solve.
-- **Topic Mastery Progress**: Visual levels for tags like DP, Graphs, Greedy, and Math. Level up your skills from "Newbie" to "Master."
-- **Consistency Heatmap**: A GitHub-style activity tracker that weights squares by the difficulty (rating) of the problems solved, not just the quantity.
-- **Codeforces Sync**: Connect your Codeforces handle to fetch real-time data, submissions, and ratings.
-
-### 📈 Growth & Prediction
-- **Leaderboard**: Compare your progress with peers and the community based on your rating and problem-solving stats.
-- **Smart Analytics**: Analyze how long you take to solve problems versus your penalty attempts.
-
-### 👥 Community & Tools
-- **Code Snippet Manager**: Save, organize, and reuse your competitive programming templates (`C++`, `Java`, `Python`, etc.) directly from CPPro.
-- **Community Forum**: Participate in discussions, post questions, and share solutions. Features rich post interactions including comments and upvotes.
-- **Secure Authentication**: Robust local authentication using JWT and bcrypt, with features to securely link external accounts.
+**CPPro** is a high-performance, SaaS-inspired analytics engine designed for competitive programmers. It unifies data from **Codeforces** and **LeetCode** into a single, high-fidelity dashboard—empowering users to stop grinding blindly and start growing strategically through data-driven insights.
 
 ---
 
-## 💻 Tech Stack
+## ✨ Premium Platform Features
+
+CPPro isn't just a profile aggregator; it's a full-stack growth ecosystem.
+
+### 🌌 Lean Nexus Background Engine
+*   **Zero-Block UI**: Experience instant dashboard loads with intelligent caching.
+*   **The Bouncer**: Sophisticated rate-limiting (250ms serialization) ensuring resilient API communication without risk of platform bans.
+*   **Nexus Proxy**: Advanced IP-rotation and custom User-Agent orchestration for 100% sync reliability.
+
+### 📈 NextTarget™ Rating Engine
+*   **50-Point Sprints**: Breaks down grand rating goals into manageable milestones.
+*   **Curated Recommendations**: 
+    *   **Master First**: Solidify foundation with problems just below your rating.
+    *   **Stretch Goals**: Level-up with problems just above your comfort zone.
+*   **Milestone Estimation**: Data-driven prediction of how many contests you need to reach your next tier.
+
+### 🎭 Unified Analytics & Visualizations
+*   **Unified Activity Heatmap**: A GitHub-style contribution grid merging submissions from all linked handles.
+*   **3D Learning Tree**: A futuristic, interactive Three.js visualization of your algorithmic mastery across Graphs, DP, and more.
+*   **Skill Radar**: Multi-dimensional mapping of your consistency, speed, and accuracy.
+
+### 🛠️ Developer Productivity Suite
+*   **Upsolve "The Bucket"**: Automatically identifies contest problems you attempted but didn't solve—targeting your exact growth gaps.
+*   **Snippet Manager**: A centralized repository for your optimized C++, Java, and Python templates.
+*   **Global CPScore Leaderboard**: A unique ranking system based on a weighted composite of ratings, solves, and streaks.
+
+---
+
+## 💻 Tech Architecture
 
 | Layer | Technology |
 | :--- | :--- |
-| **Frontend** | React.js (Vite), Tailwind CSS, Framer Motion, Recharts (for data visualization), React Router |
-| **Backend** | Node.js, Express.js, JWT, HTTP Proxy Agent |
-| **Database** | MongoDB & Mongoose |
-| **External API** | Codeforces API |
+| **Frontend** | React 18 (Vite), Tailwind CSS v4, Framer Motion, Three.js, Recharts |
+| **Styling** | Modern Brutalist Design, Dark/Light Mode with Global Theme Context |
+| **Backend** | Node.js (Express), MongoDB (Mongoose), JWT, Bottleneck.js |
+| **Infrastructure** | Nexus Proxy Engine, Bouncer Rate-Limiter, Circuit-Breaker Fail-safes |
 
 ---
 
-## 📁 Project Structure
+## 📁 System Blueprint
 
 ```text
 CPPro/
-├── client/                 # React Frontend (Vite)
+├── client/                 # React Unified Interface
 │   ├── src/
-│   │   ├── components/     # Reusable UI components
-│   │   │   ├── AuthPage/   # Login & Signup flows
-│   │   │   ├── Dashboard/  # Analytics & Heatmap
-│   │   │   ├── Leaderboard/# User rankings
-│   │   │   ├── Community Page/ # Posts, Comments & Discussions
-│   │   │   ├── CodeTemplate/# Code snippet management
-│   │   │   └── VerifyCodeforces/ # Handle syncing
-│   │   ├── AppRouter.jsx   # Frontend routing definition
-│   │   └── index.css       # Tailwind entry and global styles
-│   └── package.json
+│   │   ├── components/     # Atomic & Layered UI Components
+│   │   │   ├── Dashboard/  # High-Fidelity Analytics Engine
+│   │   │   ├── Leaderboard/# Multi-Scope Ranking System
+│   │   │   ├── Community/  # Full-Stack Threaded Forums
+│   │   │   └── LevelUp/    # NextTarget™ Progress Tracker
+│   │   ├── hooks/          # Global Context Providers (Theme, Auth)
+│   │   └── index.css       # Design System Tokens
 │
-├── server/                 # Express Backend
-│   ├── Controllers/        # Request handlers
-│   ├── Middlewares/        # Custom middlewares (e.g., auth verification)
-│   ├── Model/              # Mongoose schema definitions
-│   ├── Routes/             # Express routes (User, Dashboard, Sync, CodeTemplate, etc.)
-│   ├── index.js            # Entry point for the server
-│   └── package.json
+├── server/                 # Express API & Sync Worker
+│   ├── Controllers/        # Business Logic & Data Orchestration
+│   ├── Utils/              # Nexus Proxy & Bouncer Infrastructure
+│   ├── Model/              # Unified Core Data Models
+│   └── Routes/             # Secure RESTful Endpoints
 │
-└── package.json            # Root configuration (concurrently scripts)
+└── docs/                   # Exhaustive Technical Documentation
 ```
 
 ---
 
-## 🚀 Getting Started
-
-Follow these instructions to set up the project locally.
+## 🚦 Getting Started
 
 ### 🔑 Prerequisites
+*   **Node.js** (v18+)
+*   **MongoDB** (Local or Atlas)
 
-- [Node.js](https://nodejs.org/) (v16+ recommended)
-- [MongoDB](https://www.mongodb.com/) (Local or Atlas)
-- NPM or Yarn
-
-### 🛠️ Installation
-
-1. **Clone the repository:**
-   ```bash
-   git clone <your-repo-url>
-   cd CPPro
-   ```
-
-2. **Install root dependencies:**
-   ```bash
-   npm install
-   ```
-
-3. **Install client and server dependencies:**
-   ```bash
-   cd client && npm install
-   cd ../server && npm install
-   cd ..
-   ```
-
-### ⚙️ Environment Variables
-
-Create a `.env` file in the `server` directory and configure the following variables:
-
-```env
-PORT=5000
-MongoUrl=<your_mongodb_connection_string>
-JWT_SECRET=<your_jwt_secret>
-```
-
-*(Add any other API keys or proxy configurations if required by `nexusProxy.js` or your rate limiters).*
-
-### 🏃‍♂️ Running the App
-
-You can run both the frontend and backend concurrently from the root directory:
-
+### 🛠️ Rapid Installation
 ```bash
-# Starts the Express backend on port 5000 and Vite frontend on port 5173
+# Clone the repository
+git clone https://github.com/your-repo/cppro.git && cd CPPro
+
+# Install dependencies for both client and server
+npm install && cd client && npm install && cd ../server && npm install && cd ..
+
+# Launch the unified development environment
 npm start
 ```
 
-Alternatively, to run them individually:
-- **Backend (port 5000)**: `cd server && npm run dev`
-- **Frontend (port 5173)**: `cd client && npm run dev`
+### ⚙️ Configuration (`/server/.env`)
+```env
+PORT=5000
+MongoUrl=YOUR_MONGODB_URI
+JWT_SECRET=YOUR_SECURE_SECRET
+```
 
 ---
 
-## 🛣️ API Documentation (Overview)
-
-- **Auth** (`/api/auth/*`): Login, Registration, JWT issuing.
-- **Sync** (`/api/sync/*`): Proxies Codeforces API and syncs user submissions.
-- **Dashboard** (`/api/dashboard/*`): Retrieves user analytics, heatmaps, and problem states.
-- **Code Templates** (`/api/codeTemplate/*`): CRUD operations for user code snippets.
-- **Community** (`/api/posts/*`, `/api/comments/*`): Manage forum posts, upvotes, and comments.
-- **Leaderboard** (`/api/leaderboard/*`): Returns ranked user standings.
+## 🚀 The Verification Loop
+CPPro uses a zero-password verification protocol. To link your handles:
+1.  Generate a **Nexus Token** via the CPPro Dashboard.
+2.  Set the token as your **"Real Name"** on Codeforces/LeetCode.
+3.  Click **"Verify"** to securely bridge your data.
 
 ---
 
-## 🤝 Contributing
-
-Contributions, issues, and feature requests are welcome! 
-Feel free to check out the issues page to see what needs to be worked on.
-
----
-
-*Built with ❤️ for Competitive Programmers.*
+*Built with ❤️ for the Competitive Programming Community.*

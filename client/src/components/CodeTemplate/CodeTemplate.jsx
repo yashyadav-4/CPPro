@@ -114,7 +114,7 @@ export default function CodeTemplate() {
     }, [searchQuery, activeFilter])
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-[#1A1A1A] py-10 px-4 sm:px-6 lg:px-8">
+        <div className="min-h-screen bg-gray-50 dark:bg-[#0a0a0a] py-10 px-4 sm:px-6 lg:px-8">
             <div className="max-w-7xl mx-auto">
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-10">
@@ -124,7 +124,7 @@ export default function CodeTemplate() {
                     </div>
                     <button 
                         onClick={() => setShowAddModal(true)}
-                        className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-5 py-2.5 rounded-lg shadow-sm transition-colors flex-shrink-0"
+                        className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-5 py-2.5 rounded-lg shadow-sm transition-colors flex-shrink-0"
                     >
                         <Plus size={18} />
                         New Snippet
@@ -142,7 +142,7 @@ export default function CodeTemplate() {
                             placeholder="Search by title, language, or tag..."
                             value={searchQuery}
                             onChange={e => setSearchQuery(e.target.value)}
-                            className="block w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-white/[0.12] rounded-lg leading-5 bg-white dark:bg-[#242424] text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm shadow-sm transition-colors"
+                            className="block w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-white/[0.12] rounded-lg leading-5 bg-white dark:bg-[#111111] text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm shadow-sm transition-colors"
                         />
                     </div>
 
@@ -153,8 +153,8 @@ export default function CodeTemplate() {
                                 onClick={() => setActiveFilter(f.value)}
                                 className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors border ${
                                     activeFilter === f.value 
-                                    ? "bg-indigo-600 text-white border-indigo-600" 
-                                    : "bg-white dark:bg-[#242424] text-gray-700 dark:text-gray-200 border-gray-300 dark:border-white/[0.12] hover:bg-gray-50 dark:hover:bg-white/10"
+                                    ? "bg-emerald-600 text-white border-emerald-600" 
+                                    : "bg-white dark:bg-[#111111] text-gray-700 dark:text-gray-200 border-gray-300 dark:border-white/[0.12] hover:bg-gray-50 dark:hover:bg-white/10"
                                 }`}
                             >
                                 {f.label}
@@ -166,8 +166,8 @@ export default function CodeTemplate() {
                                 onClick={() => setActiveFilter(activeFilter === tag ? "all" : tag)}
                                 className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors border ${
                                     activeFilter === tag 
-                                    ? "bg-indigo-600 text-white border-indigo-600" 
-                                    : "bg-white dark:bg-[#242424] text-gray-700 dark:text-gray-200 border-gray-300 dark:border-white/[0.12] hover:bg-gray-50 dark:hover:bg-white/10"
+                                    ? "bg-emerald-600 text-white border-emerald-600" 
+                                    : "bg-white dark:bg-[#111111] text-gray-700 dark:text-gray-200 border-gray-300 dark:border-white/[0.12] hover:bg-gray-50 dark:hover:bg-white/10"
                                 }`}
                             >
                                 {tag.charAt(0).toUpperCase() + tag.slice(1)}

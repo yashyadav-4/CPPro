@@ -6,7 +6,7 @@ export default function CodeTemplateList({ snippets, onViewSnippet, onDelete, lo
         return (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {[1, 2, 3].map(i => (
-                    <div key={i} className="animate-pulse bg-white dark:bg-[#242424] border border-gray-200 dark:border-white/[0.08] rounded-xl h-64" />
+                    <div key={i} className="animate-pulse bg-white dark:bg-[#111111] border border-gray-200 dark:border-white/[0.08] rounded-xl h-64" />
                 ))}
             </div>
         )
@@ -14,8 +14,8 @@ export default function CodeTemplateList({ snippets, onViewSnippet, onDelete, lo
 
     if (!snippets || snippets.length === 0) {
         return (
-            <div className="bg-white dark:bg-[#242424] border border-gray-200 dark:border-white/[0.08] rounded-xl p-16 text-center shadow-sm w-full">
-                <div className="w-16 h-16 mx-auto bg-gray-100 dark:bg-[#1A1A1A] rounded-full flex items-center justify-center text-gray-400 mb-4">
+            <div className="bg-white dark:bg-[#111111] border border-gray-200 dark:border-white/[0.08] rounded-xl p-16 text-center shadow-sm w-full">
+                <div className="w-16 h-16 mx-auto bg-gray-100 dark:bg-[#0a0a0a] rounded-full flex items-center justify-center text-gray-400 mb-4">
                     <FileCode2 size={32} />
                 </div>
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">No snippets found</h3>
@@ -58,7 +58,7 @@ export default function CodeTemplateList({ snippets, onViewSnippet, onDelete, lo
             {totalPages > 1 && (
                 <div className="flex justify-center items-center gap-2 mt-10">
                     <button
-                        className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-300 dark:border-white/[0.12] bg-white dark:bg-[#242424] text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-300 dark:border-white/[0.12] bg-white dark:bg-[#111111] text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         disabled={currentPage === 1}
                         onClick={() => onPageChange(currentPage - 1)}
                     >
@@ -75,8 +75,8 @@ export default function CodeTemplateList({ snippets, onViewSnippet, onDelete, lo
                                 <button
                                     className={`w-10 h-10 flex items-center justify-center rounded-lg text-sm font-medium transition-colors ${
                                         currentPage === page 
-                                        ? "bg-indigo-600 text-white border border-indigo-600 shadow-sm" 
-                                        : "bg-white dark:bg-[#242424] text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-white/[0.12] hover:bg-gray-50 dark:hover:bg-white/10"
+                                        ? "bg-emerald-600 text-white border border-emerald-600 shadow-sm" 
+                                        : "bg-white dark:bg-[#111111] text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-white/[0.12] hover:bg-gray-50 dark:hover:bg-white/10"
                                     }`}
                                     onClick={() => onPageChange(page)}
                                 >
@@ -87,7 +87,7 @@ export default function CodeTemplateList({ snippets, onViewSnippet, onDelete, lo
                     })}
 
                     <button
-                        className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-300 dark:border-white/[0.12] bg-white dark:bg-[#242424] text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-300 dark:border-white/[0.12] bg-white dark:bg-[#111111] text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         disabled={currentPage === totalPages}
                         onClick={() => onPageChange(currentPage + 1)}
                     >
