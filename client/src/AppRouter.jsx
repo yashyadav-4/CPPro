@@ -54,16 +54,16 @@ const router = createBrowserRouter([
             {
                 path: "settings",
                 element: <ProtectedRoute><Settings /></ProtectedRoute>
+            },
+            {
+                path: "login",
+                element: <Login />
+            },
+            {
+                path: "signup",
+                element: <Signup />
             }
         ]
-    },
-    {
-        path: "/login",
-        element: <Login />
-    },
-    {
-        path: "/signup",
-        element: <Signup />
     }
 ]);
 

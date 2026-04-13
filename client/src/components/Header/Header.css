@@ -1,1 +1,44 @@
-/* Header.css has been deprecated in favor of Tailwind CSS in Header.jsx */
+/* Header Specific Styles */
+
+.theme-toggle-btn {
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  transition: color 0.5s;
+}
+
+.theme-toggle-btn::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  left: -20%;
+  right: -20%;
+  top: 0;
+  bottom: 0;
+  transform: skewX(-45deg) scale(0, 1);
+  transition: transform 0.5s;
+}
+
+/* Light Mode specific hover colors */
+:not(.dark) .theme-toggle-btn::after {
+  background: #000000;
+}
+
+:not(.dark) .theme-toggle-btn:hover {
+  color: #ffffff;
+  border-color: #000000;
+}
+
+/* Dark Mode specific hover colors */
+.dark .theme-toggle-btn::after {
+  background: #ffffff;
+}
+
+.dark .theme-toggle-btn:hover {
+  color: #000000;
+  border-color: #ffffff;
+}
+
+.theme-toggle-btn:hover::after {
+  transform: skewX(-45deg) scale(1, 1);
+}

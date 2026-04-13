@@ -1,32 +1,30 @@
-import { useMemo } from 'react';
-
-/**
- * FallingStars
- *
- * Renders soft dark dots that gently fall from the top of the screen,
- * like white stars falling on a clear night — but in dark on a light bg.
- *
- * Each star has a randomized:
- *   - horizontal position
- *   - size (1px – 3px)
- *   - animation duration (8s – 20s)
- *   - animation delay (0s – 15s)
- *   - opacity (0.08 – 0.25)
- */
+import { useMemo, useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { useTheme } from '../../hooks/useTheme';
 
 const TOTAL_STARS = 40;
 
 export default function FallingStars() {
-    // Generate random star properties only once (useMemo).
+    const { isDark } = useTheme();
+    const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+
+    useEffect(() => {
+        const handleMouseMove = (e) => {
+            setMousePos({ x: e.clientX, y: e.clientY });
+        };
+        window.addEventListener('mousemove', handleMouseMove);
+        return () => window.removeEventListener('mousemove', handleMouseMove);
+    }, []);
+
     const stars = useMemo(() => {
         const starArray = [];
-
         for (let i = 0; i < TOTAL_STARS; i++) {
-            const leftPosition = Math.random() * 100;           // 0% to 100%
-            const size = 1.5 + Math.random() * 2;               // 1.5px to 3.5px
-            const animationDuration = 8 + Math.random() * 12;   // 8s to 20s
-            const animationDelay = Math.random() * 15;           // 0s to 15s
-            const opacity = 0.3 + Math.random() * 0.4;        // 0.3 to 0.7
+            const leftPosition = Math.random() * 100;
+            const size = 1.2 + Math.random() * 2.5; 
+            const animationDuration = 10 + Math.random() * 15;
+            const animationDelay = Math.random() * -25;
+            const opacity = isDark ? (0.4 + Math.random() * 0.4) : (0.2 + Math.random() * 0.3);
+            const color = isDark ? '#ffffff' : '#0f172a';
 
             starArray.push({
                 id: i,
@@ -35,29 +33,61 @@ export default function FallingStars() {
                 animationDuration,
                 animationDelay,
                 opacity,
+                color
             });
         }
-
         return starArray;
-    }, []);
+    }, [isDark]);
+
+    const gridColor = isDark ? 'rgba(22, 163, 74, 0.15)' : 'rgba(22, 163, 74, 0.1)';
+    const accentGrid = isDark ? 'rgba(34, 197, 94, 0.4)' : 'rgba(22, 163, 74, 0.3)';
 
     return (
-        <div className="falling-stars-container" aria-hidden="true">
+        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden', zIndex: 0 }}>
+            {/* Base Grid */}
+            <div style={{ 
+                position: 'absolute', inset: 0, 
+                backgroundImage: `linear-gradient(${isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)'} 1px,transparent 1px),linear-gradient(90deg,${isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)'} 1px,transparent 1px)`, 
+                backgroundSize: '64px 64px', zIndex: -2 
+            }} />
+
+            {/* Interactive Emerald Grid Layer */}
+            <div style={{ 
+                position: 'absolute', inset: 0, 
+                backgroundImage: `linear-gradient(${accentGrid} 1px,transparent 1px),linear-gradient(90deg,${accentGrid} 1px,transparent 1px)`, 
+                backgroundSize: '64px 64px',
+                zIndex: -1,
+                WebkitMaskImage: `radial-gradient(circle 250px at ${mousePos.x}px ${mousePos.y}px, black, transparent)`,
+                maskImage: `radial-gradient(circle 250px at ${mousePos.x}px ${mousePos.y}px, black, transparent)`,
+                transition: 'mask-image 0.1s ease-out'
+            }} />
+
+            {/* Subtle Static Glows */}
+            <div style={{ position: 'absolute', top: '20%', right: '10%', width: '600px', height: '600px', borderRadius: '50%', background: `radial-gradient(circle, ${isDark ? 'rgba(34, 197, 94, 0.05)' : 'rgba(22, 163, 74, 0.03)'} 0%, transparent 70%)`, pointerEvents: 'none', zIndex: -2 }} />
+            
             {stars.map((star) => (
-                <div
+                <motion.div
                     key={star.id}
-                    className="falling-star"
+                    initial={{ y: '-10vh' }}
+                    animate={{ y: '110vh' }}
+                    transition={{ 
+                        duration: star.animationDuration, 
+                        repeat: Infinity, 
+                        delay: star.animationDelay,
+                        ease: "linear" 
+                    }}
                     style={{
-                        left: star.leftPosition + '%',
-                        width: star.size + 'px',
-                        height: star.size + 'px',
+                        position: 'absolute',
+                        left: `${star.leftPosition}%`,
+                        width: `${star.size}px`,
+                        height: `${star.size}px`,
+                        backgroundColor: star.color,
+                        borderRadius: '50%',
                         opacity: star.opacity,
-                        animationDuration: star.animationDuration + 's',
-                        animationDelay: star.animationDelay + 's',
+                        boxShadow: isDark ? `0 0 6px rgba(255,255,255,0.4)` : 'none'
                     }}
                 />
             ))}
         </div>
     );
 }
-

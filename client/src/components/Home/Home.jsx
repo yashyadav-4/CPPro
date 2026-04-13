@@ -156,10 +156,15 @@ function HeatmapPreview({t}){
 }
 
 /* ── STATS BAR ──────────────────────────────────────── */
-function LiveStatsBar({t}){
+function LiveStatsBar({t, stats}){
   const ref=useRef(null);
   const inView=useInView(ref,{once:true});
-  const data=[{n:847,suf:"",lbl:"Ratings synced today"},{n:12400,suf:"+",lbl:"Problems tracked"},{n:99,suf:"%",lbl:"Uptime"},{n:3200,suf:"+",lbl:"Active users"}];
+  const data=[
+    {n:stats.syncedToday,suf:"",lbl:"Ratings synced today"},
+    {n:stats.problemsTracked,suf:"+",lbl:"Problems tracked"},
+    {n:parseFloat(stats.uptime),suf:"%",lbl:"Uptime"},
+    {n:stats.activeUsers,suf:"+",lbl:"Active users"}
+  ];
   return(
     <div ref={ref} style={{background:t.statsBar,borderTop:`1px solid ${t.statsDvdr}`,borderBottom:`1px solid ${t.statsDvdr}`}}>
       <motion.div initial="hidden" animate={inView?"visible":"hidden"} variants={stagger}
@@ -396,10 +401,36 @@ export default function Home(){
   const { isDark } = useTheme();
   const dark = isDark;
   const t=dark?DARK:LIGHT;
-  const{scrollYProgress}=useScroll();
+  const{scrollYProgress, scrollY}=useScroll();
   const bar=useTransform(scrollYProgress,[0,1],["0%","100%"]);
-  const{scrollY}=useScroll();
   const heroY=useTransform(scrollY,[0,500],[0,48]);
+
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      setMousePos({ x: e.clientX, y: e.clientY });
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
+
+  const [stats, setStats] = useState({
+    activeUsers: 3200,
+    problemsTracked: 12400,
+    syncedToday: 847,
+    uptime: "99.9%",
+    topAvatars: []
+  });
+
+  useEffect(() => {
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/stats/public/summary`)
+      .then(res => res.json())
+      .then(res => {
+        if (res.success) setStats(res.data);
+      })
+      .catch(err => console.error("Stats fetch failed:", err));
+  }, []);
 
   return(
     <motion.div animate={{backgroundColor:t.bg,color:t.body}} transition={{duration:0.35,ease:"easeInOut"}} style={{minHeight:"100vh"}}>
@@ -425,8 +456,21 @@ export default function Home(){
       {/* ── HERO ── */}
       <motion.section animate={{backgroundColor:t.bg}} transition={{duration:0.35}}
         style={{minHeight:"100vh",display:"flex",flexDirection:"column",justifyContent:"center",paddingTop:"5rem",position:"relative",overflow:"hidden"}}>
-        <div style={{position:"absolute",inset:0,backgroundImage:`linear-gradient(${t.gridLine} 1px,transparent 1px),linear-gradient(90deg,${t.gridLine} 1px,transparent 1px)`,backgroundSize:"48px 48px",pointerEvents:"none"}}/>
-        <div style={{position:"absolute",top:"5%",right:"2%",width:640,height:640,borderRadius:"50%",background:`radial-gradient(circle,${t.glow} 0%,transparent 68%)`,pointerEvents:"none"}}/>
+        {/* Base Grid */}
+        <div style={{position:"absolute",inset:0,backgroundImage:`linear-gradient(${t.gridLine} 1px,transparent 1px),linear-gradient(90deg,${t.gridLine} 1px,transparent 1px)`,backgroundSize:"48px 48px",pointerEvents:"none",zIndex:0}}/>
+        
+        {/* Interactive Emerald Grid Layer */}
+        <div style={{ 
+            position: 'absolute', inset: 0, 
+            backgroundImage: `linear-gradient(${t.accent}33 1px,transparent 1px),linear-gradient(90deg,${t.accent}33 1px,transparent 1px)`, 
+            backgroundSize: '48px 48px',
+            zIndex: 1,
+            WebkitMaskImage: `radial-gradient(circle 350px at ${mousePos.x}px ${mousePos.y}px, black, transparent)`,
+            maskImage: `radial-gradient(circle 350px at ${mousePos.x}px ${mousePos.y}px, black, transparent)`,
+            pointerEvents: 'none'
+        }} />
+
+        <div style={{position:"absolute",top:"5%",right:"2%",width:640,height:640,borderRadius:"50%",background:`radial-gradient(circle,${t.glow} 0%,transparent 68%)`,pointerEvents:"none",zIndex:0}}/>
 
         <div className="container" style={{position:"relative",zIndex:2}}>
           <motion.div initial="hidden" animate="visible" variants={stagger}>
@@ -462,12 +506,18 @@ export default function Home(){
 
             <motion.div variants={fadeUp} custom={6} style={{display:"flex",alignItems:"center",gap:"0.75rem",flexWrap:"wrap"}}>
               <div style={{display:"flex"}}>
-                {(dark?["#2a2a2a","#333","#444","#555","#666"]:["#94a3b8","#64748b","#475569","#334155","#1e293b"]).map((c,i)=>(
-                  <div key={i} style={{width:28,height:28,borderRadius:"50%",background:c,border:`2px solid ${t.bg}`,marginLeft:i===0?0:-8,zIndex:5-i}}/>
-                ))}
+                {stats.topAvatars.length > 0 ? (
+                  stats.topAvatars.map((url, i) => (
+                    <div key={i} style={{width:28,height:28,borderRadius:"50%",background:t.bg3,backgroundImage:url?`url(${url})`:'none',backgroundSize:'cover',border:`2px solid ${t.bg}`,marginLeft:i===0?0:-8,zIndex:5-i}}/>
+                  ))
+                ) : (
+                  (dark?["#2a2a2a","#333","#444","#555","#666"]:["#94a3b8","#64748b","#475569","#334155","#1e293b"]).map((c,i)=>(
+                    <div key={i} style={{width:28,height:28,borderRadius:"50%",background:c,border:`2px solid ${t.bg}`,marginLeft:i===0?0:-8,zIndex:5-i}}/>
+                  ))
+                )}
               </div>
               <span style={{fontFamily:"'DM Sans',sans-serif",fontSize:"0.82rem",color:t.subtle}}>
-                Trusted by <span style={{color:t.heading,fontWeight:700}}>3,200+</span> competitive programmers
+                Trusted by <span style={{color:t.heading,fontWeight:700}}>{stats.activeUsers.toLocaleString()}+</span> competitive programmers
               </span>
             </motion.div>
           </motion.div>
@@ -531,7 +581,7 @@ export default function Home(){
         </div>
       </motion.section>
 
-      <LiveStatsBar t={t}/>
+       <LiveStatsBar t={t} stats={stats}/>
 
       {/* ── FEATURES ── */}
       <motion.section animate={{backgroundColor:t.bg}} transition={{duration:0.35}} style={{padding:"7rem 0"}}>
@@ -614,9 +664,21 @@ export default function Home(){
 
       {/* ── CTA ── */}
       <motion.section animate={{backgroundColor:t.ctaBg}} transition={{duration:0.35}} style={{paddingTop:"7rem", paddingBottom:"12rem", position:"relative",overflow:"hidden"}}>
-        <motion.div animate={{backgroundPosition:["0 0","48px 48px"]}} transition={{duration:4,ease:"linear",repeat:Infinity}}
-          style={{position:"absolute",inset:0,backgroundImage:`linear-gradient(rgba(255,255,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.03) 1px,transparent 1px)`,backgroundSize:"48px 48px",pointerEvents:"none"}}/>
-        <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:600,height:300,borderRadius:"50%",background:`radial-gradient(ellipse,${t.accent}10 0%,transparent 70%)`,pointerEvents:"none"}}/>
+        {/* Base Grid */}
+        <div style={{position:"absolute",inset:0,backgroundImage:`linear-gradient(rgba(255,255,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.03) 1px,transparent 1px)`,backgroundSize:"48px 48px",pointerEvents:"none",zIndex:0}}/>
+        
+        {/* Interactive Emerald Grid Layer */}
+        <div style={{ 
+            position: 'absolute', inset: 0, 
+            backgroundImage: `linear-gradient(${t.accent}33 1px,transparent 1px),linear-gradient(90deg,${t.accent}33 1px,transparent 1px)`, 
+            backgroundSize: '48px 48px',
+            zIndex: 1,
+            WebkitMaskImage: `radial-gradient(circle 400px at ${mousePos.x}px ${mousePos.y}px, black, transparent)`,
+            maskImage: `radial-gradient(circle 400px at ${mousePos.x}px ${mousePos.y}px, black, transparent)`,
+            pointerEvents: 'none'
+        }} />
+
+        <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:600,height:300,borderRadius:"50%",background:`radial-gradient(ellipse,${t.accent}10 0%,transparent 70%)`,pointerEvents:"none",zIndex:0}}/>
         <div className="container" style={{position:"relative",zIndex:1}}>
           <motion.div initial="hidden" whileInView="visible" viewport={{once:true,margin:"-80px"}} variants={stagger}
             style={{textAlign:"center",maxWidth:680,margin:"0 auto"}}>

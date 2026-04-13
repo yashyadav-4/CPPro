@@ -104,7 +104,7 @@ export default function Footer() {
         {/* Bottom Bar */}
         <div className="pt-8 border-t border-gray-200 dark:border-white/[0.08] flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
-            © 2026 CPPro. Made with <Heart className="h-4 w-4 text-red-500 fill-current" /> for competitive programmers.
+            © 2026 CPPro. Built by <span className="font-semibold text-gray-900 dark:text-white">YASH</span> with <Heart className="h-4 w-4 text-red-500 fill-current" /> for competitive programmers.
           </p>
           <div className="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-300">
             <span className="relative flex h-3 w-3">

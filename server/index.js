@@ -15,6 +15,7 @@ const leaderboardRoutes= require('./Routes/leaderboardRoutes');
 const settingsRoutes=require('./Routes/settingsRoutes');
 const lcDashboardRoutes= require('./Routes/lcDashboardRoutes');
 const learningRoutes = require('./Routes/learningRoutes');
+const publicStatsRoute = require('./Routes/publicStats');
 
 // connection to mongo
 connectToMongoDb(process.env.MongoUrl)
@@ -52,6 +53,7 @@ app.use('/api/leaderboard' , leaderboardRoutes);
 app.use('/api/settings' , settingsRoutes);
 app.use('/api/lc-dashboard', lcDashboardRoutes);
 app.use('/api/learning/progress', learningRoutes);
+app.use('/api/stats', publicStatsRoute);
 
 // test
 app.get('/api/test', (req, res)=>{

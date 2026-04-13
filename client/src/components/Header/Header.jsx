@@ -3,6 +3,8 @@ import { Link, NavLink, useNavigate } from "react-router-dom"
 import { LogOut, Menu, X, Shield, Settings, Sun, Moon } from 'lucide-react'
 import { useTheme } from '../../hooks/useTheme'
 
+import './Header.css'
+
 export default function Header() {
     const { isDark, toggleTheme } = useTheme();
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -49,8 +51,8 @@ export default function Header() {
     const navItems = ['Home', 'Dashboard', 'Leaderboard', 'Learning', 'Level-up', 'Code Snippet', 'Community'];
 
     return (
-        <header className="sticky top-0 z-50 w-full bg-white dark:bg-[#111111] border-b border-black/[0.07] dark:border-white/[0.08] shadow-lg shadow-emerald-500/15 dark:shadow-emerald-500/20 transition-colors duration-200">
-            <div className="max-w-[1120px] mx-auto px-6 md:px-12">
+        <header className="sticky top-4 z-50 w-[95%] max-w-[1200px] mx-auto bg-white/70 dark:bg-black/60 backdrop-blur-xl border border-white/[0.08] dark:border-white/[0.05] rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] transition-all duration-300">
+            <div className="mx-auto px-6">
                 <div className="flex items-center justify-between h-16 w-full">
                     {/* Left Section - Logo */}
                     <div className="flex-shrink-0 flex items-center">
@@ -89,7 +91,7 @@ export default function Header() {
                         <button
                             onClick={toggleTheme}
                             title={isDark ? 'Light mode' : 'Dark mode'}
-                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0"
+                            className="theme-toggle-btn flex items-center gap-2 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-transparent text-gray-600 dark:text-gray-300 text-sm font-medium whitespace-nowrap flex-shrink-0"
                         >
                             {isDark ? <Sun size={16} className="flex-shrink-0" /> : <Moon size={16} className="flex-shrink-0" />}
                             <span>{isDark ? 'Light' : 'Dark'}</span>
@@ -166,7 +168,7 @@ export default function Header() {
 
             {/* Mobile Menu */}
             {isMobileMenuOpen && (
-                <div className="md:hidden bg-white dark:bg-[#111111] border-t border-black/[0.07] dark:border-white/[0.08]">
+                <div className="md:hidden bg-white/90 dark:bg-black/80 backdrop-blur-2xl border-t border-white/[0.08] dark:border-white/[0.05] rounded-b-2xl overflow-hidden shadow-2xl transition-all duration-300">
                     <div className="pt-2 pb-3 space-y-1">
                         {navItems.map((item) => {
                             const path = item === 'Home' ? '/' : `/${item.toLowerCase().replace(' ', '')}`;
