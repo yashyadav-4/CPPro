@@ -1,7 +1,7 @@
 const axios = require('axios');
 const User = require('../Model/User');
 
-const CF_SYNC_API = process.env.CF_SYNC_API || 'http://localhost:3001';
+const CF_SYNC_API = (process.env.CF_SYNC_API || 'http://localhost:3001').replace(/\/$/, '');
 const CF_SYNC_SECRET = process.env.CF_SYNC_SECRET || '';
 
 const FIFTEEN_MINUTES = 15 * 60 * 1000;
@@ -52,27 +52,58 @@ const getCodeforcesData = async (userId, handle, role = 'user') => {
     return { freshness: 'updating' };
 };
 
-//delegates sync to the Codeforces-Api Server worker via HTTP
+// Enqueues a sync job on the CF worker and polls until completion — mirrors lcSyncService polling.
 const syncCodeforcesProfile = async (userId, handle) => {
+    const headers = { 'Content-Type': 'application/json' };
+    if (CF_SYNC_SECRET) headers['Authorization'] = `Bearer ${CF_SYNC_SECRET}`;
+
+    // 1. Enqueue the job.
+    let jobId;
     try {
-        console.log(`[LEAN-NEXUS] dispatching sync to worker for: ${handle}`);
-
-        const headers = { 'Content-Type': 'application/json' };
-        if (CF_SYNC_SECRET) {
-            headers['Authorization'] = `Bearer ${CF_SYNC_SECRET}`;
-        }
-
         const { data } = await axios.post(`${CF_SYNC_API}/sync`, {
             userId: userId.toString(),
             cfHandle: handle,
-        }, { headers, timeout: 10000 });
-
-        console.log(`[LEAN-NEXUS] >> ${handle} | Worker accepted job: ${data.jobId || 'unknown'}`);
-        return { success: true, jobId: data.jobId };
-    } catch (error) {
-        console.error(`[LEAN-NEXUS] >> ${handle} | Worker dispatch error:`, error.message);
-        throw new Error('Codeforces sync worker is currently unavailable');
+        }, { headers, timeout: 10_000 });
+        jobId = data && data.jobId;
+        if (!jobId) throw new Error('CF worker did not return a jobId');
+        console.log(`[LEAN-NEXUS] >> ${handle} | job queued: ${jobId}`);
+    } catch (err) {
+        const msg = err.response ? JSON.stringify(err.response.data) : err.message;
+        throw new Error(`CF worker enqueue failed: ${msg}`);
     }
+
+    // 2. Poll /sync/status/:jobId until done (max ~2 min, matching LC pattern).
+    const POLL_INTERVAL_MS = 3_000;
+    const MAX_POLLS        = 40; // 40 × 3 s = 120 s
+
+    for (let attempt = 0; attempt < MAX_POLLS; attempt++) {
+        await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
+
+        let state, failedReason;
+        try {
+            const { data } = await axios.get(`${CF_SYNC_API}/sync/status/${jobId}`, { headers, timeout: 8_000 });
+            state        = data && data.state;
+            failedReason = data && data.failedReason;
+        } catch (err) {
+            console.warn(`[LEAN-NEXUS] >> ${handle} | poll error: ${err.message} (retrying)`);
+            continue;
+        }
+
+        console.log(`[LEAN-NEXUS] >> ${handle} | job ${jobId} state: ${state}`);
+
+        if (state === 'completed') {
+            console.log(`[LEAN-NEXUS] >> ${handle} | sync done ✓`);
+            return { success: true };
+        }
+
+        if (state === 'failed') {
+            const reason = failedReason || 'unknown';
+            throw new Error(`CF worker job failed: ${reason}`);
+        }
+        // waiting | active | delayed → keep polling
+    }
+
+    throw new Error(`CF worker job ${jobId} did not complete within the poll window`);
 };
 
 module.exports = {

@@ -22,7 +22,8 @@ export default function Header() {
                     setUser({
                         name: data.user.name || data.user.username || 'User',
                         email: data.user.email || 'No email',
-                        initial: (data.user.name || data.user.username || 'U').charAt(0).toUpperCase()
+                        initial: (data.user.name || data.user.username || 'U').charAt(0).toUpperCase(),
+                        profilePic: data.user.profilePic || null
                     });
                 } else {
                     setIsAuthenticated(false);
@@ -47,7 +48,7 @@ export default function Header() {
             window.location.href = '/login';
         }
     };
-    
+
     const navItems = ['Home', 'Dashboard', 'Leaderboard', 'Learning', 'Level-up', 'Code Snippet', 'Community'];
 
     return (
@@ -72,10 +73,9 @@ export default function Header() {
                                     key={item}
                                     to={path}
                                     end={item === 'Home'}
-                                    className={({ isActive }) => 
-                                        `inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors whitespace-nowrap ${
-                                            isActive 
-                                            ? 'border-emerald-600 text-gray-900 dark:text-white' 
+                                    className={({ isActive }) =>
+                                        `inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors whitespace-nowrap ${isActive
+                                            ? 'border-emerald-600 text-gray-900 dark:text-white'
                                             : 'border-transparent text-gray-500 dark:text-gray-200 hover:text-gray-700 dark:hover:text-white hover:border-gray-300 dark:hover:border-white/25'
                                         }`
                                     }
@@ -99,14 +99,18 @@ export default function Header() {
 
                         {isAuthenticated ? (
                             <div className="relative flex-shrink-0">
-                                <button 
+                                <button
                                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                                     onBlur={() => setTimeout(() => setIsDropdownOpen(false), 200)}
                                     className="flex items-center gap-2 focus:outline-none"
                                 >
-                                    <div className="w-8 h-8 flex-shrink-0 rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-300 font-bold border border-emerald-200 dark:border-emerald-400/25">
-                                        {user.initial}
-                                    </div>
+                                    {user.profilePic ? (
+                                        <img src={user.profilePic} alt="Profile" className="w-8 h-8 flex-shrink-0 rounded-full object-cover border border-emerald-200 dark:border-emerald-400/25" />
+                                    ) : (
+                                        <div className="w-8 h-8 flex-shrink-0 rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-300 font-bold border border-emerald-200 dark:border-emerald-400/25">
+                                            {user.initial}
+                                        </div>
+                                    )}
                                     <span className="text-sm font-medium text-gray-700 dark:text-gray-100 whitespace-nowrap">{user.name}</span>
                                 </button>
 
@@ -116,21 +120,21 @@ export default function Header() {
                                             <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Signed in as</p>
                                             <p className="text-sm text-gray-500 dark:text-gray-300 truncate" title={user.email}>{user.email}</p>
                                         </div>
-                                        <button 
+                                        <button
                                             className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 flex items-center gap-2"
                                             onMouseDown={(e) => { e.preventDefault(); navigate('/settings'); setIsDropdownOpen(false); }}
                                         >
                                             <Settings size={16} />
                                             Settings
                                         </button>
-                                        <button 
+                                        <button
                                             className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 flex items-center gap-2"
                                             onMouseDown={(e) => { e.preventDefault(); navigate('/verify-codeforces'); setIsDropdownOpen(false); }}
                                         >
                                             <Shield size={16} />
                                             Verification
                                         </button>
-                                        <button 
+                                        <button
                                             className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 flex items-center gap-2"
                                             onMouseDown={(e) => { e.preventDefault(); handleLogout(); }}
                                         >
@@ -178,10 +182,9 @@ export default function Header() {
                                     to={path}
                                     end={item === 'Home'}
                                     onClick={() => setIsMobileMenuOpen(false)}
-                                    className={({ isActive }) => 
-                                        `block pl-3 pr-4 py-2 border-l-4 text-base font-medium ${
-                                            isActive 
-                                            ? 'border-emerald-600 text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/10' 
+                                    className={({ isActive }) =>
+                                        `block pl-3 pr-4 py-2 border-l-4 text-base font-medium ${isActive
+                                            ? 'border-emerald-600 text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/10'
                                             : 'border-transparent text-gray-500 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-white/10 hover:border-gray-300 dark:hover:border-white/20'
                                         }`
                                     }
@@ -196,7 +199,7 @@ export default function Header() {
                                     <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{user.name}</p>
                                     <p className="text-xs text-gray-500 dark:text-gray-300 truncate">{user.email}</p>
                                 </div>
-                                <Link 
+                                <Link
                                     to="/settings"
                                     onClick={() => setIsMobileMenuOpen(false)}
                                     className="w-full flex items-center gap-2 px-4 py-2 text-base font-medium text-gray-500 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-white/10"
@@ -204,7 +207,7 @@ export default function Header() {
                                     <Settings size={20} />
                                     Settings
                                 </Link>
-                                <Link 
+                                <Link
                                     to="/verify-codeforces"
                                     onClick={() => setIsMobileMenuOpen(false)}
                                     className="w-full flex items-center gap-2 px-4 py-2 text-base font-medium text-gray-500 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-white/10"
@@ -212,7 +215,7 @@ export default function Header() {
                                     <Shield size={20} />
                                     Verification
                                 </Link>
-                                <button 
+                                <button
                                     className="w-full text-left flex items-center gap-2 px-4 py-2 text-base font-medium text-gray-500 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-white/10"
                                     onClick={(e) => { e.preventDefault(); handleLogout(); }}
                                 >

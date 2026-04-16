@@ -1,7 +1,8 @@
-const {Yaxios} =require('../Utils/nexusProxy');
-const {bouncer}= require('../Utils/bouncer');
-const crypto=require('crypto');
-const User= require('../Model/User');
+const axios = require('axios');
+const { Yaxios } = require('../Utils/nexusProxy');
+const { bouncer } = require('../Utils/bouncer');
+const crypto = require('crypto');
+const User = require('../Model/User');
 
 const generateCode=async(userId)=>{
     const uniqueCode= `cppro-${crypto.randomBytes(3).toString('hex')}`;
@@ -78,8 +79,32 @@ const unlinkCodeforces = async(userId)=>{
     return {message:"Codeforces account unlinked successfully"};
 };
 
-//Leetcode one
-const LC_API = process.env.LEETCODE_API;
+// LeetCode verification — proxy through NexusLC to avoid Cloudflare 403 on datacenter IPs.
+// Falls back to direct call only when NexusLC is not configured (local dev).
+const LC_SYNC_API    = (process.env.LC_SYNC_API || '').replace(/\/$/, '');
+const LC_SYNC_SECRET = process.env.LC_SYNC_SECRET || '';
+
+const fetchLcRealName = async (lcUsername) => {
+    if (LC_SYNC_API && LC_SYNC_SECRET) {
+        // Route through NexusLC proxy — safe from Cloudflare blocking.
+        const res = await axios.get(`${LC_SYNC_API}/verify/${encodeURIComponent(lcUsername)}`, {
+            headers: { Authorization: `Bearer ${LC_SYNC_SECRET}` },
+            timeout: 15_000,
+        });
+        if (!res.data || res.data.realName === undefined) throw new Error('LeetCode user not found');
+        return res.data.realName || '';
+    }
+    // Fallback: direct call (works locally, may 403 in production).
+    const query = `query v($u:String!){matchedUser(username:$u){profile{realName}}}`;
+    const res = await axios.post(
+        'https://leetcode.com/graphql',
+        { query, variables: { u: lcUsername } },
+        { timeout: 10_000, headers: { 'Content-Type': 'application/json', 'Referer': 'https://leetcode.com' } }
+    );
+    const matched = res.data && res.data.data && res.data.data.matchedUser;
+    if (!matched) throw new Error('LeetCode user not found');
+    return (matched.profile && matched.profile.realName) || '';
+};
 
 const verifyAndLinkLeetcode = async (userId, handle) => {
     const cleanHandle = handle.trim();
@@ -91,32 +116,16 @@ const verifyAndLinkLeetcode = async (userId, handle) => {
         throw err;
     }
 
-    let lcProfile;
+    let realName;
     try {
-        const response = await bouncer.schedule(() =>
-            Yaxios.get(`${LC_API}/${cleanHandle}`)
-        );
-        lcProfile = response.data;
+        realName = await fetchLcRealName(cleanHandle);
     } catch (error) {
         const err = new Error("Invalid LeetCode handle or LeetCode API unavailable");
         err.status = 400;
         throw err;
     }
 
-    if (!lcProfile || !lcProfile.matchedUser) { //fallback if anything else in endpoint
-        if (!lcProfile || !lcProfile.username) {
-            const err = new Error("LeetCode user not found");
-            err.status = 400;
-            throw err;
-        }
-    }
 
-
-    const realName = lcProfile.matchedUser?.profile?.realName
-        || lcProfile.profile?.realName
-        || lcProfile.realName
-        || lcProfile.name
-        || '';
     const code = user.verificationCode;
 
     if (!realName.includes(code)) {

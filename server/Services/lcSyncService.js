@@ -1,160 +1,147 @@
-const { Yaxios } = require('../Utils/nexusProxy');
-const lcSyncRepo = require('../Repositories/lcSyncRepository');
+const axios = require('axios');
 const User = require('../Model/User');
 
-const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
 const FIFTEEN_MINUTES = 15 * 60 * 1000;
-const ADMIN_COOLDOWN = 10 * 1000; // 10 seconds for admins
-const LC_API = process.env.LEETCODE_API;
+const ADMIN_COOLDOWN  = 10 * 1000; // 10 s for admins
 
-/**
- * Returns the appropriate cooldown duration based on user role.
- */
+// ── NexusLC connection (set in .env) ──────────────────────────────────────
+// LC_SYNC_API  : full base URL of your NexusLC server, e.g. https://nexuslc.onrender.com
+// LC_SYNC_SECRET: the Bearer token NexusLC expects (matches its API_SECRET)
+const LC_SYNC_API    = (process.env.LC_SYNC_API || '').replace(/\/$/, '');
+const LC_SYNC_SECRET = process.env.LC_SYNC_SECRET || '';
+
+if (!LC_SYNC_API) {
+    console.warn('[LC-SYNC] WARNING: LC_SYNC_API is not set — LeetCode sync will fail.');
+}
+if (!LC_SYNC_SECRET) {
+    console.warn('[LC-SYNC] WARNING: LC_SYNC_SECRET is not set — NexusLC auth will fail.');
+}
+
+/** Shared axios instance pre-configured with NexusLC auth. */
+const nexusLC = axios.create({
+    baseURL: LC_SYNC_API,
+    headers: { Authorization: `Bearer ${LC_SYNC_SECRET}` },
+    timeout: 10_000,
+});
+
 function getCooldown(role) {
     return role === 'admin' ? ADMIN_COOLDOWN : FIFTEEN_MINUTES;
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// Role-based freshness gate — 15 min for users, 10s for admins
-// ═══════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════
+// Role-based freshness gate — 15 min for users, 10 s for admins.
+// If stale: stamps lastLcUpdate immediately then fires a background sync
+// via NexusLC (single GraphQL call → writes directly to MongoDB).
+// ══════════════════════════════════════════════════════════════════════════
 const getLeetcodeData = async (userId, handle, role = 'user') => {
     const user = await User.findById(userId).lean();
     const cooldown = getCooldown(role);
     const timeSinceUpdate = user.lastLcUpdate
-        ? (Date.now() - new Date(user.lastLcUpdate).getTime())
+        ? Date.now() - new Date(user.lastLcUpdate).getTime()
         : Infinity;
 
     if (timeSinceUpdate < cooldown) {
-        const remainingMs = cooldown - timeSinceUpdate;
-        const remainingSeconds = Math.ceil(remainingMs / 1000);
-        console.log(`[LEAN-NEXUS-LC] >> ${handle} | Fresh | Served | ${remainingSeconds}s remaining`);
+        const remainingSeconds = Math.ceil((cooldown - timeSinceUpdate) / 1000);
+        console.log(`[LC-SYNC] >> ${handle} | Fresh | ${remainingSeconds}s remaining`);
         return { freshness: 'fresh', remainingSeconds };
     }
 
-    console.log(`[LEAN-NEXUS-LC] >> ${handle} | Stale | Updating`);
+    console.log(`[LC-SYNC] >> ${handle} | Stale | Queuing NexusLC sync`);
 
-    // IMMEDIATELY stamp lastLcUpdate to prevent duplicate dispatches
+    // Stamp NOW to prevent duplicate dispatches before async work starts.
     await User.findByIdAndUpdate(userId, { $set: { lastLcUpdate: new Date() } });
 
-    // fire-and-forget background sync through the bouncer
+    // Fire-and-forget: enqueue job on NexusLC, then poll until done.
     syncLeetcodeProfile(userId, handle)
-        .then(() => console.log(`[LEAN-NEXUS-LC] >> ${handle} | Background update complete`))
+        .then(() => console.log(`[LC-SYNC] >> ${handle} | NexusLC sync complete`))
         .catch(async (err) => {
-            console.error(`[LEAN-NEXUS-LC] >> ${handle} | Background update failed:`, err.message);
-            // rollback the timestamp so the user can retry
-            await User.findByIdAndUpdate(userId, { $set: { lastLcUpdate: user.lastLcUpdate || null } });
+            console.error(`[LC-SYNC] >> ${handle} | NexusLC sync failed:`, err.message);
+            // Roll back timestamp so user can retry.
+            await User.findByIdAndUpdate(userId, {
+                $set: { lastLcUpdate: user.lastLcUpdate || null },
+            });
         });
 
     return { freshness: 'updating' };
 };
 
-// ═══════════════════════════════════════════════════════════════════════
-// Full sync — 6 sequential calls to Alfa API 
-// ═══════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════
+// Enqueue a sync job on NexusLC and poll until completion.
+// NexusLC does ONE combined GraphQL query and writes directly to MongoDB —
+// no data is returned here; CPPro reads from the DB as usual.
+// ══════════════════════════════════════════════════════════════════════════
 const syncLeetcodeProfile = async (userId, handle) => {
+    if (!LC_SYNC_API || !LC_SYNC_SECRET) {
+        throw new Error('LC_SYNC_API / LC_SYNC_SECRET not configured');
+    }
+
+    // 1. Enqueue the job on NexusLC.
+    let jobId;
     try {
-        console.log(`[LEAN-NEXUS-LC] syncing profile for: ${handle}`);
+        const enqRes = await nexusLC.post('/sync', {
+            userId: String(userId),
+            lcUsername: handle,
+        });
+        jobId = enqRes.data && enqRes.data.jobId;
+        if (!jobId) throw new Error('NexusLC did not return a jobId');
+        console.log(`[LC-SYNC] >> ${handle} | job queued: ${jobId}`);
+    } catch (err) {
+        const msg = err.response ? JSON.stringify(err.response.data) : err.message;
+        throw new Error(`NexusLC enqueue failed: ${msg}`);
+    }
 
-        // 1. Profile stats
-        const profileRes = await Yaxios.get(`${LC_API}/${handle}/profile`, { timeout: 10000 });
-        const profileData = profileRes.data;
-        await delay(500);
+    // 2. Poll /sync/status/:jobId until the job finishes (max ~2 min).
+    const POLL_INTERVAL_MS = 3_000;
+    const MAX_POLLS        = 40; // 40 × 3 s = 120 s
 
-        // 2. Skill stats
-        const skillRes = await Yaxios.get(`${LC_API}/${handle}/skill`, { timeout: 10000 });
-        const skillData = skillRes.data;
-        await delay(500);
+    for (let attempt = 0; attempt < MAX_POLLS; attempt++) {
+        await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
 
-        // 3. Solved breakdown
-        const solvedRes = await Yaxios.get(`${LC_API}/${handle}/solved`, { timeout: 10000 });
-        const solvedData = solvedRes.data;
-        await delay(500);
+        let state, failedReason;
+        try {
+            const statusRes = await nexusLC.get(`/sync/status/${jobId}`);
+            state        = statusRes.data && statusRes.data.state;
+            failedReason = statusRes.data && statusRes.data.failedReason;
+        } catch (err) {
+            console.warn(`[LC-SYNC] >> ${handle} | poll error: ${err.message} (retrying)`);
+            continue;
+        }
 
-        // 4. Calendar / heatmap
-        const calendarRes = await Yaxios.get(`${LC_API}/${handle}/calendar`, { timeout: 10000 });
-        const calendarData = calendarRes.data;
-        await delay(500);
+        console.log(`[LC-SYNC] >> ${handle} | job ${jobId} state: ${state}`);
 
-        // 5. Contest history
-        const contestRes = await Yaxios.get(`${LC_API}/${handle}/contest/history`, { timeout: 10000 });
-        const contestData = contestRes.data;
-        await delay(500);
+        if (state === 'completed') {
+            // NexusLC has already written to MongoDB — stamp lastLcUpdate.
+            await User.findByIdAndUpdate(userId, { $set: { lastLcUpdate: new Date() } });
+            console.log(`[LC-SYNC] >> ${handle} | sync done ✓`);
+            return { success: true };
+        }
 
-        // 6. Recent submissions (limit=20)
-        const submissionRes = await Yaxios.get(`${LC_API}/${handle}/submission?limit=20`, { timeout: 10000 });
-        const submissionData = submissionRes.data;
-
-        // ── Transform & merge into our schema shape ──
-        const parsedData = {
-            profile: {
-                totalSolved: profileData.totalSolved || solvedData.solvedProblem || 0,
-                easySolved: profileData.easySolved || solvedData.easySolved || 0,
-                mediumSolved: profileData.mediumSolved || solvedData.mediumSolved || 0,
-                hardSolved: profileData.hardSolved || solvedData.hardSolved || 0,
-                totalQuestions: profileData.totalQuestions || 0,
-                totalEasy: profileData.totalEasy || 0,
-                totalMedium: profileData.totalMedium || 0,
-                totalHard: profileData.totalHard || 0,
-                ranking: profileData.ranking || 0,
-                contributionPoint: profileData.contributionPoint || 0,
-                reputation: profileData.reputation || 0,
-                acSubmissionNum: solvedData.acSubmissionNum || [],
-                totalSubmissionNum: solvedData.totalSubmissionNum || [],
-            },
-            skillStats: {
-                fundamental: skillData.fundamental || [],
-                intermediate: skillData.intermediate || [],
-                advanced: skillData.advanced || [],
-            },
-            calendar: {
-                activeYears: calendarData.activeYears || [],
-                streak: calendarData.streak || 0,
-                totalActiveDays: calendarData.totalActiveDays || 0,
-                submissionCalendar: calendarData.submissionCalendar || '{}',
-            },
-            contestCount: contestData.count || 0,
-            contestHistory: (contestData.contestHistory || []).map(c => ({
-                attended: c.attended,
-                rating: c.rating,
-                ranking: c.ranking,
-                trendDirection: c.trendDirection,
-                problemsSolved: c.problemsSolved,
-                totalProblems: c.totalProblems,
-                finishTimeInSeconds: c.finishTimeInSeconds,
-                contestTitle: c.contest?.title || '',
-                contestStartTime: c.contest?.startTime || 0,
-            })),
-            recentSubmissions: (submissionData.submission || []).map(s => ({
-                title: s.title,
-                titleSlug: s.titleSlug,
-                timestamp: s.timestamp,
-                statusDisplay: s.statusDisplay,
-                lang: s.lang,
-            })),
-        };
-
-        // 7. Upsert into LeetCodeData collection
-        await lcSyncRepo.upsertLeetCodeData(userId, handle, parsedData);
-
-        // 8. Stamp lastLcUpdate on User
-        await User.findByIdAndUpdate(userId, { $set: { lastLcUpdate: new Date() } });
-
-        console.log(`[LEAN-NEXUS-LC] >> ${handle} | Sync complete`);
-        return { success: true, message: 'leetcode sync done' };
-    } catch (error) {
-        console.error(`[LEAN-NEXUS-LC] >> ${handle} | Sync error:`, error.message);
-        if (error.response && error.response.data && error.response.data.errors) {
-            const lcError = error.response.data.errors[0];
-            if (lcError && lcError.message.includes('does not exist')) {
+        if (state === 'failed') {
+            const reason = failedReason || 'unknown';
+            if (/USER_NOT_FOUND/i.test(reason)) {
                 throw new Error('invalid leetcode handle');
             }
+            throw new Error(`NexusLC job failed: ${reason}`);
         }
-        throw new Error('leetcode API is currently unavailable');
+
+        // States: waiting | active | delayed → keep polling.
     }
+
+    throw new Error(`NexusLC job ${jobId} did not complete within the poll window`);
+};
+
+// ══════════════════════════════════════════════════════════════════════════
+// Health-check: ping GET /health on NexusLC (no auth required).
+// Returns the raw health payload or throws.
+// ══════════════════════════════════════════════════════════════════════════
+const checkNexusLCHealth = async () => {
+    if (!LC_SYNC_API) throw new Error('LC_SYNC_API not configured');
+    const res = await nexusLC.get(`${LC_SYNC_API}/data`, { timeout: 8_000 });
+    return res.data;
 };
 
 module.exports = {
     getLeetcodeData,
     syncLeetcodeProfile,
+    checkNexusLCHealth,
 };

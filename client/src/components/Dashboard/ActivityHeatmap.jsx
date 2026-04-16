@@ -125,7 +125,7 @@ export default function ActivityHeatmap({ loading, heatmapData }) {
                   <div
                     key={di}
                     title={date ? `${date}: ${map[date] || 0} submissions` : ''}
-                    className={`w-3 h-3 rounded-sm transition-colors ${date ? getColor(map[date] || 0) : 'bg-gray-100 dark:bg-white/5'}`}
+                    className={`w-3 h-3 rounded-sm transition-colors ${date ? getColor(map[date] || 0) : 'bg-transparent opacity-0'}`}
                   />
                 ))}
               </div>

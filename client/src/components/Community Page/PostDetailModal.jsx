@@ -132,9 +132,13 @@ export default function PostDetailModal({ post, onClose, onVoteToggle, currentUs
       >
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50 shrink-0">
           <div className="flex items-center gap-3">
-             <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 border border-emerald-200 object-cover overflow-hidden">
-                <User size={20} />
-             </div>
+             {post.authorPic ? (
+                 <img src={post.authorPic} alt={post.authorName} className="w-10 h-10 rounded-full object-cover border border-emerald-200" />
+             ) : (
+                 <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 border border-emerald-200 object-cover overflow-hidden">
+                    <User size={20} />
+                 </div>
+             )}
              <div>
                 <div className="font-bold text-gray-900 text-sm">{post.authorName || "Anonymous"}</div>
                 <div className="text-xs text-gray-500 font-medium">{timeAgo(post.createdAt)}</div>

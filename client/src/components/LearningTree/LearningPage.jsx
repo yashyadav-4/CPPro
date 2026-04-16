@@ -107,6 +107,19 @@ export default function LearningPage() {
             <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
               <path d="M1 2L8 5L1 8" fill="none" stroke={themeVars.popBorder} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </marker>
+            {/* Glow Filter */}
+            <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="2.5" result="blur" />
+              <feComposite in="SourceGraphic" in2="blur" operator="over" />
+            </filter>
+            <filter id="strongGlow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="4" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
           </defs>
 
           {/* Lines & Labels */}
@@ -127,6 +140,9 @@ export default function LearningPage() {
           {TREE.map(node => {
             if (!node.deps) return null;
             const bp = pos[node.id];
+            const sourceTier = node.tier > 0 ? node.tier - 1 : 0;
+            const tierProgress = stats?.tierCompletion?.[sourceTier]?.ratio || 0;
+
             return node.deps.map(dep => {
               const ap = pos[dep];
               if (!ap || !bp) return null;
@@ -134,16 +150,61 @@ export default function LearningPage() {
               const x2 = bp.x + NW / 2, y2 = bp.y + NH;
               const my = (y1 + y2) / 2;
               const s = Math.min(getState(dep), getState(node.id));
-              const stroke = s > 0 ? STATE_COLORS[s] + '88' : themeVars.edgeOff;
+              
+              // Base Edge Color
+              const baseStroke = s > 0 ? STATE_COLORS[s] + '66' : themeVars.edgeOff;
+              const pathD = `M${x2},${y2} C${x2},${my} ${x1},${my} ${x1},${y1}`;
+              
+              // Color for the progressive glow (from source tier theme)
+              const depNode = TREE.find(n => n.id === dep);
+              const tierTheme = currentTiers[depNode?.color] || currentTiers.gray;
+              const glowColor = tierTheme.border;
+
               return (
-                <path
-                  key={`${dep}->${node.id}`}
-                  d={`M${x2},${y2} C${x2},${my} ${x1},${my} ${x1},${y1}`}
-                  fill="none"
-                  stroke={stroke}
-                  strokeWidth={s > 0 ? '1.5' : (isDark ? '0.8' : '1')}
-                  markerEnd="url(#arr)"
-                />
+                <g key={`${dep}->${node.id}`}>
+                  {/* Base Inactive Path */}
+                  <path
+                    d={pathD}
+                    fill="none"
+                    stroke={baseStroke}
+                    strokeWidth={s > 0 ? '1.5' : (isDark ? '0.8' : '1')}
+                    markerEnd="url(#arr)"
+                  />
+                  
+                  {/* Progressive Glow Path */}
+                  {tierProgress > 0 && (
+                    <path
+                      d={pathD}
+                      fill="none"
+                      stroke={glowColor}
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      filter="url(#glow)"
+                      style={{
+                        strokeDasharray: '1000',
+                        strokeDashoffset: (1 - tierProgress) * 1000,
+                        transition: 'stroke-dashoffset 1s ease-out',
+                        opacity: 0.6 + (tierProgress * 0.4)
+                      }}
+                    />
+                  )}
+                  {/* Subtle highlight core */}
+                  {tierProgress > 0.1 && (
+                    <path
+                      d={pathD}
+                      fill="none"
+                      stroke="#ffffff"
+                      strokeWidth="0.5"
+                      strokeLinecap="round"
+                      style={{
+                        strokeDasharray: '1000',
+                        strokeDashoffset: (1 - tierProgress) * 1000,
+                        transition: 'stroke-dashoffset 1s ease-out',
+                        opacity: 0.3
+                      }}
+                    />
+                  )}
+                </g>
               );
             });
           })}

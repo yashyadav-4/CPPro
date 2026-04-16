@@ -13,7 +13,7 @@ function Layout() {
         const lastShown = localStorage.getItem('loader-last-shown');
         const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
         
-        if (!lastShown) return true;
+        if (!lastShown || isNaN(parseInt(lastShown))) return true;
         
         const timePassed = Date.now() - parseInt(lastShown);
         return timePassed > TWENTY_FOUR_HOURS;
@@ -27,12 +27,12 @@ function Layout() {
     return (
         <div className="min-h-screen bg-white dark:bg-[#0a0a0a] text-gray-900 dark:text-white flex flex-col">
             <AnimatePresence mode="wait">
-                {isLoading && (
+                {!isAuthPage && isLoading && (
                     <LoadingScreen key="loader" onComplete={handleLoadingComplete} />
                 )}
             </AnimatePresence>
 
-            <Header />
+            {!isAuthPage && <Header />}
             <main className="flex-1">
                 <Outlet />
             </main>

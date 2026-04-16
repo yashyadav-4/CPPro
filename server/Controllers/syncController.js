@@ -64,4 +64,18 @@ async function handleLcManualRefresh(req, res) {
     }
 }
 
-module.exports = { handleManualRefresh, handleLcManualRefresh };
+async function handleLcHealthCheck(_req, res) {
+    try {
+        const health = await lcSyncService.checkNexusLCHealth();
+        return res.status(200).json({ success: true, nexusLC: health });
+    } catch (error) {
+        console.error('[LC-HEALTH] NexusLC health check failed:', error.message);
+        return res.status(503).json({
+            success: false,
+            message: 'NexusLC is unreachable',
+            detail: error.message,
+        });
+    }
+}
+
+module.exports = { handleManualRefresh, handleLcManualRefresh, handleLcHealthCheck };

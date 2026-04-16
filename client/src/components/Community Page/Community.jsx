@@ -351,9 +351,13 @@ export default function Community() {
                       <div className="flex items-center justify-between mb-4">
                           <div className="flex items-center gap-3">
                             {/* Initials avatar or mock image */}
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-100 to-purple-100 flex items-center justify-center text-emerald-700 font-bold border border-emerald-200 text-sm shadow-sm ring-2 ring-white">
-                                {(post.authorName || "?")[0].toUpperCase()}
-                            </div>
+                            {post.authorPic ? (
+                                <img src={post.authorPic} alt={post.authorName} className="w-10 h-10 rounded-full object-cover shadow-sm ring-2 ring-white border border-emerald-200" />
+                            ) : (
+                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-100 to-purple-100 flex items-center justify-center text-emerald-700 font-bold border border-emerald-200 text-sm shadow-sm ring-2 ring-white">
+                                    {(post.authorName || "?")[0].toUpperCase()}
+                                </div>
+                            )}
                             <div>
                                 <div className="font-bold text-gray-900 dark:text-gray-100 text-sm hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">{post.authorName || "Anonymous"}</div>
                                 <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">{timeAgo(post.createdAt)}</div>
