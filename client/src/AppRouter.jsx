@@ -12,6 +12,7 @@ import VerifyCodeforces from './components/VerifyCodeforces/VerifyCodeforces.jsx
 import LearningPage from './components/LearningTree/LearningPage.jsx'
 import LevelUpPage from './components/LevelUp/LevelUpPage.jsx'
 import Settings from './components/Settings/Settings.jsx'
+import HelpSupport from './components/HelpSupport/HelpSupport.jsx'
 
 const router = createBrowserRouter([
     {
@@ -54,6 +55,10 @@ const router = createBrowserRouter([
             {
                 path: "settings",
                 element: <ProtectedRoute><Settings /></ProtectedRoute>
+            },
+            {
+                path: "help-support",
+                element: <HelpSupport />
             },
             {
                 path: "login",

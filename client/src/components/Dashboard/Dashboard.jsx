@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { RefreshCw, Link as LinkIcon, AlertTriangle, Shield } from 'lucide-react';
+import { RefreshCw, Link as LinkIcon, AlertTriangle, Shield, Share2 } from 'lucide-react';
 
 import { useDashboardData } from '../../hooks/useDashboardData';
 
@@ -13,14 +13,14 @@ import ActivityHeatmap from './ActivityHeatmap';
 import RatingProgression from './RatingProgression';
 import TopTopics from './TopTopics';
 import RecentContests from './RecentContests';
-import UpsolveQueue from './UpsolveQueue';
+import TotalContests from './TotalContests';
 import SkillGaps from './SkillGaps';
 import Achievements from './Achievements';
+import ShareModal from '../Shareable/ShareModal';
 
 const REFRESH_STATE_KEY_PREFIX = 'dashboard_refresh_state_';
 const ADMIN_COOLDOWN_SECONDS = 10;
 const USER_COOLDOWN_SECONDS = 15 * 60;
-const REFRESH_WINDOW_SECONDS = 7;
 
 // ── Merge two day arrays into combined last-7-days ───────────────────────────
 function mergeLast7Days(cfDays, lcDays) {
@@ -65,10 +65,11 @@ function mergeContests(cfContests, lcContests) {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { cfData, lcData, userId, userRole, linkedAccounts, loading, error, refetch } = useDashboardData();
+  const { cfData, lcData, userId, userRole, userName, userUsername, linkedAccounts, loading, error, refetch } = useDashboardData();
 
   const [refreshing, setRefreshing] = useState(false);
   const [cooldown, setCooldown] = useState(0);
+  const [shareOpen, setShareOpen] = useState(false);
 
   const defaultCooldownSeconds = userRole === 'admin' ? ADMIN_COOLDOWN_SECONDS : USER_COOLDOWN_SECONDS;
   const refreshStateKey = userId ? `${REFRESH_STATE_KEY_PREFIX}${userId}` : null;
@@ -113,15 +114,9 @@ export default function Dashboard() {
       setCooldown(cooldownLeft);
     }
 
-    if (parsed.refreshingUntil && parsed.refreshingUntil > nowTs) {
-      setRefreshing(true);
-      const waitMs = parsed.refreshingUntil - nowTs;
-      const t = setTimeout(async () => {
-        await refetch(true);
-        setRefreshing(false);
-        applyCooldown(defaultCooldownSeconds);
-      }, waitMs);
-      return () => clearTimeout(t);
+    // If the page was reloaded mid-refresh, clear any stale refreshing state.
+    if (parsed.refreshingUntil) {
+      clearRefreshState();
     }
   }, [refreshStateKey, refetch, defaultCooldownSeconds, applyCooldown]);
 
@@ -146,10 +141,6 @@ export default function Dashboard() {
   const handleRefresh = useCallback(async () => {
     if (cooldown > 0 || !userId) return;
     setRefreshing(true);
-    persistRefreshState({
-      cooldownUntil: 0,
-      refreshingUntil: Date.now() + (REFRESH_WINDOW_SECONDS * 1000),
-    });
 
     try {
       const config = { withCredentials: true };
@@ -163,20 +154,17 @@ export default function Dashboard() {
         applyCooldown(fresh.value.data.remainingSeconds || defaultCooldownSeconds);
         setRefreshing(false);
       } else {
-        // Backend started a background sync. Fetch current, then wait 6s to fetch new.
+        // Sync completed on the backend — refetch once to show fresh data.
         await refetch(true);
-        setTimeout(async () => {
-          await refetch(true);
-          setRefreshing(false);
-          applyCooldown(defaultCooldownSeconds);
-        }, 6000);
+        setRefreshing(false);
+        applyCooldown(defaultCooldownSeconds);
       }
     } catch (err) {
       console.error(err);
       setRefreshing(false);
       clearRefreshState();
     }
-  }, [cooldown, userId, linkedAccounts, refetch, persistRefreshState, applyCooldown, defaultCooldownSeconds, clearRefreshState]);
+  }, [cooldown, userId, linkedAccounts, refetch, applyCooldown, defaultCooldownSeconds, clearRefreshState]);
 
   // ── Not linked ──────────────────────────────────────────────────────────────
   if (!loading && !linkedAccounts.codeforces && !linkedAccounts.leetcode && !error) {
@@ -287,19 +275,20 @@ export default function Dashboard() {
   // Contests (merge, sort by date, top 6)
   const contests = mergeContests(cf.recentCfContests, lc.recentLcContests);
 
-  // Upsolve queue
-  // Upsolve queue: blend CF and LC
-  const cfUpsolve = (cf.upsolveQueue || []).sort((a, b) => (a.rating || 0) - (b.rating || 0));
-  const lcUpsolve = (lc.upsolveQueue || []).sort((a, b) => b.attempts - a.attempts);
+  const cfContestCount = cfRatingHistory.length || 0;
+  const lcContestCount = lc.lcContests || lcRatingHistory.length || 0;
 
-  const half = 5;
-  let cfTake = Math.min(cfUpsolve.length, half);
-  let lcTake = Math.min(lcUpsolve.length, half);
-  
-  if (cfTake < half) lcTake = Math.min(lcUpsolve.length, 10 - cfTake);
-  if (lcTake < half) cfTake = Math.min(cfUpsolve.length, 10 - lcTake);
+  const cfBestRank = cfRatingHistory.reduce((min, c) => {
+    const r = parseInt(c.rank, 10);
+    return (!isNaN(r) && r > 0 && r < min) ? r : min;
+  }, Infinity);
+  const finalCfBestRank = cfBestRank === Infinity ? null : cfBestRank;
 
-  const upsolveProblems = [...cfUpsolve.slice(0, cfTake), ...lcUpsolve.slice(0, lcTake)];
+  const lcBestRank = lcRatingHistory.reduce((min, c) => {
+    const r = parseInt(c.rank, 10);
+    return (!isNaN(r) && r > 0 && r < min) ? r : min;
+  }, Infinity);
+  const finalLcBestRank = lcBestRank === Infinity ? null : lcBestRank;
 
   // Skill gaps
   const skills = cf.skillGaps || [];
@@ -320,20 +309,30 @@ export default function Dashboard() {
                 : linkedAccounts.codeforces ? 'Codeforces' : 'LeetCode'}
             </p>
           </div>
-          <button
-            onClick={handleRefresh}
-            disabled={refreshing || cooldown > 0}
-            className={`flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg text-white transition-colors ${
-              refreshing
-                  ? 'bg-emerald-400 cursor-not-allowed'
-                : cooldown > 0
-                  ? 'bg-amber-500 cursor-not-allowed'
-                  : 'bg-emerald-600 hover:bg-emerald-700'
-            }`}
-          >
-            <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
-            {refreshing ? 'Refreshing...' : cooldown > 0 ? `${formatCooldown(cooldown)}` : 'Refresh'}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShareOpen(true)}
+              disabled={loading || (!linkedAccounts.codeforces && !linkedAccounts.leetcode)}
+              className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-white/[0.05] hover:bg-gray-200 dark:hover:bg-white/[0.08] border border-black/[0.05] dark:border-white/[0.08] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Share2 size={12} />
+              Share
+            </button>
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing || cooldown > 0}
+              className={`flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg text-white transition-colors ${
+                refreshing
+                    ? 'bg-emerald-400 cursor-not-allowed'
+                  : cooldown > 0
+                    ? 'bg-amber-500 cursor-not-allowed'
+                    : 'bg-emerald-600 hover:bg-emerald-700'
+              }`}
+            >
+              <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
+              {refreshing ? 'Refreshing...' : cooldown > 0 ? `${formatCooldown(cooldown)}` : 'Refresh'}
+            </button>
+          </div>
         </div>
 
         {/* Row 1: Stat Cards */}
@@ -371,16 +370,16 @@ export default function Dashboard() {
         {/* Row 3: Activity heatmap */}
         <ActivityHeatmap loading={loading} heatmapData={heatmapData} />
 
-        {/* Row 4: Rating + Topics */}
-        <div className="grid grid-cols-2 gap-3">
+        {/* Row 4: Rating + Total Contests */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
           <RatingProgression loading={loading} cfRatingHistory={cfRatingHistory} lcRatingHistory={lcRatingHistory} />
-          <TopTopics loading={loading} topics={topics} />
+          <TotalContests loading={loading} cfContests={cfContestCount} lcContests={lcContestCount} cfBestRank={finalCfBestRank} lcBestRank={finalLcBestRank} />
         </div>
 
-        {/* Row 5: Contests + Upsolve */}
+        {/* Row 5: Recent Contests + Top Topics */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
           <RecentContests loading={loading} contests={contests} />
-          <UpsolveQueue loading={loading} problems={upsolveProblems} />
+          <TopTopics loading={loading} topics={topics} />
         </div>
 
         {/* Row 6: Skill Mastery (full width) */}
@@ -389,6 +388,51 @@ export default function Dashboard() {
         {/* Row 7: Achievements */}
         <Achievements loading={loading} achievements={achievements} />
       </div>
+
+      <ShareModal
+        isOpen={shareOpen}
+        onClose={() => setShareOpen(false)}
+        loading={loading}
+        cardProps={{
+          cfHandle: cf.cfHandle || null,
+          cfRating: cf.cfRating || 0,
+          cfMaxRating: cf.cfMaxRating || 0,
+          cfRank: cf.cfRank || null,
+          lcHandle: lc.lcHandle || null,
+          lcRating: lc.lcRating || 0,
+          lcMaxRating: lc.lcMaxRating || 0,
+          lcRank: lc.lcRank || null,
+          cfSolved: cf.cfSolved ?? 0,
+          lcSolved: lc.lcSolved ?? 0,
+          currentStreak,
+          bestStreak,
+          cfCurrentStreak: cf.cfCurrentStreak ?? 0,
+          lcStreak: lc.lcStreak ?? 0,
+          acceptanceRate,
+          cfAcceptanceRate: cfAR,
+          topics,
+          lcEasy: lc.lcEasy ?? 0,
+          lcMedium: lc.lcMedium ?? 0,
+          lcHard: lc.lcHard ?? 0,
+          cfRatingHistory,
+          lcRatingHistory,
+          userName,
+          userUsername,
+          activeDays,
+          solvedThisMonth,
+          cfSolvedThisMonth: cf.cfSolvedThisMonth ?? 0,
+          lcSolvedThisMonth: lc.lcSolvedThisMonth ?? 0,
+          contestsThisMonth: (cf.recentCfContests || []).filter(c => {
+            const now = new Date();
+            const ms = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+            return c.date?.startsWith(ms);
+          }).length + (lc.recentLcContests || []).filter(c => {
+            const now = new Date();
+            const ms = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+            return c.date?.startsWith(ms);
+          }).length,
+        }}
+      />
     </div>
   );
 }

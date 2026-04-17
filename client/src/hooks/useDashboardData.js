@@ -8,6 +8,8 @@ export function useDashboardData() {
     const [lcData, setLcData] = useState(null);
     const [userId, setUserId] = useState(null);
     const [userRole, setUserRole] = useState('user');
+    const [userName, setUserName] = useState('');
+    const [userUsername, setUserUsername] = useState('');
     const [linkedAccounts, setLinkedAccounts] = useState({ codeforces: false, leetcode: false });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -29,6 +31,8 @@ export function useDashboardData() {
 
             setUserId(uid);
             setUserRole(role);
+            setUserName(user.name || '');
+            setUserUsername(user.username || '');
             setLinkedAccounts({ codeforces: cfLinked, leetcode: lcLinked });
 
             // 2. Fire aggregate calls in parallel (only for linked platforms)
@@ -62,5 +66,5 @@ export function useDashboardData() {
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
-    return { cfData, lcData, userId, userRole, linkedAccounts, loading, error, refetch: fetchData };
+    return { cfData, lcData, userId, userRole, userName, userUsername, linkedAccounts, loading, error, refetch: fetchData };
 }

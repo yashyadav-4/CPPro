@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, NavLink, useNavigate } from "react-router-dom"
-import { LogOut, Menu, X, Shield, Settings, Sun, Moon } from 'lucide-react'
+import { LogOut, Menu, X, Shield, Settings, Sun, Moon, HelpCircle } from 'lucide-react'
 import { useTheme } from '../../hooks/useTheme'
 
 import './Header.css'
@@ -91,7 +91,7 @@ export default function Header() {
                         <button
                             onClick={toggleTheme}
                             title={isDark ? 'Light mode' : 'Dark mode'}
-                            className="theme-toggle-btn flex items-center gap-2 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-transparent text-gray-600 dark:text-gray-300 text-sm font-medium whitespace-nowrap flex-shrink-0"
+                            className="theme-toggle-btn flex items-center gap-2 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-transparent text-gray-600 dark:text-gray-300 text-sm font-medium whitespace-nowrap flex-shrink-0 hover:text-gray-900 dark:hover:text-white transition-colors"
                         >
                             {isDark ? <Sun size={16} className="flex-shrink-0" /> : <Moon size={16} className="flex-shrink-0" />}
                             <span>{isDark ? 'Light' : 'Dark'}</span>
@@ -136,6 +136,13 @@ export default function Header() {
                                         </button>
                                         <button
                                             className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 flex items-center gap-2"
+                                            onMouseDown={(e) => { e.preventDefault(); navigate('/help-support'); setIsDropdownOpen(false); }}
+                                        >
+                                            <HelpCircle size={16} />
+                                            Help & Support
+                                        </button>
+                                        <button
+                                            className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 flex items-center gap-2"
                                             onMouseDown={(e) => { e.preventDefault(); handleLogout(); }}
                                         >
                                             <LogOut size={16} />
@@ -156,7 +163,7 @@ export default function Header() {
                     <div className="flex md:hidden flex-1 justify-end items-center gap-4">
                         <button
                             onClick={toggleTheme}
-                            className="flex items-center gap-1 px-2 py-1 rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-gray-600 dark:text-gray-300 text-xs font-medium"
+                            className="flex items-center gap-1 px-2 py-1 rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-gray-600 dark:text-gray-300 text-xs font-medium hover:text-gray-900 dark:hover:text-white transition-colors"
                         >
                             {isDark ? <Sun size={14} /> : <Moon size={14} />}
                         </button>
@@ -214,6 +221,14 @@ export default function Header() {
                                 >
                                     <Shield size={20} />
                                     Verification
+                                </Link>
+                                <Link
+                                    to="/help-support"
+                                    onClick={() => setIsMobileMenuOpen(false)}
+                                    className="w-full flex items-center gap-2 px-4 py-2 text-base font-medium text-gray-500 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-white/10"
+                                >
+                                    <HelpCircle size={20} />
+                                    Help & Support
                                 </Link>
                                 <button
                                     className="w-full text-left flex items-center gap-2 px-4 py-2 text-base font-medium text-gray-500 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-white/10"

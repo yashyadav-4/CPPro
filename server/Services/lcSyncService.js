@@ -76,11 +76,14 @@ const syncLeetcodeProfile = async (userId, handle) => {
     }
 
     // 1. Enqueue the job on NexusLC.
+    //    force:true removes any stale completed/failed job with the same jobId so BullMQ
+    //    doesn't silently return the old job and skip the actual sync.
     let jobId;
     try {
         const enqRes = await nexusLC.post('/sync', {
             userId: String(userId),
             lcUsername: handle,
+            force: true,
         });
         jobId = enqRes.data && enqRes.data.jobId;
         if (!jobId) throw new Error('NexusLC did not return a jobId');

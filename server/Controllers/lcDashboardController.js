@@ -148,6 +148,8 @@ async function getLcAggregateDashboard(req, res) {
 
         // ── LC calendar entries ──────────────────────────────────────────────
         const lcCalendarParsed = parseLcCalendar(calendar.submissionCalendar);
+        // Build lcDaySet from calendar. Individual recentSubmissions timestamps are merged
+        // later when needed so the 12am–5:30am IST window is covered correctly.
         const lcDaySet = new Set(lcCalendarParsed.filter(d => d.count > 0).map(d => d.date));
 
         // ── LC this month / last month ───────────────────────────────────────
@@ -176,13 +178,23 @@ async function getLcAggregateDashboard(req, res) {
             : 0;
 
         // ── Unified streak: merge CF days + LC days ──────────────────────────
+        // Also merge per-submission IST dates from recentSubmissions so solves in the
+        // 12am–5:30am IST window (which land in the previous UTC calendar bucket) don't
+        // create artificial streak gaps.
+        const lcRecentAcDays = new Set(
+            (lcData.recentSubmissions || [])
+                .filter(s => s.statusDisplay === 'Accepted' && s.timestamp)
+                .map(s => getISTDate(Number(s.timestamp) * 1000))
+        );
+        const lcDaySetFull = new Set([...lcDaySet, ...lcRecentAcDays]);
+
         const cfDaySet = new Set(
             cfSubmissions.map(s => new Date(s.submittedAt).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }))
         );
-        const unifiedDaySet = new Set([...cfDaySet, ...lcDaySet]);
+        const unifiedDaySet = new Set([...cfDaySet, ...lcDaySetFull]);
         const unifiedStreak = computeStreakFromSet(unifiedDaySet);
         const cfOnlyStreak = computeStreakFromSet(cfDaySet);
-        const lcOnlyStreak = computeStreakFromSet(lcDaySet);
+        const lcOnlyStreak = computeStreakFromSet(lcDaySetFull);
         const bestStreakPlatform = cfOnlyStreak.bestStreak >= lcOnlyStreak.bestStreak ? 'codeforces' : 'leetcode';
 
         // ── LC rating history ────────────────────────────────────────────────
@@ -192,6 +204,7 @@ async function getLcAggregateDashboard(req, res) {
                 date: c.contestStartTime ? new Date(c.contestStartTime * 1000).toISOString().split('T')[0] : '',
                 rating: Math.round(c.rating || 0),
                 contestName: c.contestTitle || '',
+                rank: c.ranking || null,
             }))
             .filter(c => c.date)
             .sort((a, b) => a.date.localeCompare(b.date));
@@ -236,12 +249,14 @@ async function getLcAggregateDashboard(req, res) {
             .sort((a, b) => b.count - a.count);
 
         // ── Last 7 days (LC side) ────────────────────────────────────────────
+        // lcDaySetFull already merges calendar + per-submission IST dates so solves in
+        // the 12am–5:30am IST window are correctly attributed to the actual IST date.
         const lcLast7Days = [];
         for (let i = 6; i >= 0; i--) {
             const d = new Date();
             d.setDate(d.getDate() - i);
             const dateStr = getISTDate(d);
-            lcLast7Days.push({ date: dateStr, solved: lcDaySet.has(dateStr) });
+            lcLast7Days.push({ date: dateStr, solved: lcDaySetFull.has(dateStr) });
         }
 
         // ── LC Upsolve Queue (from recentSubmissions) ───────────────────────
@@ -368,6 +383,7 @@ async function getLcAggregateDashboard(req, res) {
                 upsolveQueue: lcUpsolveQueue,
                 // Raw CF data for combined stats in frontend
                 cfSolved,
+                lastSyncedAt: lcData.lastSyncedAt || null,
             }
         });
     } catch (error) {
