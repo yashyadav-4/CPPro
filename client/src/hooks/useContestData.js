@@ -19,6 +19,7 @@ function hydrate(raw) {
     duration:  raw.duration  ?? null,
     url:       raw.url       ?? null,
     status:    raw.status    ?? null,
+    attempted: raw.attempted ?? null,
   };
 }
 
@@ -36,7 +37,7 @@ export function useContestData() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(PROXY_URL);
+      const res = await fetch(PROXY_URL, { credentials: 'include' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
 

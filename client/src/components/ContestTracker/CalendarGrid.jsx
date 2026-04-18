@@ -10,11 +10,15 @@ const PLATFORM_META = {
   codeforces: {
     dot:   'bg-blue-500',
     pill:  'bg-blue-500/10 dark:bg-blue-500/15 border border-blue-500/20 text-blue-600 dark:text-blue-400',
+    dotAttempted: 'bg-white',
+    pillAttempted: 'bg-blue-500 dark:bg-blue-600 border-blue-600 text-white shadow-sm shadow-blue-500/20',
     label: 'CF',
   },
   leetcode: {
     dot:   'bg-amber-400',
     pill:  'bg-amber-400/10 dark:bg-amber-400/15 border border-amber-400/20 text-amber-600 dark:text-amber-400',
+    dotAttempted: 'bg-white',
+    pillAttempted: 'bg-amber-500 dark:bg-amber-600 border-amber-600 text-white shadow-sm shadow-amber-500/20',
     label: 'LC',
   },
 };
@@ -179,12 +183,19 @@ export default function CalendarGrid({ contests = [], year, month, onPrev, onNex
                     rel="noopener noreferrer"
                     title={c.name}
                     className={`
-                      flex items-center gap-1 px-1 py-0.5 rounded text-[9px] font-semibold leading-none truncate
-                      ${meta.pill} hover:opacity-80 transition-opacity
+                      flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-semibold leading-none truncate
+                      ${c.attempted ? meta.pillAttempted : meta.pill} hover:opacity-80 transition-opacity
                     `}
                   >
-                    <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${meta.dot}`} />
-                    <span className="truncate">{c.name}</span>
+                    <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${c.attempted ? meta.dotAttempted : meta.dot}`} />
+                    <span className="truncate pr-1">{c.name}</span>
+                    {c.attempted && (
+                      <span className="shrink-0 text-[8.5px] opacity-90 tracking-wide border-l border-white/30 pl-1.5 ml-auto flex gap-1">
+                        {c.attempted.rank && <span>#{c.attempted.rank}</span>}
+                        {c.attempted.rank && c.attempted.solvedCount > 0 && <span className="opacity-70">·</span>}
+                        {c.attempted.solvedCount > 0 && <span>{c.attempted.solvedCount} AC</span>}
+                      </span>
+                    )}
                   </a>
                 );
               })}

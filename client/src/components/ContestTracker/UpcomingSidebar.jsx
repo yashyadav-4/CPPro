@@ -1,6 +1,6 @@
 // UpcomingSidebar.jsx — Upcoming + Past contest sections with live countdowns
 import { useState, useEffect } from 'react';
-import { ExternalLink, Clock, CalendarDays, ChevronDown, ChevronUp } from 'lucide-react';
+import { ExternalLink, Clock, CalendarDays, ChevronDown, ChevronUp, Trophy } from 'lucide-react';
 
 // ── Platform colour tokens ─────────────────────────────────────────────────────
 const PLATFORM_META = {
@@ -92,11 +92,13 @@ function ContestRow({ c, now, muted = false }) {
       target="_blank"
       rel="noopener noreferrer"
       className={`flex items-start gap-3 py-2.5 group transition-all duration-200 rounded-lg -mx-1 px-1 ${
-        muted
-          ? 'opacity-60 hover:opacity-80 hover:bg-gray-50 dark:hover:bg-white/[0.02]'
-          : isLive
-            ? 'hover:bg-emerald-50 dark:hover:bg-emerald-500/[0.06]'
-            : 'hover:bg-gray-50 dark:hover:bg-white/[0.03]'
+        c.attempted && muted
+          ? 'bg-emerald-50/50 dark:bg-emerald-500/[0.04] opacity-100 hover:bg-emerald-50 dark:hover:bg-emerald-500/[0.08]'
+          : muted
+            ? 'opacity-60 hover:opacity-80 hover:bg-gray-50 dark:hover:bg-white/[0.02]'
+            : isLive
+              ? 'hover:bg-emerald-50 dark:hover:bg-emerald-500/[0.06]'
+              : 'hover:bg-gray-50 dark:hover:bg-white/[0.03]'
       }`}
     >
       <DateBadge date={c.startTime} muted={muted} />
@@ -153,6 +155,24 @@ function ContestRow({ c, now, muted = false }) {
             </span>
           )}
         </div>
+
+        {/* User Attempt Stats */}
+        {c.attempted && (
+          <div className="flex items-center gap-3 mt-2 mb-0.5">
+            {c.attempted.rank && (
+              <div className="flex items-center gap-1 text-[10px] font-semibold tracking-wide text-amber-600 dark:text-amber-500">
+                <Trophy size={10} />
+                <span>Rank #{c.attempted.rank}</span>
+              </div>
+            )}
+            {c.attempted.solvedCount > 0 && (
+              <div className="flex items-center gap-1 text-[10px] font-semibold tracking-wide text-emerald-600 dark:text-emerald-500">
+                <span className="w-1 h-1 rounded-full bg-emerald-500" />
+                <span>{c.attempted.solvedCount} Solved</span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </a>
   );

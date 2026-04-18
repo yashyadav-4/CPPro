@@ -34,13 +34,42 @@ export default function ContestTracker() {
 
         {/* ── Page header ── */}
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-medium text-gray-900 dark:text-white">
-              Contest Tracker
-            </h1>
-            <p className="text-xs text-gray-400 dark:text-gray-500 font-normal mt-0.5">
-              Codeforces + LeetCode
-            </p>
+          <div className="flex items-center gap-6">
+            <div>
+              <h1 className="text-lg font-medium text-gray-900 dark:text-white">
+                Contest Tracker
+              </h1>
+              <p className="text-xs text-gray-400 dark:text-gray-500 font-normal mt-0.5">
+                Codeforces + LeetCode
+              </p>
+            </div>
+
+            {/* Visual Legend */}
+            <div className="hidden xl:flex items-center gap-4 text-[9px] font-semibold text-gray-500 dark:text-gray-400 ml-2 pl-6 border-l border-gray-200 dark:border-white/10">
+              {/* CF */}
+              <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-500/10 dark:bg-blue-500/15 border border-blue-500/20 text-blue-600 dark:text-blue-400">
+                  <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                  <span>CF Unattempted</span>
+                </div>
+                <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-500 dark:bg-blue-600 border border-blue-600 text-white shadow-sm shadow-blue-500/20">
+                  <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                  <span>CF Attempted</span>
+                </div>
+              </div>
+              
+              {/* LC */}
+              <div className="flex items-center gap-1.5 border-l border-gray-200 dark:border-white/10 pl-4">
+                <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-400/10 dark:bg-amber-400/15 border border-amber-400/20 text-amber-600 dark:text-amber-400">
+                  <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                  <span>LC Unattempted</span>
+                </div>
+                <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-500 dark:bg-amber-600 border border-amber-600 text-white shadow-sm shadow-amber-500/20">
+                  <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                  <span>LC Attempted</span>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Auto-update info chip — no manual refresh needed */}
