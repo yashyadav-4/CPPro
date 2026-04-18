@@ -13,6 +13,7 @@ import LearningPage from './components/LearningTree/LearningPage.jsx'
 import LevelUpPage from './components/LevelUp/LevelUpPage.jsx'
 import Settings from './components/Settings/Settings.jsx'
 import HelpSupport from './components/HelpSupport/HelpSupport.jsx'
+import ContestTracker from './components/ContestTracker/ContestTracker.jsx'
 
 const router = createBrowserRouter([
     {
@@ -59,6 +60,10 @@ const router = createBrowserRouter([
             {
                 path: "help-support",
                 element: <HelpSupport />
+            },
+            {
+                path: "contest-tracker",
+                element: <ContestTracker />
             },
             {
                 path: "login",

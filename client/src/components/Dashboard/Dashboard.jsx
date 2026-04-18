@@ -212,7 +212,9 @@ export default function Dashboard() {
 
   // StatCards - computed early where possible
   const totalSolved = (cf.cfSolved ?? 0) + (lc.lcSolved ?? 0);
-  const totalSubmissions = (cf.cfTotalSubmissions ?? 0);
+  // Total Submissions: use AC submissions only from both platforms for consistency
+  // CF: count of AC submissions stored in DB  |  LC: AC submissions from LC's own API
+  const totalSubmissions = (cf.cfAcSubmissions ?? cf.cfTotalSubmissions ?? 0) + (lc.lcAcSubmissions ?? lc.lcTotalSubmissions ?? 0);
   const solvedThisMonth = (cf.cfSolvedThisMonth ?? 0) + (lc.lcSolvedThisMonth ?? 0);
   const solvedLastMonth = (cf.cfSolvedLastMonth ?? 0) + (lc.lcSolvedLastMonth ?? 0);
 
@@ -343,6 +345,8 @@ export default function Dashboard() {
           lcSolved={lc.lcSolved ?? 0}
           activeDays={activeDays}
           totalSubmissions={totalSubmissions}
+          cfAcSubmissions={cf.cfAcSubmissions ?? cf.cfTotalSubmissions ?? 0}
+          lcAcSubmissions={lc.lcAcSubmissions ?? lc.lcTotalSubmissions ?? 0}
           currentStreak={currentStreak}
           bestStreak={bestStreak}
           acceptanceRate={acceptanceRate}

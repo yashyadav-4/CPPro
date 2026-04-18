@@ -65,10 +65,10 @@ export default function RecentContests({ loading, contests }) {
                 </div>
               </div>
               <div className="flex flex-col items-end shrink-0 pl-3">
-                <span className={`text-sm font-medium tabular-nums ${c.delta > 0 ? 'text-green-500' : c.delta < 0 ? 'text-red-500' : 'text-gray-400'}`}>
-                  {c.delta > 0 ? `+${c.delta}` : c.delta}
+                <span className={`text-sm font-medium tabular-nums ${delta > 0 ? 'text-green-500' : delta < 0 ? 'text-red-500' : 'text-gray-400'}`}>
+                  {delta > 0 ? `+${delta}` : delta}
                 </span>
-                <span className="text-[10px] text-gray-400 dark:text-[#6B7280]">#{c.rank}</span>
+                {c.rank != null && <span className="text-[10px] text-gray-400 dark:text-[#6B7280]">#{c.rank}</span>}
               </div>
             </a>
           );

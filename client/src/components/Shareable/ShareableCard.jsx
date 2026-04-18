@@ -358,10 +358,16 @@ const ShareableCard = forwardRef(function ShareableCard({
       {/* Faint diagonal stripes */}
       <div style={{ position: 'absolute', inset: 0, backgroundImage: `repeating-linear-gradient(135deg, ${theme.STRIPES} 0px, ${theme.STRIPES} 1px, transparent 1px, transparent 18px)`, pointerEvents: 'none' }} />
 
-      <div style={{ position: 'relative', width: '100%', height: '100%', padding: '48px 60px', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
+      <div style={{ position: 'relative', width: '100%', height: '100%', padding: '36px 60px', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
 
         {/* ── Header ────────────────────────────────────────────── */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ 
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          paddingBottom: 16,
+          marginBottom: 4,
+          borderBottom: `1px solid ${theme.BORDER_SOFT}`,
+          boxShadow: `0 8px 30px -15px ${EMERALD}40`
+        }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ width: 10, height: 10, borderRadius: 3, background: EMERALD, boxShadow: `0 0 14px ${EMERALD}` }} />
             <span style={{ fontFamily: FONT_SANS, fontSize: 22, fontWeight: 700, color: theme.TEXT_PRIMARY, letterSpacing: '-0.02em' }}>CPPro</span>
@@ -372,7 +378,7 @@ const ShareableCard = forwardRef(function ShareableCard({
         </div>
 
         {/* ── Hero ──────────────────────────────────────────────── */}
-        <div style={{ height: 380, width: '100%', display: 'flex', gap: 40, marginTop: 24 }}>
+        <div style={{ height: 350, width: '100%', display: 'flex', gap: 40, marginTop: 12 }}>
           {/* Left */}
           <div style={{ flex: '1.05', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', gap: 18 }}>
 
@@ -441,7 +447,7 @@ const ShareableCard = forwardRef(function ShareableCard({
         </div>
 
         {/* ── Footer ────────────────────────────────────────────── */}
-        <div style={{ height: 160, width: '100%', marginTop: 'auto', paddingTop: 14, borderTop: `1px solid ${theme.BORDER}`, display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div style={{ height: 140, width: '100%', marginTop: 'auto', paddingTop: 14, borderTop: `1px solid ${theme.BORDER_SOFT}`, display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
 
             <StatBlock label="Total Solved" value={totalSolved.toLocaleString()} accent={EMERALD} />

@@ -6,7 +6,8 @@ const Skeleton = () => (
 
 export default function StatCards({
   loading, totalSolved, cfSolved, lcSolved, activeDays,
-  totalSubmissions, currentStreak, bestStreak,
+  totalSubmissions, cfAcSubmissions, lcAcSubmissions,
+  currentStreak, bestStreak,
   acceptanceRate, cfAcceptanceRate, lcAcceptanceRate,
   solvedThisMonth, activeDaysThisMonth,
 }) {
@@ -34,7 +35,7 @@ export default function StatCards({
     {
       label: 'TOTAL SUBMISSIONS',
       value: totalSubmissions ?? '—',
-      sub: solvedThisMonth ? `${solvedThisMonth} solved this month` : 'None',
+      sub: `CF: ${cfAcSubmissions ?? 0} | LC: ${lcAcSubmissions ?? 0}`,
       color: '#8b5cf6', // purple
     },
     {

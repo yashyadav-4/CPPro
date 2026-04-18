@@ -81,7 +81,27 @@ export default function ShareModal({ isOpen, onClose, cardProps, loading = false
         backgroundColor: isDark ? '#0a0a0a' : '#ffffff',
         logging: false,
         imageTimeout: 15000,
-        onclone: (doc) => {
+        onclone: (doc, clonedEl) => {
+          // 1. Remove the 0.5x preview scale so the card renders at full 1200×630.
+          clonedEl.style.transform = 'none';
+          // 2. Walk up ancestors and strip any CSS property that creates a containing
+          //    block (backdrop-filter from the modal backdrop, filter, transform).
+          //    Without this, `position:fixed` on clonedEl would still be relative to
+          //    the modal rather than the viewport, giving wrong capture coordinates.
+          let ancestor = clonedEl.parentElement;
+          while (ancestor && ancestor !== doc.body) {
+            ancestor.style.backdropFilter = 'none';
+            ancestor.style.webkitBackdropFilter = 'none';
+            ancestor.style.filter = 'none';
+            ancestor.style.transform = 'none';
+            ancestor = ancestor.parentElement;
+          }
+          // 3. Pin the card to viewport origin so html2canvas always renders from (0,0).
+          clonedEl.style.position = 'fixed';
+          clonedEl.style.top = '0px';
+          clonedEl.style.left = '0px';
+          clonedEl.style.zIndex = '999999';
+          // 4. Inject fonts into the cloned document.
           const link = doc.createElement('link');
           link.rel = 'stylesheet';
           link.href = 'https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap';
@@ -178,8 +198,10 @@ export default function ShareModal({ isOpen, onClose, cardProps, loading = false
                          shadow-lg border border-gray-200 dark:border-white/[0.08]"
               style={{ width: previewWidth, height: previewHeight }}
             >
-              {/* CSS-scaled visual preview — no ref, not captured */}
+              {/* Capture target: ref here so html2canvas gets the painted element.
+                  onclone strips the scale transform before rendering. */}
               <div
+                ref={cardRef}
                 style={{
                   width: 1200,
                   height: 630,
@@ -198,19 +220,6 @@ export default function ShareModal({ isOpen, onClose, cardProps, loading = false
           </p>
         </div>
 
-        {/* Off-screen capture target — natural size, no transforms */}
-        {!loading && !rankLoading && (
-          <div
-            aria-hidden="true"
-            style={{
-              position: 'fixed', left: -99999, top: 0,
-              width: 1200, height: 630,
-              pointerEvents: 'none',
-            }}
-          >
-            <ShareableCard ref={cardRef} {...enrichedCardProps} isDark={isDark} />
-          </div>
-        )}
 
         {/* ── Footer ── */}
         <div className="

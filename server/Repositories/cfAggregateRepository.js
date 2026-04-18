@@ -49,28 +49,37 @@ const getCfStats = async (userId) => {
     const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const lastMonthStr = `${lastMonthDate.getFullYear()}-${String(lastMonthDate.getMonth() + 1).padStart(2, '0')}`;
 
-    let cfSolvedThisMonth = 0;
-    let cfSolvedLastMonth = 0;
-    const thisMonthDaySet = new Set();
-    const acThisMonth = new Set();
-    const acLastMonth = new Set();
+    // Build a set of all problems that were AC'd BEFORE this month (already solved previously)
+    // Sorted by date so we can determine first-AC chronologically
+    const allSorted = [...all].sort((a, b) => new Date(a.submittedAt) - new Date(b.submittedAt));
 
-    // We iterate the submissions and add to valid days, using exactly YYYY-MM-DD.
+    // Track the first AC date for each problem
+    const firstAcDateMap = {};
+    allSorted.forEach(s => {
+        if (s.verdict === 'AC' && !firstAcDateMap[s.problemId]) {
+            firstAcDateMap[s.problemId] = getISTDate(s.submittedAt).slice(0, 7); // YYYY-MM
+        }
+    });
+
+    const thisMonthDaySet = new Set();
+
     all.forEach(s => {
         const dateStr = getISTDate(s.submittedAt);
         const ym = dateStr.slice(0, 7);
         if (ym === monthStr) {
             thisMonthDaySet.add(dateStr);
-            if (s.verdict === 'OK') acThisMonth.add(s.problemId);
         }
-        if (ym === lastMonthStr && s.verdict === 'OK') acLastMonth.add(s.problemId);
     });
-    cfSolvedThisMonth = acThisMonth.size;
-    cfSolvedLastMonth = acLastMonth.size;
+
+    // cfSolvedThisMonth = problems whose first AC was this month
+    const cfSolvedThisMonth = Object.values(firstAcDateMap).filter(ym => ym === monthStr).length;
+    // cfSolvedLastMonth = problems whose first AC was last month
+    const cfSolvedLastMonth = Object.values(firstAcDateMap).filter(ym => ym === lastMonthStr).length;
     const cfActiveDaysThisMonth = thisMonthDaySet.size;
 
-    // Total submissions
-    const cfTotalSubmissions = total;
+    // Total submissions (all verdicts) and AC-only submissions
+    const cfTotalSubmissions = total;         // all CF submissions in DB
+    const cfAcSubmissions   = acCount;        // only AC verdicts
 
     return {
         cfSolved,
@@ -79,7 +88,8 @@ const getCfStats = async (userId) => {
         cfActiveDaysThisMonth,
         cfSolvedThisMonth,
         cfSolvedLastMonth,
-        cfTotalSubmissions,
+        cfTotalSubmissions,   // kept for future use
+        cfAcSubmissions,      // used for the combined stat card
         cfDaySet: daySet, // passed for streak computation
     };
 };
@@ -344,6 +354,7 @@ const getCfRatingHistory = async (userId) => {
             date: new Date(h.date).toISOString().split('T')[0],
             rating: h.rating,
             contestName: h.contestName || '',
+            rank: h.rank || null,
         }))
         .sort((a, b) => a.date.localeCompare(b.date));
 

@@ -49,10 +49,18 @@ export default function Header() {
         }
     };
 
-    const navItems = ['Home', 'Dashboard', 'Leaderboard', 'Learning', 'Level-up', 'Code Snippet', 'Community'];
+    const navItems = ['Home', 'Dashboard', 'Leaderboard', 'Contest Tracker', 'Learning', 'Level-up', 'Code Snippet', 'Community'];
+
+    // Custom path overrides for items whose path can't be derived trivially
+    const NAV_PATH = {
+        'Home': '/',
+        'Contest Tracker': '/contest-tracker',
+        'Code Snippet': '/codesnippet',
+        'Level-up': '/level-up',
+    };
 
     return (
-        <header className="sticky top-4 z-50 w-[95%] max-w-[1200px] mx-auto bg-white/70 dark:bg-black/60 backdrop-blur-xl border border-white/[0.08] dark:border-white/[0.05] rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] transition-all duration-300">
+        <header className="sticky top-4 z-50 w-[95%] max-w-[1200px] mx-auto bg-white/70 dark:bg-black/60 backdrop-blur-xl border border-white/[0.08] dark:border-white/[0.05] rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_20px_40px_-15px_rgba(16,185,129,0.15)] shadow-emerald-500/5 transition-all duration-300">
             <div className="mx-auto px-6">
                 <div className="flex items-center justify-between h-16 w-full">
                     {/* Left Section - Logo */}
@@ -67,7 +75,7 @@ export default function Header() {
                     {/* Center Section - Navigation (Desktop) */}
                     <nav className="hidden lg:flex flex-1 justify-center gap-4 xl:gap-8 px-4 xl:px-8">
                         {navItems.map((item) => {
-                            const path = item === 'Home' ? '/' : `/${item.toLowerCase().replace(' ', '')}`;
+                            const path = NAV_PATH[item] ?? `/${item.toLowerCase().replace(/\s+/g, '')}`;
                             return (
                                 <NavLink
                                     key={item}
@@ -182,7 +190,7 @@ export default function Header() {
                 <div className="md:hidden bg-white/90 dark:bg-black/80 backdrop-blur-2xl border-t border-white/[0.08] dark:border-white/[0.05] rounded-b-2xl overflow-hidden shadow-2xl transition-all duration-300">
                     <div className="pt-2 pb-3 space-y-1">
                         {navItems.map((item) => {
-                            const path = item === 'Home' ? '/' : `/${item.toLowerCase().replace(' ', '')}`;
+                            const path = NAV_PATH[item] ?? `/${item.toLowerCase().replace(/\s+/g, '')}`;
                             return (
                                 <NavLink
                                     key={item}

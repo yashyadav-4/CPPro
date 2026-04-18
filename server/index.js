@@ -16,11 +16,16 @@ const settingsRoutes=require('./Routes/settingsRoutes');
 const lcDashboardRoutes= require('./Routes/lcDashboardRoutes');
 const learningRoutes = require('./Routes/learningRoutes');
 const publicStatsRoute = require('./Routes/publicStats');
+const contestRoutes    = require('./Routes/contestRoutes');
+const { startContestSyncWorker } = require('./Workers/contestSyncWorker');
 
-// connection to mongo
 connectToMongoDb(process.env.MongoUrl)
-.then(()=> console.log('MongoDb is connected to server'))
-.catch(err=> console.log('Error ' , err));
+.then(() => {
+    console.log('MongoDb is connected to server');
+    //start the 6-hour contest sync worker once the DB is ready
+    startContestSyncWorker();
+})
+.catch(err => console.log('Error ' , err));
 
 
 const app= express();
@@ -54,6 +59,7 @@ app.use('/api/settings' , settingsRoutes);
 app.use('/api/lc-dashboard', lcDashboardRoutes);
 app.use('/api/learning/progress', learningRoutes);
 app.use('/api/stats', publicStatsRoute);
+app.use('/api/contests', contestRoutes);
 
 // test
 app.get('/api/test', (req, res)=>{

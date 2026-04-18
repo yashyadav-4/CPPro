@@ -158,17 +158,30 @@ async function getLcAggregateDashboard(req, res) {
         const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
         const lastMonthStr = `${lastMonthDate.getFullYear()}-${String(lastMonthDate.getMonth() + 1).padStart(2, '0')}`;
 
-        let lcSolvedThisMonth = 0;
-        let lcSolvedLastMonth = 0;
         let lcActiveDaysThisMonth = 0;
         lcCalendarParsed.forEach(d => {
             const ym = d.date.slice(0, 7);
-            if (ym === monthStr) {
-                lcSolvedThisMonth += d.count;
-                if (d.count > 0) lcActiveDaysThisMonth++;
-            }
-            if (ym === lastMonthStr) lcSolvedLastMonth += d.count;
+            if (ym === monthStr && d.count > 0) lcActiveDaysThisMonth++;
         });
+
+        // Use recentSubmissions to count unique problems NEWLY AC'd this month / last month.
+        // recentSubmissions is ordered newest-first; we track per-titleSlug first AC occurrence
+        // and only count it if that first AC falls within the target month.
+        const recentSubs = lcData.recentSubmissions || [];
+        // Sort ascending by timestamp so we can find the first AC for each problem
+        const recentSorted = [...recentSubs]
+            .filter(s => s.timestamp)
+            .sort((a, b) => Number(a.timestamp) - Number(b.timestamp));
+
+        const firstAcMonthMap = {}; // titleSlug -> YYYY-MM of its first AC
+        recentSorted.forEach(s => {
+            if (s.statusDisplay === 'Accepted' && !firstAcMonthMap[s.titleSlug]) {
+                firstAcMonthMap[s.titleSlug] = getISTDate(Number(s.timestamp) * 1000).slice(0, 7);
+            }
+        });
+
+        const lcSolvedThisMonth = Object.values(firstAcMonthMap).filter(ym => ym === monthStr).length;
+        const lcSolvedLastMonth = Object.values(firstAcMonthMap).filter(ym => ym === lastMonthStr).length;
 
         // ── LC acceptance rate ───────────────────────────────────────────────
         const acSubmissions = (profile.acSubmissionNum || []).find(s => s.difficulty === 'All');
@@ -383,6 +396,9 @@ async function getLcAggregateDashboard(req, res) {
                 upsolveQueue: lcUpsolveQueue,
                 // Raw CF data for combined stats in frontend
                 cfSolved,
+                // LC submission counts from LeetCode's own API
+                lcTotalSubmissions: totalSubmissionsNum?.submissions || 0,  // ALL submissions (every attempt)
+                lcAcSubmissions: acSubmissions?.submissions || 0,            // AC submissions only
                 lastSyncedAt: lcData.lastSyncedAt || null,
             }
         });
