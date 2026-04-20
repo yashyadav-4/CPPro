@@ -53,24 +53,6 @@ const LevelUpPage = () => {
                     )}
                 </div>
 
-                {/* Secondary/WIP Section */}
-                <div className="flex flex-col items-center justify-center py-12 pt-20 border-t border-black/[0.05] dark:border-white/[0.05]">
-                    <div className="bg-white/50 dark:bg-[#111111]/50 backdrop-blur-sm border border-black/[0.05] dark:border-white/[0.05] text-center rounded-2xl p-10 max-w-lg w-full shadow-lg shadow-black/[0.02]">
-                        <div className="inline-block p-4 rounded-full bg-emerald-50 dark:bg-emerald-500/10 mb-6 border border-emerald-100 dark:border-emerald-500/20">
-                            <div className="animate-bounce text-3xl">🚀</div>
-                        </div>
-                        <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-3 tracking-tight">Advanced Roadmaps</h2>
-                        <p className="text-gray-500 dark:text-gray-400 mb-10 font-medium leading-relaxed">
-                            We're currently building deep-dive paths, peer-to-peer 
-                            benchmarking, and 1-on-1 mentor logic into this section.
-                        </p>
-                        <div className="flex gap-2 justify-center">
-                            <span className="w-16 h-1.5 rounded-full bg-emerald-600/40 animate-pulse"></span>
-                            <span className="w-8 h-1.5 rounded-full bg-gray-300 dark:bg-gray-700"></span>
-                            <span className="w-4 h-1.5 rounded-full bg-gray-200 dark:bg-gray-800"></span>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     );

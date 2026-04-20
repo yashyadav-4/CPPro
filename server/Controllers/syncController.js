@@ -9,26 +9,53 @@ const ADMIN_COOLDOWN  = 10 * 1000;
 
 async function handleManualRefresh(req, res) {
     try {
-        const userId= req.user._id;
-        const user= await User.findById(userId);
+        const userId = req.user._id;
+        const user   = await User.findById(userId);
 
-        if (!user || !user.linkedAccounts || !user.linkedAccounts.codeforces){
-            return res.status(400).json({ success: false, message:'no codeforces account linked' });
+        if (!user || !user.linkedAccounts || !user.linkedAccounts.codeforces) {
+            return res.status(400).json({ success: false, message: 'no codeforces account linked' });
         }
-        const handle = user.linkedAccounts.codeforces;
-        const role = user.role || 'user';
+        const handle  = user.linkedAccounts.codeforces;
+        const role    = user.role || 'user';
+        const cooldown = role === 'admin' ? ADMIN_COOLDOWN : FIFTEEN_MINUTES;
 
-        const { freshness, remainingSeconds } = await syncService.getCodeforcesData(userId, handle, role);
+        const timeSinceUpdate = user.lastCfUpdate
+            ? Date.now() - new Date(user.lastCfUpdate).getTime()
+            : Infinity;
+
+        // Still within cooldown — return current MongoDB data immediately.
+        if (timeSinceUpdate < cooldown) {
+            const remainingSeconds = Math.ceil((cooldown - timeSinceUpdate) / 1000);
+            const profileData = await dashboardService.getProfileSummary(userId);
+            return res.status(200).json({
+                success: true,
+                freshness: 'fresh',
+                remainingSeconds,
+                message: `Data is up to date (cooldown: ${role === 'admin' ? '10s' : '15min'})`,
+                data: profileData,
+            });
+        }
+
+        // Stamp NOW to prevent duplicate dispatches on double-click.
+        await User.findByIdAndUpdate(userId, { $set: { lastCfUpdate: new Date() } });
+
+        // Await the sync so the response carries fresh data (mirrors LC behaviour).
+        try {
+            await syncService.syncCodeforcesProfile(userId, handle);
+        } catch (err) {
+            console.error('[LEAN-NEXUS] sync failed:', err.message);
+            // Roll back timestamp so the user can retry.
+            await User.findByIdAndUpdate(userId, { $set: { lastCfUpdate: user.lastCfUpdate || null } });
+            return res.status(500).json({ success: false, message: `Sync failed: ${err.message}` });
+        }
+
         const profileData = await dashboardService.getProfileSummary(userId);
-
         return res.status(200).json({
             success: true,
-            freshness,
-            remainingSeconds: remainingSeconds || 0,
-            message: freshness === 'fresh'
-                ? `Data is up to date (cooldown: ${role === 'admin' ? '10s' : '15min'})`
-                : 'Returning current data — background update in progress',
-            data: profileData
+            freshness: 'synced',
+            remainingSeconds: Math.ceil(cooldown / 1000),
+            message: 'Codeforces data synced successfully',
+            data: profileData,
         });
     } catch (error) {
         console.error('[LEAN-NEXUS] manual refresh error:', error);

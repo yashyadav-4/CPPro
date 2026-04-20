@@ -400,6 +400,18 @@ async function getLcAggregateDashboard(req, res) {
                 lcTotalSubmissions: totalSubmissionsNum?.submissions || 0,  // ALL submissions (every attempt)
                 lcAcSubmissions: acSubmissions?.submissions || 0,            // AC submissions only
                 lastSyncedAt: lcData.lastSyncedAt || null,
+                // Recent AC submissions (title, titleSlug, timestamp)
+                recentSubmissions: lcData.recentSubmissions || [],
+                // Tiered skill stats for LC Skill Breakdown component
+                lcSkillFundamental: (skillStats.fundamental || [])
+                    .map(t => ({ name: t.tagName, count: t.problemsSolved }))
+                    .sort((a, b) => b.count - a.count).slice(0, 10),
+                lcSkillIntermediate: (skillStats.intermediate || [])
+                    .map(t => ({ name: t.tagName, count: t.problemsSolved }))
+                    .sort((a, b) => b.count - a.count).slice(0, 10),
+                lcSkillAdvanced: (skillStats.advanced || [])
+                    .map(t => ({ name: t.tagName, count: t.problemsSolved }))
+                    .sort((a, b) => b.count - a.count).slice(0, 10),
             }
         });
     } catch (error) {

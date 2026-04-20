@@ -1,80 +1,50 @@
-import { createBrowserRouter } from 'react-router-dom'
-import Layout from './Layout.jsx'
-import Login from './components/AuthPage/Login'
-import Signup from './components/AuthPage/Signup.jsx'
-import Home from './components/Home/Home.jsx'
-import ProtectedRoute from './components/ProtectedRoute.jsx'
-import Dashboard from './components/Dashboard/Dashboard.jsx'
-import LeaderBoard from './components/Leaderboard/Leaderboard.jsx'
-import CodeTemplate from './components/CodeTemplate/CodeTemplate.jsx'
-import Community from './components/Community Page/Community.jsx'
-import VerifyCodeforces from './components/VerifyCodeforces/VerifyCodeforces.jsx'
-import LearningPage from './components/LearningTree/LearningPage.jsx'
-import LevelUpPage from './components/LevelUp/LevelUpPage.jsx'
-import Settings from './components/Settings/Settings.jsx'
-import HelpSupport from './components/HelpSupport/HelpSupport.jsx'
-import ContestTracker from './components/ContestTracker/ContestTracker.jsx'
+import { lazy, Suspense } from 'react';
+import { createBrowserRouter } from 'react-router-dom';
+import Layout from './Layout.jsx';
+import ProtectedRoute from './components/ProtectedRoute.jsx';
+
+const Home = lazy(() => import('./components/Home/Home.jsx'));
+const Login = lazy(() => import('./components/AuthPage/Login'));
+const Signup = lazy(() => import('./components/AuthPage/Signup.jsx'));
+const Dashboard = lazy(() => import('./components/Dashboard/Dashboard.jsx'));
+const LeaderBoard = lazy(() => import('./components/Leaderboard/Leaderboard.jsx'));
+const CodeTemplate = lazy(() => import('./components/CodeTemplate/CodeTemplate.jsx'));
+const Community = lazy(() => import('./components/Community Page/Community.jsx'));
+const VerifyCodeforces = lazy(() => import('./components/VerifyCodeforces/VerifyCodeforces.jsx'));
+const LearningPage = lazy(() => import('./components/LearningTree/LearningPage.jsx'));
+const LevelUpPage = lazy(() => import('./components/LevelUp/LevelUpPage.jsx'));
+const Settings = lazy(() => import('./components/Settings/Settings.jsx'));
+const HelpSupport = lazy(() => import('./components/HelpSupport/HelpSupport.jsx'));
+const ContestTracker = lazy(() => import('./components/ContestTracker/ContestTracker.jsx'));
+
+const PageLoader = () => (
+  <div className="min-h-screen bg-white dark:bg-[#0a0a0a] flex items-center justify-center">
+    <div className="w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+  </div>
+);
+
+const withSuspense = (element) => <Suspense fallback={<PageLoader />}>{element}</Suspense>;
 
 const router = createBrowserRouter([
-    {
-        path: "/",
-        element: <Layout />,
-        children: [
-            {
-                index: true,
-                element: <Home/>
-            },
-            {
-                path: "dashboard",
-                element: <ProtectedRoute><Dashboard /></ProtectedRoute>
-            },
-            {
-                path: "leaderboard",
-                element: <LeaderBoard />
-            },
-
-            {
-                path: "level-up",
-                element: <ProtectedRoute><LevelUpPage /></ProtectedRoute>
-            },
-            {
-                path: "codesnippet",
-                element: <ProtectedRoute> <CodeTemplate /> </ProtectedRoute>
-            },
-            {
-                path: "community",
-                element: <Community />
-            },
-            {
-                path: "verify-codeforces",
-                element: <ProtectedRoute><VerifyCodeforces /></ProtectedRoute>
-            },
-            {
-                path: "learning",
-                element: <ProtectedRoute><LearningPage /></ProtectedRoute>
-            },
-            {
-                path: "settings",
-                element: <ProtectedRoute><Settings /></ProtectedRoute>
-            },
-            {
-                path: "help-support",
-                element: <HelpSupport />
-            },
-            {
-                path: "contest-tracker",
-                element: <ContestTracker />
-            },
-            {
-                path: "login",
-                element: <Login />
-            },
-            {
-                path: "signup",
-                element: <Signup />
-            }
-        ]
-    }
+  {
+    path: '/',
+    element: <Layout />,
+    children: [
+      { index: true, element: withSuspense(<Home />) },
+      { path: 'dashboard', element: withSuspense(<ProtectedRoute><Dashboard /></ProtectedRoute>) },
+      { path: 'leaderboard', element: withSuspense(<LeaderBoard />) },
+      { path: 'level-up', element: withSuspense(<ProtectedRoute><LevelUpPage /></ProtectedRoute>) },
+      { path: 'codesnippet', element: withSuspense(<ProtectedRoute><CodeTemplate /></ProtectedRoute>) },
+      { path: 'community', element: withSuspense(<Community />) },
+      { path: 'verify-codeforces', element: withSuspense(<ProtectedRoute><VerifyCodeforces /></ProtectedRoute>) },
+      { path: 'learning', element: withSuspense(<ProtectedRoute><LearningPage /></ProtectedRoute>) },
+      { path: 'settings', element: withSuspense(<ProtectedRoute><Settings /></ProtectedRoute>) },
+      { path: 'help-support', element: withSuspense(<HelpSupport />) },
+      { path: 'contest-tracker', element: withSuspense(<ContestTracker />) },
+      { path: 'login', element: withSuspense(<Login />) },
+      { path: 'signup', element: withSuspense(<Signup />) },
+    ],
+  },
 ]);
 
 export default router;

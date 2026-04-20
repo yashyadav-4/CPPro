@@ -65,6 +65,7 @@ export default function Community() {
   const [selectedPost, setSelectedPost] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
   const [postToDelete, setPostToDelete] = useState(null);
+  const [fetchError, setFetchError] = useState(null);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -85,44 +86,20 @@ export default function Community() {
   const fetchPosts = useCallback(async () => {
     try {
       setLoading(true);
+      setFetchError(null);
       const limit = 10;
       let url = `/api/posts?page=${page}&limit=${limit}`;
-      
-      if (debouncedSearch) {
-        url += `&search=${encodeURIComponent(debouncedSearch)}`;
-      }
-      
-      if (activeFilter !== "All") {
-        url += `&tag=${encodeURIComponent(activeFilter)}`;
-      }
+      if (debouncedSearch) url += `&search=${encodeURIComponent(debouncedSearch)}`;
+      if (activeFilter !== "All") url += `&tag=${encodeURIComponent(activeFilter)}`;
 
       const res = await axios.get(url, { withCredentials: true });
       if (Array.isArray(res.data)) {
         setPosts(res.data);
         setTotalPages(res.data.length === limit ? page + 1 : page);
-        localStorage.setItem('community_posts', JSON.stringify(res.data));
       }
     } catch (error) {
-      console.log("Using localStorage fallback for fetching posts");
-      const localPosts = JSON.parse(localStorage.getItem('community_posts') || '[]');
-      
-      // Basic local filtering
-      let filtered = [...localPosts];
-      if (activeFilter !== "All") {
-          filtered = filtered.filter(p => 
-             Array.isArray(p.tags) ? p.tags.includes(activeFilter.toLowerCase()) : 
-             (p.types === activeFilter.toLowerCase())
-          );
-      }
-      if (debouncedSearch) {
-          filtered = filtered.filter(p => 
-              p.title.toLowerCase().includes(debouncedSearch.toLowerCase()) || 
-              p.content.toLowerCase().includes(debouncedSearch.toLowerCase())
-          );
-      }
-
-      setPosts(filtered);
-      setTotalPages(1); // Simple fallback pagination
+      setFetchError("Could not connect to server. Please try again.");
+      setPosts([]);
     } finally {
       setLoading(false);
     }
@@ -171,57 +148,21 @@ export default function Community() {
       await axios.patch(`/api/posts/${postId}/${type}`, {}, { withCredentials: true });
       fetchPosts();
     } catch (error) {
-      console.log("Fallback to localStorage voting");
-      
-      // Update local storage as well
-      const localPosts = JSON.parse(localStorage.getItem('community_posts') || '[]');
-      const updatedLocal = localPosts.map(p => {
-          if (p._id === postId) {
-              const isUpvote = type === "upvote";
-              let newUpvotes = [...(p.upVotes || [])];
-              let newDownvotes = [...(p.downVotes || [])];
-              if (isUpvote) {
-                  if (newUpvotes.includes(currentUserId)) newUpvotes = newUpvotes.filter(id => id !== currentUserId);
-                  else { newUpvotes.push(currentUserId); newDownvotes = newDownvotes.filter(id => id !== currentUserId); }
-              } else {
-                  if (newDownvotes.includes(currentUserId)) newDownvotes = newDownvotes.filter(id => id !== currentUserId);
-                  else { newDownvotes.push(currentUserId); newUpvotes = newUpvotes.filter(id => id !== currentUserId); }
-              }
-              return { ...p, upVotes: newUpvotes, downVotes: newDownvotes };
-          }
-          return p;
-      });
-      localStorage.setItem('community_posts', JSON.stringify(updatedLocal));
-      
-      // Update selectedPost if open
-      if (selectedPost && selectedPost._id === postId) {
-         setSelectedPost(updatedLocal.find(p => p._id === postId));
-      }
+      // Revert optimistic update on failure
+      fetchPosts();
     }
   };
 
   const handleCreatePost = async (postData) => {
     try {
-      await axios.post("/api/posts", postData, {
-        withCredentials: true,
-      });
+      await axios.post("/api/posts", postData, { withCredentials: true });
       setIsNewModalOpen(false);
       setActiveFilter("All");
       setPage(1);
       fetchPosts();
     } catch (error) {
-      console.log("Fallback to localStorage creation");
-      const newPost = {
-          ...postData,
-          _id: Date.now().toString(),
-          authorName: currentUser?.name || "CurrentUser",
-          authorId: currentUser?._id || "localUser",
-      };
-      const localPosts = JSON.parse(localStorage.getItem('community_posts') || '[]');
-      const updated = [newPost, ...localPosts];
-      localStorage.setItem('community_posts', JSON.stringify(updated));
       setIsNewModalOpen(false);
-      fetchPosts();
+      setFetchError("Could not save your post — server is unreachable. Please try again.");
     }
   };
 
@@ -229,22 +170,11 @@ export default function Community() {
     if (!postToDelete) return;
     const postId = postToDelete;
     try {
-      await axios.delete(`/api/posts/${postId}`, {
-        withCredentials: true,
-      });
+      await axios.delete(`/api/posts/${postId}`, { withCredentials: true });
+      if (selectedPost && selectedPost._id === postId) setSelectedPost(null);
       fetchPosts();
-      if (selectedPost && selectedPost._id === postId) {
-        setSelectedPost(null);
-      }
     } catch (error) {
-      console.log("Fallback to localStorage deletion");
-      const localPosts = JSON.parse(localStorage.getItem('community_posts') || '[]');
-      const updated = localPosts.filter(p => p._id !== postId);
-      localStorage.setItem('community_posts', JSON.stringify(updated));
-      if (selectedPost && selectedPost._id === postId) {
-          setSelectedPost(null);
-      }
-      fetchPosts();
+      setFetchError("Could not delete post — server is unreachable. Please try again.");
     } finally {
       setPostToDelete(null);
     }
@@ -307,6 +237,19 @@ export default function Community() {
             ))}
           </div>
         </div>
+
+        {/* Server Error Banner */}
+        {fetchError && (
+          <div className="mb-6 flex items-center gap-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-xl px-4 py-3">
+            <span className="text-red-500 text-sm flex-1">{fetchError}</span>
+            <button
+              onClick={() => { setFetchError(null); fetchPosts(); }}
+              className="text-xs text-red-500 hover:text-red-700 underline font-medium flex-shrink-0"
+            >
+              Retry
+            </button>
+          </div>
+        )}
 
         {/* Posts Area */}
         {loading && posts.length === 0 ? (

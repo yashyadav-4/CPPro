@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import { Trophy, Medal, Award, AlertTriangle, RefreshCw, ChevronDown, Crown, Eye, EyeOff } from 'lucide-react';
+import { Trophy, Medal, Award, AlertTriangle, RefreshCw, ChevronDown, Crown, Eye, EyeOff, Search } from 'lucide-react';
 import PodiumCard from './PodiumCard';
 
 const CATEGORIES = [
@@ -41,6 +41,7 @@ export default function LeaderBoard() {
   const [scopeOpen, setScopeOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [search, setSearch] = useState('');
 
   const fetchLeaderboard = useCallback(async () => {
     setLoading(true);
@@ -67,9 +68,17 @@ export default function LeaderBoard() {
     fetchLeaderboard();
   }, [fetchLeaderboard]);
 
-  // Top 3 for podium
-  const top3 = leaderboard.slice(0, 3);
-  const rest = leaderboard.slice(3);
+  // Search filtering
+  const filteredLeaderboard = search.trim()
+    ? leaderboard.filter(u =>
+        (u.username || '').toLowerCase().includes(search.toLowerCase()) ||
+        (u.name || '').toLowerCase().includes(search.toLowerCase())
+      )
+    : leaderboard;
+
+  // Top 3 for podium (only when not searching)
+  const top3 = search.trim() ? [] : filteredLeaderboard.slice(0, 3);
+  const rest = search.trim() ? filteredLeaderboard : filteredLeaderboard.slice(3);
 
   // ── Loading State ──
   if (loading) {
@@ -113,10 +122,20 @@ export default function LeaderBoard() {
     <div className="min-h-screen bg-white dark:bg-[#0a0a0a] text-gray-900 dark:text-white py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-5xl mx-auto">
         {/* ── Header ── */}
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
             Leaderboard
           </h1>
+          <div className="relative max-w-xs w-full">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search by username..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="w-full pl-9 pr-3 py-2 text-sm bg-gray-50 dark:bg-[#111111] border border-gray-200 dark:border-white/[0.08] rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors"
+            />
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-4 mb-16">

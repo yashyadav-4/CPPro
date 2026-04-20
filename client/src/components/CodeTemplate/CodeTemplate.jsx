@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react"
-import { Search, Plus } from "lucide-react"
+import { Search, Plus, AlertTriangle } from "lucide-react"
 import CodeTemplateList from "./CodeTemplateList"
 import AddSnippetModal from "./AddSnippetModal"
 import SnippetDetailModal from "./SnippetDetailModal"
@@ -22,24 +22,21 @@ export default function CodeTemplate() {
     const [showAddModal, setShowAddModal] = useState(false)
     const [selectedSnippet, setSelectedSnippet] = useState(null)
     const [loading, setLoading] = useState(true)
+    const [fetchError, setFetchError] = useState(null)
 
     const fetchSnippets = useCallback(async () => {
         setLoading(true)
+        setFetchError(null)
         try {
-            // First try to load from API, if fail, fallback to localStorage
             const res = await fetch("/api/codeTemplate", { credentials: "include" })
             if (res.ok) {
                 const data = await res.json()
                 setSnippets(data)
-                // sync to localStorage for persistence as requested
-                localStorage.setItem('snippets', JSON.stringify(data));
             } else {
-                throw new Error("API failed");
+                throw new Error("API failed")
             }
         } catch (err) {
-            console.log("Using localStorage fallback for snippets");
-            const localSnippets = JSON.parse(localStorage.getItem('snippets') || '[]');
-            setSnippets(localSnippets);
+            setFetchError("Could not load snippets — server is unreachable.")
         } finally {
             setLoading(false)
         }
@@ -51,38 +48,24 @@ export default function CodeTemplate() {
 
     async function handleDelete(id) {
         try {
-            // Try API
             const res = await fetch(`/api/codeTemplate/${id}`, {
                 method: "DELETE",
                 credentials: "include",
             })
             if (res.ok) {
-                const updated = snippets.filter(s => s._id !== id);
-                setSnippets(updated);
-                localStorage.setItem('snippets', JSON.stringify(updated));
+                setSnippets(prev => prev.filter(s => s._id !== id));
             } else {
-                throw new Error("API failed");
+                throw new Error("API failed")
             }
         } catch (err) {
-            // Fallback to localStorage deletion
-            const updated = snippets.filter(s => s._id !== id);
-            setSnippets(updated);
-            localStorage.setItem('snippets', JSON.stringify(updated));
+            setFetchError("Could not delete snippet — server is unreachable.")
         }
     }
 
-    const handleAddSnippetLocal = (newSnippet) => {
-        const snippetWithId = {
-            ...newSnippet,
-            _id: Date.now().toString(),
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-        };
-        const updated = [snippetWithId, ...snippets];
-        setSnippets(updated);
-        localStorage.setItem('snippets', JSON.stringify(updated));
-        setShowAddModal(false);
-    }
+    const handleSnippetAdded = useCallback(() => {
+        setShowAddModal(false)
+        fetchSnippets()
+    }, [fetchSnippets])
 
     const tagPills = [...new Set(snippets.flatMap(s => s.tags || []))]
 
@@ -122,7 +105,7 @@ export default function CodeTemplate() {
                         <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">My Code Snippets</h1>
                         <p className="mt-2 text-gray-600 dark:text-gray-400">Save, organize, and quickly access your frequently used algorithms and templates.</p>
                     </div>
-                    <button 
+                    <button
                         onClick={() => setShowAddModal(true)}
                         className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-5 py-2.5 rounded-lg shadow-sm transition-colors flex-shrink-0"
                     >
@@ -130,6 +113,20 @@ export default function CodeTemplate() {
                         New Snippet
                     </button>
                 </div>
+
+                {/* Error Banner */}
+                {fetchError && (
+                    <div className="mb-6 flex items-center gap-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-xl px-4 py-3">
+                        <AlertTriangle size={16} className="text-red-500 flex-shrink-0" />
+                        <span className="text-red-600 dark:text-red-400 text-sm flex-1">{fetchError}</span>
+                        <button
+                            onClick={() => { setFetchError(null); fetchSnippets(); }}
+                            className="text-xs text-red-500 hover:text-red-700 underline font-medium flex-shrink-0"
+                        >
+                            Retry
+                        </button>
+                    </div>
+                )}
 
                 {/* Search & Filter */}
                 <div className="mb-8">
@@ -152,8 +149,8 @@ export default function CodeTemplate() {
                                 key={f.value}
                                 onClick={() => setActiveFilter(f.value)}
                                 className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors border ${
-                                    activeFilter === f.value 
-                                    ? "bg-emerald-600 text-white border-emerald-600" 
+                                    activeFilter === f.value
+                                    ? "bg-emerald-600 text-white border-emerald-600"
                                     : "bg-white dark:bg-[#111111] text-gray-700 dark:text-gray-200 border-gray-300 dark:border-white/[0.12] hover:bg-gray-50 dark:hover:bg-white/10"
                                 }`}
                             >
@@ -165,8 +162,8 @@ export default function CodeTemplate() {
                                 key={tag}
                                 onClick={() => setActiveFilter(activeFilter === tag ? "all" : tag)}
                                 className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors border ${
-                                    activeFilter === tag 
-                                    ? "bg-emerald-600 text-white border-emerald-600" 
+                                    activeFilter === tag
+                                    ? "bg-emerald-600 text-white border-emerald-600"
                                     : "bg-white dark:bg-[#111111] text-gray-700 dark:text-gray-200 border-gray-300 dark:border-white/[0.12] hover:bg-gray-50 dark:hover:bg-white/10"
                                 }`}
                             >
@@ -191,13 +188,13 @@ export default function CodeTemplate() {
                 {showAddModal && (
                     <AddSnippetModal
                         onClose={() => setShowAddModal(false)}
-                        onAddLocal={handleAddSnippetLocal}
+                        onAddLocal={handleSnippetAdded}
                     />
                 )}
 
                 {/* Detail Modal */}
                 {selectedSnippet && (
-                    <SnippetDetailModal 
+                    <SnippetDetailModal
                         snippet={selectedSnippet}
                         onClose={() => setSelectedSnippet(null)}
                         onDelete={handleDelete}

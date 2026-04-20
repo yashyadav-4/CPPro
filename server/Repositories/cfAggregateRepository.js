@@ -367,7 +367,48 @@ const getCfRatingHistory = async (userId) => {
     };
 };
 
-// ── 10. Last 7 days (CF) ─────────────────────────────────────────────────────
+// ── 10. Recent CF AC submissions (last 20 unique problems) ──────────────────
+const getRecentCfSubmissions = async (userId) => {
+    const uid = new mongoose.Types.ObjectId(userId);
+
+    // Get last 50 AC submissions, then deduplicate by problemId keeping latest
+    const subs = await Submission.find({ userId: uid, platform: 'codeforces', verdict: 'AC' })
+        .select('problemId problemTitle problemUrl difficulty tags contestId submittedAt')
+        .sort({ submittedAt: -1 })
+        .limit(50)
+        .lean();
+
+    const seen = new Set();
+    const unique = [];
+    for (const s of subs) {
+        if (!seen.has(s.problemId)) {
+            seen.add(s.problemId);
+            unique.push(s);
+            if (unique.length === 20) break;
+        }
+    }
+
+    return unique.map(s => {
+        // Build URL: problemUrl stored in DB, fallback to constructed URL
+        let url = s.problemUrl || null;
+        if (!url && s.contestId && s.problemId) {
+            // problemId looks like "1234A" — extract index by stripping contestId prefix
+            const index = String(s.problemId).replace(String(s.contestId), '') || s.problemId;
+            url = `https://codeforces.com/contest/${s.contestId}/problem/${index}`;
+        }
+        return {
+            platform: 'codeforces',
+            problemId: s.problemId,
+            title: s.problemTitle || s.problemId,
+            difficulty: s.difficulty || null,
+            tags: s.tags || [],
+            submittedAt: s.submittedAt,
+            url,
+        };
+    });
+};
+
+// ── 11. Last 7 days (CF) ─────────────────────────────────────────────────────
 const getCfLast7Days = async (userId) => {
     const uid = new mongoose.Types.ObjectId(userId);
     const sevenDaysAgo = new Date();
@@ -404,4 +445,5 @@ module.exports = {
     getSkillGaps,
     getCfRatingHistory,
     getCfLast7Days,
+    getRecentCfSubmissions,
 };

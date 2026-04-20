@@ -130,7 +130,7 @@ async function getAggregateDashboard(req, res) {
     try {
         const { userId } = req.params;
 
-        const [cfStats, cfDiffBands, cfHeatmap, cfTopics, cfRatingInfo, recentCfContests, upsolveQueue, skillGaps, cfLast7Days] = await Promise.all([
+        const [cfStats, cfDiffBands, cfHeatmap, cfTopics, cfRatingInfo, recentCfContests, upsolveQueue, skillGaps, cfLast7Days, recentCfSubmissions] = await Promise.all([
             cfAggRepo.getCfStats(userId),
             cfAggRepo.getCfDiffBands(userId),
             cfAggRepo.getCfHeatmap(userId),
@@ -140,6 +140,7 @@ async function getAggregateDashboard(req, res) {
             cfAggRepo.getUpsolveQueue(userId),
             cfAggRepo.getSkillGaps(userId),
             cfAggRepo.getCfLast7Days(userId),
+            cfAggRepo.getRecentCfSubmissions(userId),
         ]);
 
         // Compute streak from CF day set only (LC days will be merged in the lc-aggregate endpoint for unified streak)
@@ -159,6 +160,7 @@ async function getAggregateDashboard(req, res) {
                 cfTopics,
                 cfLast7Days,
                 recentCfContests,
+                recentCfSubmissions,
                 upsolveQueue,
                 skillGaps,
                 ...cfRatingInfo,

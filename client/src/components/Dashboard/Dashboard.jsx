@@ -4,6 +4,7 @@ import axios from 'axios';
 import { RefreshCw, Link as LinkIcon, AlertTriangle, Shield, Share2 } from 'lucide-react';
 
 import { useDashboardData } from '../../hooks/useDashboardData';
+import ErrorBoundary from '../common/ErrorBoundary';
 
 import StatCards from './StatCards';
 import PlatformProfiles from './PlatformProfiles';
@@ -16,6 +17,9 @@ import RecentContests from './RecentContests';
 import TotalContests from './TotalContests';
 import SkillGaps from './SkillGaps';
 import Achievements from './Achievements';
+import RecentSubmissions from './RecentSubmissions';
+import LCSkillBreakdown from './LCSkillBreakdown';
+import CFRatingDistribution from './CFRatingDistribution';
 import ShareModal from '../Shareable/ShareModal';
 
 const REFRESH_STATE_KEY_PREFIX = 'dashboard_refresh_state_';
@@ -70,6 +74,7 @@ export default function Dashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [cooldown, setCooldown] = useState(0);
   const [shareOpen, setShareOpen] = useState(false);
+  const [view, setView] = useState('all'); // 'all' | 'cf' | 'lc'
 
   const defaultCooldownSeconds = userRole === 'admin' ? ADMIN_COOLDOWN_SECONDS : USER_COOLDOWN_SECONDS;
   const refreshStateKey = userId ? `${REFRESH_STATE_KEY_PREFIX}${userId}` : null;
@@ -148,17 +153,15 @@ export default function Dashboard() {
       if (linkedAccounts.codeforces) promises.push(axios.post('/api/sync/refresh', {}, config));
       if (linkedAccounts.leetcode) promises.push(axios.post('/api/sync/refresh-lc', {}, config));
       const results = await Promise.allSettled(promises);
+
+      // Always refetch — background syncs (e.g. from account relink) may have updated
+      // MongoDB even if the cooldown gate returned 'fresh'. The aggregate read is cheap.
+      await refetch(true);
+      setRefreshing(false);
+
       const fresh = results.find(r => r.status === 'fulfilled' && r.value.data?.freshness === 'fresh');
-      
-      if (fresh) {
-        applyCooldown(fresh.value.data.remainingSeconds || defaultCooldownSeconds);
-        setRefreshing(false);
-      } else {
-        // Sync completed on the backend — refetch once to show fresh data.
-        await refetch(true);
-        setRefreshing(false);
-        applyCooldown(defaultCooldownSeconds);
-      }
+      const remainingSeconds = fresh?.value?.data?.remainingSeconds;
+      applyCooldown(remainingSeconds || defaultCooldownSeconds);
     } catch (err) {
       console.error(err);
       setRefreshing(false);
@@ -210,6 +213,13 @@ export default function Dashboard() {
   const cf = cfData || {};
   const lc = lcData || {};
 
+  // Reset view if the selected platform gets unlinked
+  const effectiveView = (view === 'cf' && !linkedAccounts.codeforces)
+    ? 'all'
+    : (view === 'lc' && !linkedAccounts.leetcode)
+      ? 'all'
+      : view;
+
   // StatCards - computed early where possible
   const totalSolved = (cf.cfSolved ?? 0) + (lc.lcSolved ?? 0);
   // Total Submissions: use AC submissions only from both platforms for consistency
@@ -218,8 +228,12 @@ export default function Dashboard() {
   const solvedThisMonth = (cf.cfSolvedThisMonth ?? 0) + (lc.lcSolvedThisMonth ?? 0);
   const solvedLastMonth = (cf.cfSolvedLastMonth ?? 0) + (lc.lcSolvedLastMonth ?? 0);
 
-  // Heatmap (merge CF + LC)
-  const heatmapData = mergeHeatmaps(cf.cfHeatmap, lc.lcCalendarParsed);
+  // Heatmap (merge CF + LC, or platform-specific)
+  const heatmapData = effectiveView === 'cf'
+    ? mergeHeatmaps(cf.cfHeatmap, [])
+    : effectiveView === 'lc'
+      ? mergeHeatmaps([], lc.lcCalendarParsed)
+      : mergeHeatmaps(cf.cfHeatmap, lc.lcCalendarParsed);
 
   // Active Days (deduplicated across platforms from heatmap)
   const activeDays = heatmapData.length;
@@ -271,11 +285,19 @@ export default function Dashboard() {
   const cfRatingHistory = cf.cfRatingHistory || [];
   const lcRatingHistory = lc.lcRatingHistory || [];
 
-  // Topics (merge, top 8)
-  const topics = mergeTopics(cf.cfTopics, lc.lcTopics);
+  // Topics (merge, top 8, or platform-specific)
+  const topics = effectiveView === 'cf'
+    ? mergeTopics(cf.cfTopics, [])
+    : effectiveView === 'lc'
+      ? mergeTopics([], lc.lcTopics)
+      : mergeTopics(cf.cfTopics, lc.lcTopics);
 
-  // Contests (merge, sort by date, top 6)
-  const contests = mergeContests(cf.recentCfContests, lc.recentLcContests);
+  // Contests (merge, sort by date, top 15, or platform-specific)
+  const contests = effectiveView === 'cf'
+    ? mergeContests(cf.recentCfContests, [])
+    : effectiveView === 'lc'
+      ? mergeContests([], lc.recentLcContests)
+      : mergeContests(cf.recentCfContests, lc.recentLcContests);
 
   const cfContestCount = cfRatingHistory.length || 0;
   const lcContestCount = lc.lcContests || lcRatingHistory.length || 0;
@@ -302,7 +324,7 @@ export default function Dashboard() {
     <div className="bg-[#ffffff] dark:bg-[#0a0a0a] px-6 py-6 min-h-screen">
       <div className="max-w-[1400px] mx-auto space-y-3">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
             <h1 className="text-lg font-medium text-gray-900 dark:text-white">Dashboard</h1>
             <p className="text-xs text-gray-400 dark:text-gray-500 font-normal">
@@ -311,6 +333,30 @@ export default function Dashboard() {
                 : linkedAccounts.codeforces ? 'Codeforces' : 'LeetCode'}
             </p>
           </div>
+
+          {/* Platform Filter Tabs — only show if both platforms are linked */}
+          {linkedAccounts.codeforces && linkedAccounts.leetcode && (
+            <div className="flex items-center gap-1 bg-gray-100 dark:bg-white/[0.04] rounded-lg p-1 border border-black/[0.05] dark:border-white/[0.06]">
+              {[
+                { key: 'all', label: 'All' },
+                { key: 'cf', label: 'Codeforces' },
+                { key: 'lc', label: 'LeetCode' },
+              ].map(tab => (
+                <button
+                  key={tab.key}
+                  onClick={() => setView(tab.key)}
+                  className={`px-3 py-1 text-xs font-medium rounded-md transition-all duration-150 ${
+                    view === tab.key
+                      ? 'bg-white dark:bg-white/[0.1] text-gray-900 dark:text-white shadow-sm'
+                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          )}
+
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShareOpen(true)}
@@ -338,59 +384,126 @@ export default function Dashboard() {
         </div>
 
         {/* Row 1: Stat Cards */}
-        <StatCards
-          loading={loading}
-          totalSolved={totalSolved}
-          cfSolved={cf.cfSolved ?? 0}
-          lcSolved={lc.lcSolved ?? 0}
-          activeDays={activeDays}
-          totalSubmissions={totalSubmissions}
-          cfAcSubmissions={cf.cfAcSubmissions ?? cf.cfTotalSubmissions ?? 0}
-          lcAcSubmissions={lc.lcAcSubmissions ?? lc.lcTotalSubmissions ?? 0}
-          currentStreak={currentStreak}
-          bestStreak={bestStreak}
-          acceptanceRate={acceptanceRate}
-          cfAcceptanceRate={cfAR}
-          lcAcceptanceRate={lcAR}
-          solvedThisMonth={solvedThisMonth}
-          activeDaysThisMonth={activeDaysThisMonth}
-        />
+        <ErrorBoundary>
+          <StatCards
+            loading={loading}
+            totalSolved={effectiveView === 'cf' ? (cf.cfSolved ?? 0) : effectiveView === 'lc' ? (lc.lcSolved ?? 0) : totalSolved}
+            cfSolved={cf.cfSolved ?? 0}
+            lcSolved={lc.lcSolved ?? 0}
+            activeDays={activeDays}
+            totalSubmissions={effectiveView === 'cf' ? (cf.cfAcSubmissions ?? cf.cfTotalSubmissions ?? 0) : effectiveView === 'lc' ? (lc.lcAcSubmissions ?? lc.lcTotalSubmissions ?? 0) : totalSubmissions}
+            cfAcSubmissions={cf.cfAcSubmissions ?? cf.cfTotalSubmissions ?? 0}
+            lcAcSubmissions={lc.lcAcSubmissions ?? lc.lcTotalSubmissions ?? 0}
+            currentStreak={currentStreak}
+            bestStreak={bestStreak}
+            acceptanceRate={effectiveView === 'cf' ? cfAR : effectiveView === 'lc' ? lcAR : acceptanceRate}
+            cfAcceptanceRate={cfAR}
+            lcAcceptanceRate={lcAR}
+            solvedThisMonth={effectiveView === 'cf' ? (cf.cfSolvedThisMonth ?? 0) : effectiveView === 'lc' ? (lc.lcSolvedThisMonth ?? 0) : solvedThisMonth}
+            activeDaysThisMonth={activeDaysThisMonth}
+          />
+        </ErrorBoundary>
 
         {/* Row 2: Platform info trio */}
         <div className="grid grid-cols-3 gap-3">
-          <PlatformProfiles loading={loading} {...profileProps} />
-          <DifficultyBreakdown loading={loading} cfBands={cfBands} lcBands={lcBands} />
-          <WeekStreak
-            loading={loading}
-            currentStreak={currentStreak}
-            bestStreak={bestStreak}
-            bestStreakPlatform={bestStreakPlatform}
-            last7Days={last7Days}
-            activeDaysThisMonth={activeDaysThisMonth}
-            activeDaysLastMonth={activeDaysLastMonth}
-          />
+          <ErrorBoundary>
+            <PlatformProfiles
+              loading={loading}
+              cfHandle={effectiveView === 'lc' ? null : profileProps.cfHandle}
+              cfRating={effectiveView === 'lc' ? null : profileProps.cfRating}
+              cfMaxRating={effectiveView === 'lc' ? null : profileProps.cfMaxRating}
+              cfRank={effectiveView === 'lc' ? null : profileProps.cfRank}
+              lcHandle={effectiveView === 'cf' ? null : profileProps.lcHandle}
+              lcRating={effectiveView === 'cf' ? null : profileProps.lcRating}
+              lcMaxRating={effectiveView === 'cf' ? null : profileProps.lcMaxRating}
+              lcRank={effectiveView === 'cf' ? null : profileProps.lcRank}
+            />
+          </ErrorBoundary>
+          <ErrorBoundary>
+            <DifficultyBreakdown
+              loading={loading}
+              cfBands={effectiveView === 'lc' ? [] : cfBands}
+              lcBands={effectiveView === 'cf' ? [] : lcBands}
+            />
+          </ErrorBoundary>
+          <ErrorBoundary>
+            <WeekStreak
+              loading={loading}
+              currentStreak={currentStreak}
+              bestStreak={bestStreak}
+              bestStreakPlatform={bestStreakPlatform}
+              last7Days={last7Days}
+              activeDaysThisMonth={activeDaysThisMonth}
+              activeDaysLastMonth={activeDaysLastMonth}
+            />
+          </ErrorBoundary>
         </div>
 
         {/* Row 3: Activity heatmap */}
-        <ActivityHeatmap loading={loading} heatmapData={heatmapData} />
+        <ErrorBoundary>
+          <ActivityHeatmap loading={loading} heatmapData={heatmapData} />
+        </ErrorBoundary>
 
         {/* Row 4: Rating + Total Contests */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-          <RatingProgression loading={loading} cfRatingHistory={cfRatingHistory} lcRatingHistory={lcRatingHistory} />
-          <TotalContests loading={loading} cfContests={cfContestCount} lcContests={lcContestCount} cfBestRank={finalCfBestRank} lcBestRank={finalLcBestRank} />
+          <ErrorBoundary>
+            <RatingProgression
+              loading={loading}
+              cfRatingHistory={effectiveView === 'lc' ? [] : cfRatingHistory}
+              lcRatingHistory={effectiveView === 'cf' ? [] : lcRatingHistory}
+            />
+          </ErrorBoundary>
+          <ErrorBoundary>
+            <TotalContests
+              loading={loading}
+              cfContests={effectiveView === 'lc' ? 0 : cfContestCount}
+              lcContests={effectiveView === 'cf' ? 0 : lcContestCount}
+              cfBestRank={effectiveView === 'lc' ? null : finalCfBestRank}
+              lcBestRank={effectiveView === 'cf' ? null : finalLcBestRank}
+            />
+          </ErrorBoundary>
         </div>
 
         {/* Row 5: Recent Contests + Top Topics */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-          <RecentContests loading={loading} contests={contests} />
-          <TopTopics loading={loading} topics={topics} />
+          <ErrorBoundary>
+            <RecentContests loading={loading} contests={contests} />
+          </ErrorBoundary>
+          <ErrorBoundary>
+            <TopTopics loading={loading} topics={topics} />
+          </ErrorBoundary>
         </div>
 
-        {/* Row 6: Skill Mastery (full width) */}
-        <SkillGaps loading={loading} skills={skills} />
+        {/* Row 6: Recent Submissions + contextual right panel */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <ErrorBoundary>
+            <RecentSubmissions
+              loading={loading}
+              cfSubmissions={effectiveView === 'lc' ? [] : cf.recentCfSubmissions}
+              lcSubmissions={effectiveView === 'cf' ? [] : lc.recentSubmissions}
+              view={effectiveView}
+            />
+          </ErrorBoundary>
+          <ErrorBoundary>
+            {effectiveView === 'lc' ? (
+              <LCSkillBreakdown
+                loading={loading}
+                fundamental={lc.lcSkillFundamental}
+                intermediate={lc.lcSkillIntermediate}
+                advanced={lc.lcSkillAdvanced}
+              />
+            ) : effectiveView === 'cf' ? (
+              <CFRatingDistribution loading={loading} cfDiffBands={cf.cfDiffBands} />
+            ) : (
+              <SkillGaps loading={loading} skills={skills} />
+            )}
+          </ErrorBoundary>
+        </div>
 
         {/* Row 7: Achievements */}
-        <Achievements loading={loading} achievements={achievements} />
+        <ErrorBoundary>
+          <Achievements loading={loading} achievements={achievements} />
+        </ErrorBoundary>
       </div>
 
       <ShareModal

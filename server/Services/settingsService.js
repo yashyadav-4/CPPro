@@ -46,7 +46,7 @@ const verifyAndLinkCodeforces = async(userId ,handle)=>{
     await User.findByIdAndUpdate(
         userId,
         {
-            $set:{"linkedAccounts.codeforces":cleanHandle},
+            $set:{"linkedAccounts.codeforces":cleanHandle, lastCfUpdate: null},
             $unset:{verificationCode :""}
         },
         {new:true}
@@ -68,7 +68,7 @@ const unlinkCodeforces = async(userId)=>{
         throw err;
     }
     await User.findByIdAndUpdate(userId, {
-        $set:{"linkedAccounts.codeforces":""},
+        $set:{"linkedAccounts.codeforces":"", lastCfUpdate: null},
         $unset:{verificationCode:""}
     });
     //remove all codeforces data: platform stats + submission history

@@ -10,6 +10,7 @@ export default function AddSnippetModal({ onClose, onAddLocal }) {
         tags: "",
     })
     const [submitting, setSubmitting] = useState(false)
+    const [submitError, setSubmitError] = useState(null)
 
     function handleChange(e) {
         setForm({ ...form, [e.target.name]: e.target.value })
@@ -35,6 +36,7 @@ export default function AddSnippetModal({ onClose, onAddLocal }) {
         }
 
         try {
+            setSubmitError(null)
             const res = await fetch("/api/codeTemplate", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -42,14 +44,12 @@ export default function AddSnippetModal({ onClose, onAddLocal }) {
                 body: JSON.stringify(payload),
             })
             if (res.ok) {
-                // If backend sync succeeds, parent refetches via API (assuming onAdd API prop is passed, but we use onAddLocal)
-                onAddLocal(payload)
+                onAddLocal()
             } else {
-                throw new Error("Failed to sync")
+                throw new Error("Failed to save")
             }
         } catch (err) {
-            console.log("Fallback to localStorage save for new snippet");
-            onAddLocal(payload);
+            setSubmitError("Could not save snippet — server is unreachable. Please try again.")
         } finally {
             setSubmitting(false)
         }
@@ -153,6 +153,11 @@ export default function AddSnippetModal({ onClose, onAddLocal }) {
                     </form>
                 </div>
 
+                {submitError && (
+                    <div className="px-6 pb-2">
+                        <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">{submitError}</p>
+                    </div>
+                )}
                 <div className="px-6 py-4 border-t border-white/[0.08] bg-[#111111] flex justify-end gap-3 rounded-b-2xl">
                     <button 
                         type="button" 
