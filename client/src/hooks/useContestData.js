@@ -3,8 +3,9 @@
 // The proxy calls the official Codeforces REST API + LeetCode GraphQL API
 // server-side and returns { platform, name, startTime, endTime, duration, url }.
 import { useState, useEffect, useCallback } from 'react';
+import { API_BASE } from '../api';
 
-const PROXY_URL = '/api/contests';
+const PROXY_URL = `${API_BASE}/api/contests`;
 
 /**
  * Hydrate ISO date strings → Date objects and add a stable id.
