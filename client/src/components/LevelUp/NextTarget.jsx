@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE } from '../../api';
 
 const RANK_COLORS = {
   'Newbie': 'text-gray-400',
@@ -37,7 +38,7 @@ export default function NextTarget({ userId }) {
     if (!userId) return;
     setLoading(true);
     // Corrected fetch URL: /api/dashboard/target/
-    fetch(`/api/dashboard/target/${userId}`)
+    fetch(`${API_BASE}/api/dashboard/target/${userId}`, { credentials: 'include' })
       .then(res => res.json())
       .then(json => {
         if (json.success && json.data) {
@@ -143,8 +144,8 @@ export default function NextTarget({ userId }) {
              <div className="flex w-full gap-1 h-3 mb-2">
                 {[0, 1, 2, 3].map((step) => {
                   const segStart = data.bracketStart + (step * 50);
-                  const isPast = segStart < data.bracketStart;
-                  const isCurrent = segStart === data.bracketStart;
+                  const isPast = data.currentRating >= segStart + 50;
+                  const isCurrent = data.currentRating >= segStart && data.currentRating < segStart + 50;
                   
                   let bgClass = "bg-gray-100 dark:bg-white/5";
                   if (isPast) bgClass = "bg-emerald-500 dark:bg-emerald-600";
