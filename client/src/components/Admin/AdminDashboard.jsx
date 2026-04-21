@@ -168,25 +168,6 @@ export default function AdminDashboard() {
   const dist = data?.distributions || {};
   const meta = data?.serverMeta || {};
 
-  // ── Error state ───────────────────────────────────────────────────────────
-  if (error) {
-    return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-        <div className="text-center">
-          <AlertCircle size={40} className="text-red-500 mx-auto mb-3" />
-          <p className="text-white font-medium mb-1">Failed to load admin stats</p>
-          <p className="text-gray-500 text-sm mb-4">{error}</p>
-          <button
-            onClick={() => fetchStats(days)}
-            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm rounded-lg transition-colors"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white" style={{ fontFamily: "'DM Sans', sans-serif" }}>
       <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
@@ -232,6 +213,20 @@ export default function AdminDashboard() {
             </button>
           </div>
         </div>
+
+        {/* ── Error banner ── */}
+        {error && (
+          <div className="flex items-center gap-3 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+            <AlertCircle size={16} className="text-red-400 flex-shrink-0" />
+            <span className="text-red-400 text-sm flex-1">{error}</span>
+            <button
+              onClick={() => fetchStats(days)}
+              className="text-xs text-red-400 hover:text-red-300 underline flex-shrink-0"
+            >
+              Retry
+            </button>
+          </div>
+        )}
 
         {/* ── Force Refresh Panel ── */}
         <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4">
