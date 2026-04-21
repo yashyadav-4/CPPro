@@ -82,6 +82,40 @@ const updateProfile = async (req, res) => {
     }
 };
 
+const saveLcSession = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { session } = req.body;
+        if (!session || typeof session !== 'string' || session.trim().length < 50) {
+            return res.status(400).json({ success: false, message: 'Invalid session token — paste the full LEETCODE_SESSION cookie value' });
+        }
+        const result = await settingsService.saveLcSession(userId, session);
+        return res.json({ success: true, ...result });
+    } catch (err) {
+        return res.status(err.status || 500).json({ success: false, message: err.message });
+    }
+};
+
+const getLcSessionStatus = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const result = await settingsService.getLcSessionStatus(userId);
+        return res.json({ success: true, ...result });
+    } catch (err) {
+        return res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+const removeLcSession = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const result = await settingsService.removeLcSession(userId);
+        return res.json({ success: true, ...result });
+    } catch (err) {
+        return res.status(500).json({ success: false, message: err.message });
+    }
+};
+
 module.exports = {
     getVerificationCode,
     verifyCodeforcesAccount,
@@ -90,4 +124,7 @@ module.exports = {
     unlinkLeetcodeAccount,
     getProfile,
     updateProfile,
+    saveLcSession,
+    getLcSessionStatus,
+    removeLcSession,
 };

@@ -3,7 +3,7 @@ import axios from 'axios';
 import { motion } from 'framer-motion';
 import {
   Settings as SettingsIcon, User, MapPin, GraduationCap, Eye, EyeOff,
-  Save, RefreshCw, CheckCircle, AlertTriangle, Link2, Shield
+  Save, RefreshCw, CheckCircle, AlertTriangle, Link2, Shield, KeyRound, Trash2, Info
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -25,12 +25,22 @@ export default function Settings() {
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
 
+  // LC Session state
+  const [lcSession, setLcSession] = useState('');
+  const [lcSessionStatus, setLcSessionStatus] = useState('loading'); // 'loading' | 'not_set' | 'active' | 'expired' | 'feature_disabled'
+  const [lcSessionSaving, setLcSessionSaving] = useState(false);
+  const [lcSessionError, setLcSessionError] = useState('');
+  const [lcSessionSuccess, setLcSessionSuccess] = useState('');
+
   useEffect(() => {
     (async () => {
       try {
-        const res = await axios.get('/api/settings/profile', { withCredentials: true });
-        if (res.data.success) {
-          const u = res.data.data;
+        const [profileRes, sessionRes] = await Promise.allSettled([
+          axios.get('/api/settings/profile', { withCredentials: true }),
+          axios.get('/api/settings/lc-session/status', { withCredentials: true }),
+        ]);
+        if (profileRes.status === 'fulfilled' && profileRes.value.data.success) {
+          const u = profileRes.value.data.data;
           setForm({
             name: u.name || '',
             gender: u.gender || '',
@@ -46,6 +56,11 @@ export default function Settings() {
           setEmail(u.email || '');
           setUsername(u.username || '');
         }
+        if (sessionRes.status === 'fulfilled' && sessionRes.value.data.success) {
+          setLcSessionStatus(sessionRes.value.data.status || 'not_set');
+        } else {
+          setLcSessionStatus('not_set');
+        }
       } catch (err) {
         setError('Failed to load profile');
       } finally {
@@ -58,6 +73,44 @@ export default function Settings() {
     setForm(prev => ({ ...prev, [field]: value }));
     setSuccess('');
     setError('');
+  };
+
+  const handleSaveLcSession = async () => {
+    setLcSessionError('');
+    setLcSessionSuccess('');
+    if (!lcSession.trim() || lcSession.trim().length < 50) {
+      setLcSessionError('Paste the full LEETCODE_SESSION cookie value (it is very long)');
+      return;
+    }
+    setLcSessionSaving(true);
+    try {
+      const res = await axios.put('/api/settings/lc-session', { session: lcSession.trim() }, { withCredentials: true });
+      if (res.data.success) {
+        setLcSessionStatus('active');
+        setLcSession('');
+        setLcSessionSuccess('Session saved. Full submission history will sync on next refresh.');
+        setTimeout(() => setLcSessionSuccess(''), 5000);
+      } else {
+        setLcSessionError(res.data.message || 'Failed to save session');
+      }
+    } catch (err) {
+      setLcSessionError(err.response?.data?.message || 'Failed to save session');
+    } finally {
+      setLcSessionSaving(false);
+    }
+  };
+
+  const handleRemoveLcSession = async () => {
+    setLcSessionError('');
+    setLcSessionSuccess('');
+    try {
+      await axios.delete('/api/settings/lc-session', { withCredentials: true });
+      setLcSessionStatus('not_set');
+      setLcSessionSuccess('Session removed.');
+      setTimeout(() => setLcSessionSuccess(''), 3000);
+    } catch (err) {
+      setLcSessionError('Failed to remove session');
+    }
   };
 
   const handleSave = async () => {
@@ -250,8 +303,92 @@ export default function Settings() {
             </div>
           </motion.div>
 
-          {/* ── Section 4: Privacy ── */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className={CARD_CLASS}>
+          {/* ── Section 4: LeetCode Session ── */}
+          {linked.leetcode && (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }} className={CARD_CLASS}>
+              <div className="flex items-center gap-2 mb-4">
+                <KeyRound size={18} className="text-amber-500" />
+                <h2 className="text-base font-semibold text-gray-900 dark:text-white">LeetCode Session</h2>
+                {lcSessionStatus === 'active' && (
+                  <span className="ml-auto inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 dark:bg-green-500/15 text-green-700 dark:text-green-400">
+                    <CheckCircle size={11} /> Active
+                  </span>
+                )}
+                {lcSessionStatus === 'expired' && (
+                  <span className="ml-auto inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 dark:bg-red-500/15 text-red-700 dark:text-red-400">
+                    <AlertTriangle size={11} /> Expired
+                  </span>
+                )}
+                {lcSessionStatus === 'not_set' && (
+                  <span className="ml-auto inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400">
+                    Not set
+                  </span>
+                )}
+              </div>
+
+              <div className="p-3 mb-4 rounded-lg bg-amber-50 dark:bg-amber-500/[0.07] border border-amber-200 dark:border-amber-500/20 flex gap-2.5">
+                <Info size={15} className="text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
+                  Adding your session enables full submission history (status, language) instead of the last 20 AC-only.
+                  Your session is encrypted with AES-256-GCM and never logged or shared.
+                  Find it in your browser cookies at <strong>leetcode.com</strong> — the key is <code className="font-mono">LEETCODE_SESSION</code>.
+                </p>
+              </div>
+
+              {lcSessionStatus !== 'feature_disabled' && (
+                <>
+                  <div className="mb-3">
+                    <label className={LABEL_CLASS}>LEETCODE_SESSION cookie value</label>
+                    <textarea
+                      value={lcSession}
+                      onChange={e => { setLcSession(e.target.value); setLcSessionError(''); setLcSessionSuccess(''); }}
+                      rows={3}
+                      placeholder="Paste the full LEETCODE_SESSION value here…"
+                      className={`${INPUT_CLASS} resize-none font-mono text-xs`}
+                    />
+                  </div>
+
+                  {lcSessionError && (
+                    <p className="flex items-center gap-1.5 text-xs text-red-600 dark:text-red-400 mb-3">
+                      <AlertTriangle size={12} /> {lcSessionError}
+                    </p>
+                  )}
+                  {lcSessionSuccess && (
+                    <p className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400 mb-3">
+                      <CheckCircle size={12} /> {lcSessionSuccess}
+                    </p>
+                  )}
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleSaveLcSession}
+                      disabled={lcSessionSaving || !lcSession.trim()}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
+                    >
+                      {lcSessionSaving ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
+                      {lcSessionSaving ? 'Saving…' : 'Save Session'}
+                    </button>
+                    {(lcSessionStatus === 'active' || lcSessionStatus === 'expired') && (
+                      <button
+                        onClick={handleRemoveLcSession}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 text-red-600 dark:text-red-400 text-sm font-medium rounded-lg transition-colors border border-red-200 dark:border-red-500/20"
+                      >
+                        <Trash2 size={14} /> Remove
+                      </button>
+                    )}
+                  </div>
+                </>
+              )}
+              {lcSessionStatus === 'feature_disabled' && (
+                <p className="text-xs text-gray-400 dark:text-gray-500">
+                  Session storage is not configured on this server. Add <code className="font-mono">ENCRYPTION_KEY</code> to enable it.
+                </p>
+              )}
+            </motion.div>
+          )}
+
+          {/* ── Section 5: Privacy ── */}
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }} className={CARD_CLASS}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 {form.public ? <Eye size={18} className="text-emerald-500" /> : <EyeOff size={18} className="text-gray-400" />}
@@ -274,7 +411,7 @@ export default function Settings() {
           </motion.div>
 
           {/* ── Save Bar ── */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
             className="flex items-center justify-between gap-4 pt-2 pb-8">
             <div className="flex-1">
               {success && (

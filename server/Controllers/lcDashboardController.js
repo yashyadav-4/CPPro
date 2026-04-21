@@ -273,6 +273,9 @@ async function getLcAggregateDashboard(req, res) {
         }
 
         // ── LC Upsolve Queue (from recentSubmissions) ───────────────────────
+        // acSlugs = 100 most recent AC slugs from the public endpoint, stored separately
+        // so problems solved outside the session window are still excluded.
+        const acSlugSet = new Set(lcData.acSlugs || []);
         const recentSubmissions = lcData.recentSubmissions || [];
         const lcProblemMap = {};
         recentSubmissions.forEach(s => {
@@ -304,7 +307,7 @@ async function getLcAggregateDashboard(req, res) {
         });
 
         const lcUpsolveQueue = Object.values(lcProblemMap)
-            .filter(p => !p.hasAC && p.attempts > 0)
+            .filter(p => !p.hasAC && !acSlugSet.has(p.problemId) && p.attempts > 0)
             .map(p => ({
                 platform: 'leetcode',
                 problemId: p.problemId,

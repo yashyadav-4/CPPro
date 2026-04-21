@@ -17,6 +17,8 @@ const lcDashboardRoutes= require('./Routes/lcDashboardRoutes');
 const learningRoutes = require('./Routes/learningRoutes');
 const publicStatsRoute = require('./Routes/publicStats');
 const contestRoutes    = require('./Routes/contestRoutes');
+const notificationRoutes = require('./Routes/notificationRoutes');
+const adminRoutes = require('./Routes/adminRoutes');
 const { startContestSyncWorker } = require('./Workers/contestSyncWorker');
 
 connectToMongoDb(process.env.MongoUrl)
@@ -32,10 +34,9 @@ const app= express();
 const port= process.env.PORT ? parseInt(process.env.PORT) : 5000;
 
 
-// cors is not in use currently
 app.use(cors({
-    origin:'http://localhost:5173',
-    credentials:true
+    origin: process.env.ALLOWED_ORIGIN || 'http://localhost:5173',
+    credentials: true,
 }))
 
 // prebuilt middlewares
@@ -60,6 +61,8 @@ app.use('/api/lc-dashboard', lcDashboardRoutes);
 app.use('/api/learning/progress', learningRoutes);
 app.use('/api/stats', publicStatsRoute);
 app.use('/api/contests', contestRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/admin', adminRoutes);
 
 // test
 app.get('/api/test', (req, res)=>{

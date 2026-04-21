@@ -1,5 +1,6 @@
 const axios = require('axios');
 const User = require('../Model/User');
+const Notification = require('../Model/Notification');
 
 const FIFTEEN_MINUTES = 15 * 60 * 1000;
 const ADMIN_COOLDOWN  = 10 * 1000; // 10 s for admins
@@ -70,21 +71,20 @@ const getLeetcodeData = async (userId, handle, role = 'user') => {
 // NexusLC does ONE combined GraphQL query and writes directly to MongoDB —
 // no data is returned here; CPPro reads from the DB as usual.
 // ══════════════════════════════════════════════════════════════════════════
-const syncLeetcodeProfile = async (userId, handle) => {
+const syncLeetcodeProfile = async (userId, handle, sessionToken = null) => {
     if (!LC_SYNC_API || !LC_SYNC_SECRET) {
         throw new Error('LC_SYNC_API / LC_SYNC_SECRET not configured');
     }
 
+    // Build job payload. Session token is passed to NexusLC so it can make
+    // authenticated GraphQL calls for full submission history.
+    const payload = { userId: String(userId), lcUsername: handle, force: true };
+    if (sessionToken) payload.sessionToken = sessionToken;
+
     // 1. Enqueue the job on NexusLC.
-    //    force:true removes any stale completed/failed job with the same jobId so BullMQ
-    //    doesn't silently return the old job and skip the actual sync.
     let jobId;
     try {
-        const enqRes = await nexusLC.post('/sync', {
-            userId: String(userId),
-            lcUsername: handle,
-            force: true,
-        });
+        const enqRes = await nexusLC.post('/sync', payload);
         jobId = enqRes.data && enqRes.data.jobId;
         if (!jobId) throw new Error('NexusLC did not return a jobId');
         console.log(`[LC-SYNC] >> ${handle} | job queued: ${jobId}`);
@@ -95,7 +95,8 @@ const syncLeetcodeProfile = async (userId, handle) => {
 
     // 2. Poll /sync/status/:jobId until the job finishes (max ~2 min).
     const POLL_INTERVAL_MS = 3_000;
-    const MAX_POLLS        = 40; // 40 × 3 s = 120 s
+    const MAX_POLLS        = 40;
+    let lastLoggedState    = null;
 
     for (let attempt = 0; attempt < MAX_POLLS; attempt++) {
         await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
@@ -110,10 +111,13 @@ const syncLeetcodeProfile = async (userId, handle) => {
             continue;
         }
 
-        console.log(`[LC-SYNC] >> ${handle} | job ${jobId} state: ${state}`);
+        // Only log when state changes to avoid spamming 'delayed' on every poll tick.
+        if (state !== lastLoggedState) {
+            console.log(`[LC-SYNC] >> ${handle} | job ${jobId} state: ${state}`);
+            lastLoggedState = state;
+        }
 
         if (state === 'completed') {
-            // NexusLC has already written to MongoDB — stamp lastLcUpdate.
             await User.findByIdAndUpdate(userId, { $set: { lastLcUpdate: new Date() } });
             console.log(`[LC-SYNC] >> ${handle} | sync done ✓`);
             return { success: true };
@@ -121,13 +125,30 @@ const syncLeetcodeProfile = async (userId, handle) => {
 
         if (state === 'failed') {
             const reason = failedReason || 'unknown';
+
             if (/USER_NOT_FOUND/i.test(reason)) {
                 throw new Error('invalid leetcode handle');
             }
+
+            // Session expired — mark it and notify the user.
+            if (/SESSION_EXPIRED/i.test(reason)) {
+                try {
+                    await User.findByIdAndUpdate(userId, { $set: { 'lcSession.status': 'expired' } });
+                    await Notification.create({
+                        userId,
+                        type:      'lc_session_expired',
+                        title:     'LeetCode Session Expired',
+                        message:   'Your LeetCode session has expired. Go to Settings → LeetCode Session to update it.',
+                        actionUrl: '/settings',
+                    });
+                } catch (notifErr) {
+                    console.warn('[LC-SYNC] failed to create session-expired notification:', notifErr.message);
+                }
+                throw new Error('LC_SESSION_EXPIRED');
+            }
+
             throw new Error(`NexusLC job failed: ${reason}`);
         }
-
-        // States: waiting | active | delayed → keep polling.
     }
 
     throw new Error(`NexusLC job ${jobId} did not complete within the poll window`);

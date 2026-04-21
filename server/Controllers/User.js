@@ -64,11 +64,11 @@ async function handleUserLogin(req , res){
         const token=setUser(user);
 
         res.cookie('token' , token , {
-            httpOnly:true,
-            path:'/',
-            // secure: process.env.NODE_ENV==='production' ,
-            sameSite:'strict',
-            maxAge:7* 24 *60 *60 *1000 // means 7 days
+            httpOnly: true,
+            path: '/',
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+            maxAge: 7 * 24 * 60 * 60 * 1000,
         });
         res.status(200).json({message:"Login Successful "});
     }catch(err){
@@ -83,7 +83,8 @@ function handleLogOut(req, res){
         expires: new Date(0),
         maxAge: 0,
         path: '/',
-        sameSite: 'strict'
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
     });
     return res.json({message: "logged out succesfully"});
 }

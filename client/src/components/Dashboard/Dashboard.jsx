@@ -113,9 +113,13 @@ export default function Dashboard() {
     }
 
     const nowTs = Date.now();
-    const cooldownLeft = parsed.cooldownUntil ? Math.max(0, Math.ceil((parsed.cooldownUntil - nowTs) / 1000)) : 0;
+    let cooldownLeft = parsed.cooldownUntil ? Math.max(0, Math.ceil((parsed.cooldownUntil - nowTs) / 1000)) : 0;
 
     if (cooldownLeft > 0) {
+      // If user is admin, cap the cooldown (useful  if they were just promoted)
+      if (userRole === 'admin' && cooldownLeft > ADMIN_COOLDOWN_SECONDS) {
+          cooldownLeft = ADMIN_COOLDOWN_SECONDS;
+      }
       setCooldown(cooldownLeft);
     }
 

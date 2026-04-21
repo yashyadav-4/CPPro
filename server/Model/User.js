@@ -93,7 +93,14 @@ const userSchema = new mongoose.Schema({
     lastLcUpdate:{
         type:Date,
         default:null
-    }
+    },
+    lcSession: {
+        iv:             { type: String, default: null },
+        encryptedToken: { type: String, default: null },
+        authTag:        { type: String, default: null },
+        status:         { type: String, enum: ['not_set', 'active', 'expired'], default: 'not_set' },
+        updatedAt:      { type: Date,   default: null },
+    },
 }, {timestamps:true});
 
 

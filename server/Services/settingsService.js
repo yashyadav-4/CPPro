@@ -3,6 +3,8 @@ const { Yaxios } = require('../Utils/nexusProxy');
 const { bouncer } = require('../Utils/bouncer');
 const crypto = require('crypto');
 const User = require('../Model/User');
+const Notification = require('../Model/Notification');
+const { encrypt, decrypt, isEnabled } = require('../Utils/encryption');
 
 const generateCode=async(userId)=>{
     const uniqueCode= `cppro-${crypto.randomBytes(3).toString('hex')}`;
@@ -212,6 +214,67 @@ const updateUserProfile = async(userId, fields) =>{
     return updated;
 };
 
+// ── LC Session management ────────────────────────────────────────────────────
+
+const saveLcSession = async (userId, rawToken) => {
+    if (!isEnabled()) {
+        const err = new Error('Session storage is not configured on this server');
+        err.status = 503;
+        throw err;
+    }
+    const { iv, encryptedToken, authTag } = encrypt(rawToken.trim());
+    await User.findByIdAndUpdate(userId, {
+        $set: {
+            'lcSession.iv':             iv,
+            'lcSession.encryptedToken': encryptedToken,
+            'lcSession.authTag':        authTag,
+            'lcSession.status':         'active',
+            'lcSession.updatedAt':      new Date(),
+            lastLcUpdate:               null,   // force re-sync with new session
+        },
+    });
+    // Notify user that session was saved successfully
+    await Notification.create({
+        userId,
+        type:    'lc_session_saved',
+        title:   'LeetCode Session Connected',
+        message: 'Your LeetCode session is active. Full submission history will be fetched on the next sync.',
+        actionUrl: '/dashboard',
+    });
+    return { status: 'active' };
+};
+
+const getLcSessionStatus = async (userId) => {
+    if (!isEnabled()) return { status: 'feature_disabled' };
+    const user = await User.findById(userId).select('lcSession').lean();
+    return { status: user?.lcSession?.status || 'not_set' };
+};
+
+const removeLcSession = async (userId) => {
+    await User.findByIdAndUpdate(userId, {
+        $set: {
+            'lcSession.iv':             null,
+            'lcSession.encryptedToken': null,
+            'lcSession.authTag':        null,
+            'lcSession.status':         'not_set',
+            'lcSession.updatedAt':      new Date(),
+        },
+    });
+    return { status: 'not_set' };
+};
+
+/** Internal use only — decrypts and returns the raw session token for sync dispatch. */
+const getDecryptedLcSession = async (userId) => {
+    if (!isEnabled()) return null;
+    const user = await User.findById(userId).select('lcSession').lean();
+    if (!user?.lcSession?.encryptedToken || user.lcSession.status !== 'active') return null;
+    try {
+        return decrypt(user.lcSession);
+    } catch {
+        return null;
+    }
+};
+
 module.exports ={
     generateCode,
     verifyAndLinkCodeforces,
@@ -220,4 +283,8 @@ module.exports ={
     unlinkLeetcode,
     getProfile,
     updateUserProfile,
+    saveLcSession,
+    getLcSessionStatus,
+    removeLcSession,
+    getDecryptedLcSession,
 };

@@ -33,7 +33,7 @@ export default function StatCards({
       color: '#10b981', // emerald
     },
     {
-      label: 'TOTAL SUBMISSIONS',
+      label: 'AC SUBMISSIONS',
       value: totalSubmissions ?? '—',
       sub: `CF: ${cfAcSubmissions ?? 0} | LC: ${lcAcSubmissions ?? 0}`,
       color: '#8b5cf6', // purple
@@ -47,7 +47,7 @@ export default function StatCards({
     {
       label: 'ACCEPTANCE RATE',
       value: acceptanceRate != null ? `${acceptanceRate}%` : '—',
-      sub: `Avg. CF: ${cfAcceptanceRate ?? '—'}%`,
+      sub: `CF: ${cfAcceptanceRate ?? '—'}% | LC: ${lcAcceptanceRate ?? '—'}%`,
       color: '#06b6d4', // cyan
     },
     {

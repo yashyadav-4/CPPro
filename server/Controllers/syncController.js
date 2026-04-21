@@ -1,8 +1,13 @@
+const axios = require('axios');
 const User = require('../Model/User');
 const syncService = require('../Services/cfSyncService');
 const lcSyncService = require('../Services/lcSyncService');
 const dashboardService = require('../Services/cfDashboardService');
 const LeetCodeData = require('../Model/LeetCodeData');
+const { getDecryptedLcSession } = require('../Services/settingsService');
+
+const CF_SYNC_API    = (process.env.CF_SYNC_API    || 'http://localhost:3001').replace(/\/$/, '');
+const CF_SYNC_SECRET = process.env.CF_SYNC_SECRET  || '';
 
 const FIFTEEN_MINUTES = 15 * 60 * 1000;
 const ADMIN_COOLDOWN  = 10 * 1000;
@@ -95,9 +100,11 @@ async function handleLcManualRefresh(req, res) {
         // Stamp NOW to prevent duplicate dispatches if the user double-clicks.
         await User.findByIdAndUpdate(userId, { $set: { lastLcUpdate: new Date() } });
 
+        const sessionToken = await getDecryptedLcSession(userId);
+
         // Await the sync so this response only returns once MongoDB has fresh data.
         try {
-            await lcSyncService.syncLeetcodeProfile(userId, handle);
+            await lcSyncService.syncLeetcodeProfile(userId, handle, sessionToken);
         } catch (err) {
             console.error('[LEAN-NEXUS-LC] sync failed:', err.message);
             // Roll back the timestamp so the user can retry after a page reload.
@@ -133,4 +140,18 @@ async function handleLcHealthCheck(_req, res) {
     }
 }
 
-module.exports = { handleManualRefresh, handleLcManualRefresh, handleLcHealthCheck };
+async function handleCfHealthCheck(_req, res) {
+    try {
+        const headers = CF_SYNC_SECRET ? { Authorization: `Bearer ${CF_SYNC_SECRET}` } : {};
+        const response = await axios.get(`${CF_SYNC_API}/data`, { headers, timeout: 8_000 });
+        return res.status(200).json({ success: true, cfWorker: response.data });
+    } catch (error) {
+        return res.status(503).json({
+            success: false,
+            message: 'CF worker is unreachable',
+            detail: error.response ? JSON.stringify(error.response.data) : error.message,
+        });
+    }
+}
+
+module.exports = { handleManualRefresh, handleLcManualRefresh, handleLcHealthCheck, handleCfHealthCheck };

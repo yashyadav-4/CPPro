@@ -4,6 +4,7 @@ import { AnimatePresence } from "framer-motion";
 import Header from './components/Header/Header'
 import Footer from "./components/Footer/Footer";
 import LoadingScreen from "./components/common/LoadingScreen";
+import HelpSupport from "./components/HelpSupport/HelpSupport";
 
 function Layout() {
     const location = useLocation();
@@ -37,6 +38,7 @@ function Layout() {
                 <Outlet />
             </main>
             {!isAuthPage && <Footer/>}
+            {!isAuthPage && <HelpSupport />}
         </div>
     )
 }

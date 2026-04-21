@@ -1,14 +1,19 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { useLocation, NavLink } from 'react-router-dom';
 import { useLearningTree } from './hooks/useLearningTree';
-import { TREE, SUB_LABELS, TIER_COLORS, STATE_COLORS, TIER_LABELS } from './data/learningTreeData';
+import { 
+  CP_TREE, CP_SUB_LABELS, CP_TIER_LABELS, 
+  DSA_TREE, DSA_SUB_LABELS, DSA_TIER_LABELS,
+  TIER_COLORS, STATE_COLORS 
+} from './data/learningTreeData';
 
 const NW = 118, NH = 52, HGAP = 18, VGAP = 90, TOP_PAD = 40, SIDE_PAD = 40;
-const TIERS = [0, 1, 2, 3, 4, 5, 6, 7];
+const TIERS_ARRAY = [0, 1, 2, 3, 4, 5, 6, 7];
 
-function computeLayout() {
+function computeLayout(activeTree) {
   const pos = {};
-  for (const t of TIERS) {
-    const nodes = TREE.filter(n => n.tier === t);
+  for (const t of TIERS_ARRAY) {
+    const nodes = activeTree.filter(n => n.tier === t);
     nodes.forEach((n, i) => {
       pos[n.id] = { x: SIDE_PAD + i * (NW + HGAP), y: TOP_PAD + (7 - t) * (NH + VGAP) };
     });
@@ -33,7 +38,14 @@ const LIGHT_TIERS = {
 };
 
 export default function LearningPage() {
-  const { progress, getState, toggleState, stats } = useLearningTree();
+  const location = useLocation();
+  const isDsa = location.pathname.includes('/dsa');
+  
+  const activeTree = isDsa ? DSA_TREE : CP_TREE;
+  const activeSubLabels = isDsa ? DSA_SUB_LABELS : CP_SUB_LABELS;
+  const activeTierLabels = isDsa ? DSA_TIER_LABELS : CP_TIER_LABELS;
+
+  const { progress, getState, toggleState, stats } = useLearningTree(activeTree);
   const [hoveredNode, setHoveredNode] = useState(null);
   const [popNode, setPopNode] = useState(null);
   const [markPop, setMarkPop] = useState(null);
@@ -60,16 +72,16 @@ export default function LearningPage() {
   const currentTiers = isDark ? TIER_COLORS : LIGHT_TIERS;
 
   const pos = useMemo(() => {
-    const p = computeLayout();
+    const p = computeLayout(activeTree);
     const W = getSvgWidth(p);
-    for (const t of TIERS) {
-      const nodes = TREE.filter(n => n.tier === t);
+    for (const t of TIERS_ARRAY) {
+      const nodes = activeTree.filter(n => n.tier === t);
       const rowW = nodes.length * (NW + HGAP) - HGAP;
       const offsetX = (W - rowW) / 2;
       nodes.forEach((n, i) => { p[n.id].x = offsetX + i * (NW + HGAP); });
     }
     return p;
-  }, []);
+  }, [activeTree]);
 
   const W = useMemo(() => getSvgWidth(pos), [pos]);
   const H = TOP_PAD + 8 * (NH + VGAP) + 40;
@@ -101,7 +113,40 @@ export default function LearningPage() {
 
   return (
     <div className="w-full overflow-x-hidden font-mono" style={{ backgroundColor: themeVars.bg, color: themeVars.text }}>
-      <div className="px-4 pt-6 pb-12 overflow-x-auto">
+      {/* Selection Header */}
+      <div className="px-6 pt-10 pb-4 max-w-[1200px] mx-auto flex flex-col md:flex-row items-end md:items-center justify-between gap-4">
+        <div>
+           <div className="flex items-center gap-2 mb-1.5">
+             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+             <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-500/80">Skill Acquisition</span>
+           </div>
+           <h1 className="text-3xl font-bold tracking-tighter">
+             {isDsa ? 'Data Structures' : 'Competitive Programming'}
+           </h1>
+           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 max-w-md">
+             {isDsa 
+               ? 'Master the fundamental building blocks of efficient software and ace technical interviews.' 
+               : 'Climb the ranks of competitive platforms with advanced algorithmic strategies and patterns.'}
+           </p>
+        </div>
+        
+        <div className="flex bg-gray-100 dark:bg-white/5 p-1 rounded-xl border border-gray-200 dark:border-white/10">
+           <NavLink 
+             to="/learning/cp" 
+             className={({ isActive }) => `px-4 py-2 rounded-lg text-xs font-bold transition-all ${isActive ? 'bg-white dark:bg-white/10 shadow-sm text-emerald-600 dark:text-emerald-400' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'}`}
+           >
+             CP Tree
+           </NavLink>
+           <NavLink 
+             to="/learning/dsa" 
+             className={({ isActive }) => `px-4 py-2 rounded-lg text-xs font-bold transition-all ${isActive ? 'bg-white dark:bg-white/10 shadow-sm text-emerald-600 dark:text-emerald-400' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'}`}
+           >
+             DSA Tree
+           </NavLink>
+        </div>
+      </div>
+
+      <div className="px-4 pt-6 pb-24 overflow-x-auto">
         <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} width={W} height={H} className="block mx-auto overflow-visible">
           <defs>
             <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
@@ -123,13 +168,13 @@ export default function LearningPage() {
           </defs>
 
           {/* Lines & Labels */}
-          {TIERS.map(t => {
+          {TIERS_ARRAY.map(t => {
             const y = TOP_PAD + (7 - t) * (NH + VGAP) + NH + VGAP / 2;
             const lblY = TOP_PAD + (7 - t) * (NH + VGAP) + 4;
             return (
               <g key={`tier-${t}`}>
                 <text x="8" y={lblY} fontSize="8" fontWeight="600" fill={isDark ? "#2a2a2e" : "#a1a1aa"} fontFamily="JetBrains Mono, monospace">
-                  {TIER_LABELS[t]}
+                  {activeTierLabels[t]}
                 </text>
                 {t < 7 && <line x1="0" y1={y} x2={W} y2={y} stroke={themeVars.gridLine} strokeWidth="1" strokeDasharray="2 8" />}
               </g>
@@ -137,7 +182,7 @@ export default function LearningPage() {
           })}
 
           {/* Edges */}
-          {TREE.map(node => {
+          {activeTree.map(node => {
             if (!node.deps) return null;
             const bp = pos[node.id];
             const sourceTier = node.tier > 0 ? node.tier - 1 : 0;
@@ -156,7 +201,7 @@ export default function LearningPage() {
               const pathD = `M${x2},${y2} C${x2},${my} ${x1},${my} ${x1},${y1}`;
               
               // Color for the progressive glow (from source tier theme)
-              const depNode = TREE.find(n => n.id === dep);
+              const depNode = activeTree.find(n => n.id === dep);
               const tierTheme = currentTiers[depNode?.color] || currentTiers.gray;
               const glowColor = tierTheme.border;
 
@@ -210,13 +255,13 @@ export default function LearningPage() {
           })}
 
           {/* Nodes */}
-          {TREE.map(node => {
+          {activeTree.map(node => {
             const p = pos[node.id];
             if (!p) return null;
             const s = getState(node.id);
             const c = currentTiers[node.color] || currentTiers.gray;
             const hasSubs = node.subs && node.subs.length > 0;
-            const isGod = node.tier === 7 && node.id === 'godtier';
+            const isGod = node.tier === 7 && node.id.includes('mastery'); // Updated for DSA
 
             const bg = isGod ? STATE_COLORS[s] + '22' : (s > 0 ? STATE_COLORS[s] + (isDark?'18':'22') : c.bg);
             const border = s > 0 ? STATE_COLORS[s] : c.border;
@@ -296,7 +341,7 @@ export default function LearningPage() {
           <div className="flex flex-wrap gap-1.5">
             {popNode.node.subs.map(sid => {
               const s = getState(sid);
-              const label = SUB_LABELS[sid] || sid;
+              const label = activeSubLabels[sid] || sid;
               return (
                 <div
                   key={sid}
@@ -358,6 +403,42 @@ export default function LearningPage() {
           </div>
         </div>
       )}
+
+      {/* Modern Stats Bar */}
+      <div className="fixed bottom-0 left-0 right-0 h-14 bg-white/80 dark:bg-black/80 backdrop-blur-xl border-t border-gray-200 dark:border-white/10 z-[40]">
+        <div className="max-w-[1200px] mx-auto h-full flex items-center justify-between px-6">
+           <div className="flex items-center gap-6">
+              <div className="flex flex-col">
+                <span className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">Progress</span>
+                <div className="flex items-center gap-2">
+                   <span className="text-lg font-black tracking-tighter">{Math.round((stats.mastered / (stats.total || 1)) * 100)}%</span>
+                   <div className="w-24 h-1.5 bg-gray-200 dark:bg-white/10 rounded-full overflow-hidden">
+                      <div className="h-full bg-emerald-500 transition-all duration-1000" style={{ width: `${(stats.mastered / (stats.total || 1)) * 100}%` }} />
+                   </div>
+                </div>
+              </div>
+
+              <div className="hidden sm:flex items-center gap-4 border-l border-gray-200 dark:border-white/10 pl-6">
+                 {[
+                   { label: 'Mastered', val: stats.mastered, color: 'text-emerald-500' },
+                   { label: 'Implementation', val: stats.inProgress, color: 'text-blue-500' },
+                   { label: 'Touched', val: stats.touched, color: 'text-amber-500' }
+                 ].map(s => (
+                   <div key={s.label} className="flex flex-col">
+                      <span className="text-[9px] uppercase font-bold text-gray-500">{s.label}</span>
+                      <span className={`text-sm font-black ${s.color}`}>{s.val}</span>
+                   </div>
+                 ))}
+              </div>
+           </div>
+
+           <div className="flex items-center gap-2">
+              <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${isDsa ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'}`}>
+                {isDsa ? 'DSA Track' : 'CP Track'}
+              </div>
+           </div>
+        </div>
+      </div>
     </div>
   );
 }

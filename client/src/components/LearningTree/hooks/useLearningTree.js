@@ -1,8 +1,8 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import axios from 'axios';
-import { TREE, getAllTrackableIds } from '../data/learningTreeData';
+import { CP_TREE, getAllTrackableIds } from '../data/learningTreeData';
 
-export function useLearningTree() {
+export function useLearningTree(activeTree = CP_TREE) {
   const [progress, setProgress] = useState({});
   const [isLoading, setIsLoading] = useState(true);
 
@@ -48,9 +48,9 @@ export function useLearningTree() {
     }
   }, [progress]);
 
-  // Compute stats
+  // Compute stats based on the active tree
   const stats = useMemo(() => {
-    const allIds = getAllTrackableIds();
+    const allIds = getAllTrackableIds(activeTree);
     const total = allIds.length;
     const mastered = allIds.filter(id => (progress[id] || 0) === 3).length;
     const inProgress = allIds.filter(id => {
@@ -59,10 +59,10 @@ export function useLearningTree() {
     }).length;
     const touched = allIds.filter(id => (progress[id] || 0) > 0).length;
 
-    // Per-tier completion
+    // Per-tier completion using activeTree
     const tierCompletion = {};
     for (let t = 0; t <= 7; t++) {
-      const tierNodes = TREE.filter(n => n.tier === t);
+      const tierNodes = activeTree.filter(n => n.tier === t);
       const tierIds = [];
       for (const node of tierNodes) {
         if (node.subs && node.subs.length > 0) {
@@ -85,7 +85,7 @@ export function useLearningTree() {
 
     // Per-node (topic) completion
     const nodeCompletion = {};
-    for (const node of TREE) {
+    for (const node of activeTree) {
       if (node.subs && node.subs.length > 0) {
         const subTotal = node.subs.length;
         const subTouched = node.subs.filter(id => (progress[id] || 0) > 0).length;
@@ -112,7 +112,7 @@ export function useLearningTree() {
     }
 
     return { total, mastered, inProgress, touched, tierCompletion, nodeCompletion };
-  }, [progress]);
+  }, [progress, activeTree]);
 
   return { progress, getState, toggleState, stats, isLoading };
 }

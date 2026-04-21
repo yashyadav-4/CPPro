@@ -13,6 +13,11 @@ const postSchema= new mongoose.Schema({
     authorPic:{
         type:String,
     },
+    authorRole: {
+        type: String,
+        enum: ['user', 'admin'],
+        default: 'user'
+    },
     title: { 
         type: String,
         required: [true, "Post title is required"],

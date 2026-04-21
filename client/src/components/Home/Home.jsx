@@ -424,7 +424,7 @@ export default function Home(){
   });
 
   useEffect(() => {
-    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/stats/public/summary`)
+    fetch('/api/stats/public/summary')
       .then(res => res.json())
       .then(res => {
         if (res.success) setStats(res.data);

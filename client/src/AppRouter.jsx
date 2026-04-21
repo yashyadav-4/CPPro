@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { createBrowserRouter } from 'react-router-dom';
 import Layout from './Layout.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
+import AdminRoute from './components/AdminRoute.jsx';
 
 const Home = lazy(() => import('./components/Home/Home.jsx'));
 const Login = lazy(() => import('./components/AuthPage/Login'));
@@ -14,8 +15,9 @@ const VerifyCodeforces = lazy(() => import('./components/VerifyCodeforces/Verify
 const LearningPage = lazy(() => import('./components/LearningTree/LearningPage.jsx'));
 const LevelUpPage = lazy(() => import('./components/LevelUp/LevelUpPage.jsx'));
 const Settings = lazy(() => import('./components/Settings/Settings.jsx'));
-const HelpSupport = lazy(() => import('./components/HelpSupport/HelpSupport.jsx'));
+
 const ContestTracker = lazy(() => import('./components/ContestTracker/ContestTracker.jsx'));
+const AdminDashboard = lazy(() => import('./components/Admin/AdminDashboard.jsx'));
 
 const PageLoader = () => (
   <div className="min-h-screen bg-white dark:bg-[#0a0a0a] flex items-center justify-center">
@@ -38,9 +40,12 @@ const router = createBrowserRouter([
       { path: 'community', element: withSuspense(<Community />) },
       { path: 'verify-codeforces', element: withSuspense(<ProtectedRoute><VerifyCodeforces /></ProtectedRoute>) },
       { path: 'learning', element: withSuspense(<ProtectedRoute><LearningPage /></ProtectedRoute>) },
+      { path: 'learning/cp', element: withSuspense(<ProtectedRoute><LearningPage /></ProtectedRoute>) },
+      { path: 'learning/dsa', element: withSuspense(<ProtectedRoute><LearningPage /></ProtectedRoute>) },
       { path: 'settings', element: withSuspense(<ProtectedRoute><Settings /></ProtectedRoute>) },
-      { path: 'help-support', element: withSuspense(<HelpSupport />) },
+
       { path: 'contest-tracker', element: withSuspense(<ContestTracker />) },
+      { path: 'admin', element: withSuspense(<AdminRoute><AdminDashboard /></AdminRoute>) },
       { path: 'login', element: withSuspense(<Login />) },
       { path: 'signup', element: withSuspense(<Signup />) },
     ],

@@ -1,49 +1,48 @@
 import { useState, useEffect } from "react";
-import { X, ArrowUp, ArrowDown, MessageCircle, Send, User, Trash2 } from "lucide-react";
+import {
+  X, ArrowUp, ArrowDown, MessageCircle, Send,
+  User, Trash2, ShieldCheck, Pin,
+} from "lucide-react";
 import axios from "axios";
 import DeleteConfirmModal from "../common/DeleteConfirmModal";
 
+const TYPE_COLORS = {
+  blog:       "bg-blue-500/10 text-blue-400 border-blue-500/20",
+  discussion: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+  help:       "bg-amber-500/10 text-amber-400 border-amber-500/20",
+};
+
 const timeAgo = (date) => {
   if (!date) return "Just now";
-  const seconds = Math.floor((new Date() - new Date(date)) / 1000);
-  let interval = seconds / 31536000;
-  if (interval > 1) return Math.floor(interval) + "y ago";
-  interval = seconds / 2592000;
-  if (interval > 1) return Math.floor(interval) + "mo ago";
-  interval = seconds / 86400;
-  if (interval > 1) return Math.floor(interval) + "d ago";
-  interval = seconds / 3600;
-  if (interval > 1) return Math.floor(interval) + "h ago";
-  interval = seconds / 60;
-  if (interval > 1) return Math.floor(interval) + "m ago";
+  const s = Math.floor((new Date() - new Date(date)) / 1000);
+  if (s / 31536000 > 1) return Math.floor(s / 31536000) + "y ago";
+  if (s / 2592000  > 1) return Math.floor(s / 2592000)  + "mo ago";
+  if (s / 86400    > 1) return Math.floor(s / 86400)    + "d ago";
+  if (s / 3600     > 1) return Math.floor(s / 3600)     + "h ago";
+  if (s / 60       > 1) return Math.floor(s / 60)       + "m ago";
   return "Just now";
 };
 
-export default function PostDetailModal({ post, onClose, onVoteToggle, currentUser }) {
-  const [comments, setComments] = useState([]);
-  const [newComment, setNewComment] = useState("");
+export default function PostDetailModal({ post, onClose, onVoteToggle, onPinToggle, currentUser }) {
+  const [comments, setComments]           = useState([]);
+  const [newComment, setNewComment]       = useState("");
   const [loadingComments, setLoadingComments] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState(null);
+  const [isSubmitting, setIsSubmitting]   = useState(false);
+  const [error, setError]                 = useState(null);
   const [commentToDelete, setCommentToDelete] = useState(null);
 
   useEffect(() => {
-    if (post) {
-      fetchComments();
-    }
+    if (post) fetchComments();
   }, [post]);
 
   const fetchComments = async () => {
     try {
       setLoadingComments(true);
-      const res = await axios.get(`/api/comments/${post._id}`, {
-        withCredentials: true,
-      });
+      const res = await axios.get(`/api/comments/${post._id}`, { withCredentials: true });
       setComments(Array.isArray(res.data) ? res.data : []);
-    } catch (err) {
-      console.log("Fallback to local comments reading");
-      const localCommentsReqs = JSON.parse(localStorage.getItem('post_comments') || '{}');
-      setComments(localCommentsReqs[post._id] || []);
+    } catch {
+      const local = JSON.parse(localStorage.getItem("post_comments") || "{}");
+      setComments(local[post._id] || []);
     } finally {
       setLoadingComments(false);
     }
@@ -52,42 +51,27 @@ export default function PostDetailModal({ post, onClose, onVoteToggle, currentUs
   const handleAddComment = async (e) => {
     e.preventDefault();
     if (!newComment.trim()) return;
-
     try {
       setIsSubmitting(true);
-      const res = await axios.post(
-        `/api/comments/${post._id}`,
-        { content: newComment },
-        { withCredentials: true }
-      );
-      
-      setComments([...comments, res.data]);
+      const res = await axios.post(`/api/comments/${post._id}`, { content: newComment }, { withCredentials: true });
+      setComments((c) => [...c, res.data]);
       setNewComment("");
-      
-      // Also update local storage for full sync
-      const localCommentsReqs = JSON.parse(localStorage.getItem('post_comments') || '{}');
-      const postArray = localCommentsReqs[post._id] || [];
-      postArray.push(res.data);
-      localCommentsReqs[post._id] = postArray;
-      localStorage.setItem('post_comments', JSON.stringify(localCommentsReqs));
-
-    } catch (err) {
-      console.log("Fallback to localStorage comment creation");
-      const fakeNewComment = {
-          _id: Date.now().toString(),
-          content: newComment,
-          authorName: currentUser?.name || "CurrentUser",
-          authorId: currentUser?._id || "localUser",
-          createdAt: new Date().toISOString(),
+      const local = JSON.parse(localStorage.getItem("post_comments") || "{}");
+      local[post._id] = [...(local[post._id] || []), res.data];
+      localStorage.setItem("post_comments", JSON.stringify(local));
+    } catch {
+      const fake = {
+        _id: Date.now().toString(),
+        content: newComment,
+        authorName: currentUser?.name || "You",
+        authorId: currentUser?._id || "localUser",
+        createdAt: new Date().toISOString(),
       };
-      setComments([...comments, fakeNewComment]);
+      setComments((c) => [...c, fake]);
       setNewComment("");
-
-      const localCommentsReqs = JSON.parse(localStorage.getItem('post_comments') || '{}');
-      const postArray = localCommentsReqs[post._id] || [];
-      postArray.push(fakeNewComment);
-      localCommentsReqs[post._id] = postArray;
-      localStorage.setItem('post_comments', JSON.stringify(localCommentsReqs));
+      const local = JSON.parse(localStorage.getItem("post_comments") || "{}");
+      local[post._id] = [...(local[post._id] || []), fake];
+      localStorage.setItem("post_comments", JSON.stringify(local));
     } finally {
       setIsSubmitting(false);
     }
@@ -95,178 +79,220 @@ export default function PostDetailModal({ post, onClose, onVoteToggle, currentUs
 
   const confirmDeleteComment = async () => {
     if (!commentToDelete) return;
-    const commentId = commentToDelete;
     try {
-      await axios.delete(`/api/comments/${commentId}`, {
-        withCredentials: true,
-      });
-      setComments(comments.filter(c => c._id !== commentId));
-    } catch (err) {
-      console.log("Fallback to localStorage comment deletion");
-      const updated = comments.filter(c => c._id !== commentId);
-      setComments(updated);
-
-      const localCommentsReqs = JSON.parse(localStorage.getItem('post_comments') || '{}');
-      localCommentsReqs[post._id] = updated;
-      localStorage.setItem('post_comments', JSON.stringify(localCommentsReqs));
+      await axios.delete(`/api/comments/${commentToDelete}`, { withCredentials: true });
+      setComments((c) => c.filter((x) => x._id !== commentToDelete));
+    } catch {
+      setComments((c) => c.filter((x) => x._id !== commentToDelete));
     } finally {
       setCommentToDelete(null);
     }
   };
 
-  const handleDeleteComment = (commentId) => {
-    setCommentToDelete(commentId);
-  };
-
   if (!post) return null;
 
   const currentUserId = currentUser?._id || "localUser";
-  const upvoted = post.upVotes?.includes(currentUserId);
+  const upvoted  = post.upVotes?.includes(currentUserId);
   const downvoted = post.downVotes?.includes(currentUserId);
+  const score    = (post.upVotes?.length || 0) - (post.downVotes?.length || 0);
+  const typeKey  = (Array.isArray(post.types) ? post.types[0] : post.types)?.toLowerCase();
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm transition-opacity" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+      onClick={onClose}
+    >
       <div
-        className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[95vh] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200"
+        className="bg-white dark:bg-[#111111] rounded-2xl shadow-2xl border border-gray-200 dark:border-white/[0.08] w-full max-w-4xl max-h-[92vh] overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50 shrink-0">
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-gray-100 dark:border-white/[0.07] flex items-center justify-between bg-gray-50/50 dark:bg-white/[0.02] shrink-0">
           <div className="flex items-center gap-3">
-             {post.authorPic ? (
-                 <img src={post.authorPic} alt={post.authorName} className="w-10 h-10 rounded-full object-cover border border-emerald-200" />
-             ) : (
-                 <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 border border-emerald-200 object-cover overflow-hidden">
-                    <User size={20} />
-                 </div>
-             )}
-             <div>
-                <div className="font-bold text-gray-900 text-sm">{post.authorName || "Anonymous"}</div>
-                <div className="text-xs text-gray-500 font-medium">{timeAgo(post.createdAt)}</div>
-             </div>
+            {post.authorPic ? (
+              <img src={post.authorPic} alt={post.authorName} className="w-9 h-9 rounded-full object-cover ring-1 ring-white/10" />
+            ) : (
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-600/30 to-emerald-400/20 flex items-center justify-center text-emerald-400 ring-1 ring-emerald-500/20">
+                <User size={18} />
+              </div>
+            )}
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="font-semibold text-sm text-gray-900 dark:text-gray-100">
+                  {post.authorName || "Anonymous"}
+                </span>
+                {post.authorRole === "admin" && (
+                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-black bg-emerald-600 text-white uppercase tracking-tighter">
+                    <ShieldCheck size={8} /> ADMIN
+                  </span>
+                )}
+              </div>
+              <div className="text-[11px] text-gray-400 dark:text-gray-500">{timeAgo(post.createdAt)}</div>
+            </div>
           </div>
-          <button 
-             className="text-gray-400 hover:text-gray-500 hover:bg-gray-100 p-2 rounded-full transition-colors focus:outline-none" 
-             onClick={onClose}
-          >
-            <X size={20} />
-          </button>
+          <div className="flex items-center gap-2">
+            {post.isPinned && (
+              <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 px-2.5 py-1 rounded-full">
+                <Pin size={11} className="fill-current" /> Pinned
+              </span>
+            )}
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 p-2 rounded-full transition-colors"
+            >
+              <X size={18} />
+            </button>
+          </div>
         </div>
-        
-        <div className="flex flex-col md:flex-row overflow-hidden flex-1 overflow-y-auto hidden-scrollbar">
-            
-            <div className="w-full md:w-3/5 p-6 border-b md:border-b-0 md:border-r border-gray-100 shrink-0 md:shrink overflow-y-auto hidden-scrollbar">
-              <h2 className="text-2xl font-extrabold text-gray-900 mb-4">{post.title}</h2>
-              
-              <div className="flex flex-wrap gap-2 mb-6">
-                   {post.types && (
-                       <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100 capitalize">
-                         {Array.isArray(post.types) ? post.types.join(", ") : post.types}
-                       </span>
-                   )}
-                  {post.tags && post.tags.map((t) => (
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-gray-100 text-gray-600 border border-gray-200 capitalize" key={t}>
-                        #{t}
-                    </span>
-                  ))}
-              </div>
 
-              <div className="text-gray-800 leading-relaxed text-[15px] space-y-4 whitespace-pre-wrap">
-                  {post.content}
-              </div>
-              
-              <div className="flex items-center gap-4 mt-8 pt-6 border-t border-gray-100">
-                  <div className="flex items-center gap-1 bg-gray-50 border border-gray-200 rounded-full p-1">
-                      <button 
-                         className={`flex items-center justify-center w-8 h-8 rounded-full transition-colors ${upvoted ? 'bg-emerald-100 text-emerald-600' : 'text-gray-500 hover:bg-gray-200 hover:text-gray-700'}`}
-                         onClick={() => onVoteToggle(post._id, 'upvote')}
-                         title="Upvote"
-                      >
-                          <ArrowUp size={16} />
-                      </button>
-                      <span className={`text-sm font-bold min-w-[20px] text-center ${upvoted ? 'text-emerald-600' : downvoted ? 'text-orange-600' : 'text-gray-700'}`}>
-                          {(post.upVotes?.length || 0) - (post.downVotes?.length || 0)}
-                      </span>
-                      <button 
-                         className={`flex items-center justify-center w-8 h-8 rounded-full transition-colors ${downvoted ? 'bg-orange-100 text-orange-600' : 'text-gray-500 hover:bg-gray-200 hover:text-gray-700'}`}
-                         onClick={() => onVoteToggle(post._id, 'downvote')}
-                         title="Downvote"
-                      >
-                          <ArrowDown size={16} />
-                      </button>
-                  </div>
-                  
-                  <div className="flex items-center gap-2 text-gray-500 font-medium text-sm ml-2">
-                      <MessageCircle size={18} /> {post.commentCount || comments.length} Comments
-                  </div>
-              </div>
+        {/* Body */}
+        <div className="flex flex-col md:flex-row overflow-hidden flex-1">
+          {/* Post content */}
+          <div className="w-full md:w-3/5 p-6 border-b md:border-b-0 md:border-r border-gray-100 dark:border-white/[0.07] overflow-y-auto">
+            <h2 className="text-xl font-extrabold text-gray-900 dark:text-white mb-4 leading-tight">
+              {post.title}
+            </h2>
+
+            {/* Badges */}
+            <div className="flex flex-wrap gap-1.5 mb-5">
+              {typeKey && (
+                <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border capitalize ${TYPE_COLORS[typeKey] || "bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 border-transparent"}`}>
+                  {typeKey}
+                </span>
+              )}
+              {post.tags?.map((t) => (
+                <span
+                  key={t}
+                  className="text-[10px] font-medium px-2.5 py-1 rounded-full bg-gray-100 dark:bg-white/[0.06] text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-white/[0.06]"
+                >
+                  #{t}
+                </span>
+              ))}
             </div>
 
-            <div className="w-full md:w-2/5 p-6 bg-gray-50 flex flex-col shrink-0 md:shrink border-t md:border-t-0 border-gray-100 overflow-y-auto hidden-scrollbar">
-                <h3 className="text-lg font-bold text-gray-900 mb-4 shrink-0">Discussions</h3>
-                
-                <form className="relative mb-6 shrink-0" onSubmit={handleAddComment}>
-                    <input 
-                       type="text" 
-                       className="w-full pl-4 pr-12 py-3 bg-white border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors shadow-sm placeholder:text-gray-400"
-                       placeholder="Add a comment..." 
-                       value={newComment}
-                       onChange={(e) => setNewComment(e.target.value)}
-                       disabled={isSubmitting}
-                    />
-                    <button 
-                        type="submit" 
-                        disabled={isSubmitting || !newComment.trim()}
-                        className="absolute right-2 top-1.5 bottom-1.5 w-9 flex items-center justify-center text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg disabled:bg-gray-300 disabled:text-gray-500 transition-colors"
-                    >
-                        <Send size={14} className="ml-0.5" />
-                    </button>
-                </form>
+            {/* Content */}
+            <div className="text-gray-700 dark:text-gray-300 leading-relaxed text-sm whitespace-pre-wrap">
+              {post.content}
+            </div>
 
-                <div className="flex-1 overflow-y-auto hidden-scrollbar pr-2">
-                    {loadingComments ? (
-                        <div className="text-center text-sm text-gray-500 py-4 font-medium animate-pulse">Loading comments...</div>
-                    ) : error && comments.length === 0 ? (
-                        <div className="text-center text-sm text-red-500 bg-red-50 rounded-lg py-3 font-medium border border-red-100">{error}</div>
-                    ) : comments.length === 0 ? (
-                        <div className="text-center py-8">
-                            <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-3 text-gray-400">
-                                <MessageCircle size={24} />
-                            </div>
-                            <p className="text-sm font-medium text-gray-900">No comments yet</p>
-                            <p className="text-xs text-gray-500 mt-1">Be the first to share your thoughts!</p>
-                        </div>
-                    ) : (
-                        <div className="space-y-4">
-                            {comments.map((comment) => (
-                                <div key={comment._id} className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm relative group">
-                                     <div className="flex items-start justify-between mb-2">
-                                         <span className="text-sm font-bold text-gray-900">{comment.authorName || "User"}</span>
-                                         <div className="flex items-center gap-3">
-                                            <span className="text-xs text-gray-500 font-medium">{timeAgo(comment.createdAt)}</span>
-                                            {currentUserId === comment.authorId && (
-                                              <button 
-                                                className="text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity" 
-                                                onClick={() => handleDeleteComment(comment._id)}
-                                                title="Delete comment"
-                                              >
-                                                  <Trash2 size={14} />
-                                              </button>
-                                            )}
-                                         </div>
-                                     </div>
-                                     <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
-                                         {comment.content}
-                                     </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
+            {/* Vote + pin controls */}
+            <div className="flex items-center gap-3 mt-8 pt-5 border-t border-gray-100 dark:border-white/[0.07]">
+              <div className="flex items-center gap-1 bg-gray-50 dark:bg-[#0a0a0a] border border-gray-200 dark:border-white/[0.08] rounded-full p-0.5">
+                <button
+                  className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors ${upvoted ? "bg-emerald-500/20 text-emerald-500" : "text-gray-400 hover:text-emerald-500 hover:bg-emerald-500/10"}`}
+                  onClick={() => onVoteToggle(post._id, "upvote")}
+                >
+                  <ArrowUp size={15} />
+                </button>
+                <span className={`text-sm font-bold min-w-[22px] text-center ${upvoted ? "text-emerald-500" : downvoted ? "text-orange-500" : "text-gray-700 dark:text-gray-300"}`}>
+                  {score}
+                </span>
+                <button
+                  className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors ${downvoted ? "bg-orange-500/20 text-orange-500" : "text-gray-400 hover:text-orange-500 hover:bg-orange-500/10"}`}
+                  onClick={() => onVoteToggle(post._id, "downvote")}
+                >
+                  <ArrowDown size={15} />
+                </button>
+              </div>
+              <div className="flex items-center gap-2 text-gray-400 dark:text-gray-500 text-sm font-medium">
+                <MessageCircle size={16} />
+                {post.commentCount || comments.length} Comments
+              </div>
+              {currentUser?.role === "admin" && (
+                <button
+                  className={`ml-auto flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-sm font-semibold transition-all ${
+                    post.isPinned
+                      ? "bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20"
+                      : "bg-gray-100 dark:bg-white/[0.06] border border-gray-200 dark:border-white/[0.08] text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10"
+                  }`}
+                  onClick={() => onPinToggle(post._id)}
+                >
+                  <Pin size={14} className={post.isPinned ? "fill-current" : ""} />
+                  {post.isPinned ? "Unpin" : "Pin Discussion"}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Comments panel */}
+          <div className="w-full md:w-2/5 p-5 flex flex-col bg-gray-50/50 dark:bg-[#0a0a0a]/40 overflow-hidden">
+            <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4 flex-shrink-0">
+              Comments
+            </h3>
+
+            {/* Add comment */}
+            <form onSubmit={handleAddComment} className="relative mb-4 flex-shrink-0">
+              <input
+                type="text"
+                className="w-full pl-4 pr-11 py-2.5 bg-white dark:bg-[#111111] border border-gray-200 dark:border-white/[0.08] rounded-xl text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/60 transition-all placeholder:text-gray-400 dark:placeholder:text-gray-600"
+                placeholder="Add a comment…"
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                disabled={isSubmitting}
+              />
+              <button
+                type="submit"
+                disabled={isSubmitting || !newComment.trim()}
+                className="absolute right-2 top-1.5 bottom-1.5 w-8 flex items-center justify-center rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-gray-200 dark:disabled:bg-white/10 disabled:text-gray-400 dark:disabled:text-gray-600 transition-colors"
+              >
+                <Send size={13} className="ml-0.5" />
+              </button>
+            </form>
+
+            {/* Comment list */}
+            <div className="flex-1 overflow-y-auto space-y-2.5 pr-1">
+              {loadingComments ? (
+                <div className="text-center text-sm text-gray-400 dark:text-gray-600 py-6 animate-pulse">
+                  Loading comments…
                 </div>
+              ) : error && comments.length === 0 ? (
+                <div className="text-center text-sm text-red-500 bg-red-50 dark:bg-red-500/10 rounded-xl py-3 border border-red-100 dark:border-red-500/20">
+                  {error}
+                </div>
+              ) : comments.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-10 text-center">
+                  <div className="w-11 h-11 rounded-full bg-gray-100 dark:bg-white/[0.05] flex items-center justify-center text-gray-300 dark:text-gray-600 mb-3">
+                    <MessageCircle size={22} />
+                  </div>
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-400">No comments yet</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-600 mt-1">Be the first to reply!</p>
+                </div>
+              ) : (
+                comments.map((comment) => (
+                  <div
+                    key={comment._id}
+                    className="bg-white dark:bg-[#111111] border border-gray-200 dark:border-white/[0.07] rounded-xl p-3.5 group"
+                  >
+                    <div className="flex items-start justify-between mb-1.5">
+                      <span className="text-xs font-bold text-gray-900 dark:text-gray-100">
+                        {comment.authorName || "User"}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-gray-400 dark:text-gray-600">
+                          {timeAgo(comment.createdAt)}
+                        </span>
+                        {currentUserId === comment.authorId && (
+                          <button
+                            className="text-gray-300 dark:text-gray-700 hover:text-red-500 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
+                            onClick={() => setCommentToDelete(comment._id)}
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed whitespace-pre-wrap">
+                      {comment.content}
+                    </p>
+                  </div>
+                ))
+              )}
             </div>
+          </div>
         </div>
       </div>
-      
-      <DeleteConfirmModal 
+
+      <DeleteConfirmModal
         isOpen={!!commentToDelete}
         onClose={() => setCommentToDelete(null)}
         onConfirm={confirmDeleteComment}

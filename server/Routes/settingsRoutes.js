@@ -9,6 +9,9 @@ const {
     unlinkLeetcodeAccount,
     getProfile,
     updateProfile,
+    saveLcSession,
+    getLcSessionStatus,
+    removeLcSession,
 } = require('../Controllers/settingsController');
 
 router.use(verifyToken);
@@ -27,5 +30,10 @@ router.delete('/unlink-lc', unlinkLeetcodeAccount);
 //profile settings
 router.get('/profile', getProfile);
 router.patch('/profile', updateProfile);
+
+// LC session
+router.get('/lc-session/status', getLcSessionStatus);
+router.put('/lc-session', saveLcSession);
+router.delete('/lc-session', removeLcSession);
 
 module.exports = router;

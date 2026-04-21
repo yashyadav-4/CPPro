@@ -57,22 +57,24 @@ export default function RecentSubmissions({ loading, cfSubmissions, lcSubmission
     time: s.submittedAt,
   }));
 
-  // Normalise LC items
-  const lcItems = (lcSubmissions || []).map(s => {
-    const slug = s.titleSlug || s.title?.toLowerCase().replace(/\s+/g, '-') || '';
-    return {
-      platform: 'lc',
-      title: s.title || s.titleSlug || 'Unknown',
-      url: slug ? `https://leetcode.com/problems/${slug}/` : null,
-      difficulty: null,
-      time: s.timestamp,
-    };
-  });
+  // Normalise LC items — filter to AC only (with session we get all statuses)
+  const lcItems = (lcSubmissions || [])
+    .filter(s => !s.statusDisplay || s.statusDisplay === 'Accepted')
+    .map(s => {
+      const slug = s.titleSlug || s.title?.toLowerCase().replace(/\s+/g, '-') || '';
+      return {
+        platform: 'lc',
+        title: s.title || s.titleSlug || 'Unknown',
+        url: slug ? `https://leetcode.com/problems/${slug}/` : null,
+        difficulty: null,
+        time: s.timestamp,
+      };
+    });
 
   // Merge + sort by time desc
   const merged = [...cfItems, ...lcItems]
     .sort((a, b) => getMs(b.time) - getMs(a.time))
-    .slice(0, 15);
+    .slice(0, 10);
 
   const title = view === 'cf'
     ? 'Recent AC Submissions (CF)'
