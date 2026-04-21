@@ -1,7 +1,1 @@
-# Proxy /api/* to the Express web service.
-# BEFORE deploying: replace the URL below with your Render web service URL (e.g. https://cppro-api.onrender.com)
-# After custom domain is set up: switch to https://api.cppro.dev
-/api/*  https://api.cppro.dev/api/:splat  200
-
-# SPA fallback — all client-side routes serve index.html
 /*  /index.html  200
