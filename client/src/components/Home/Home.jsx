@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
+import { API_BASE } from '../../api';
 import { motion, useScroll, useTransform, useInView, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Link2, Zap, LineChart } from "lucide-react";
@@ -424,7 +425,7 @@ export default function Home(){
   });
 
   useEffect(() => {
-    fetch('/api/stats/public/summary')
+    fetch(`${API_BASE}/api/stats/public/summary`)
       .then(res => res.json())
       .then(res => {
         if (res.success) setStats(res.data);

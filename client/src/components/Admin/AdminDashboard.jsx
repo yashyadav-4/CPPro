@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { API_BASE } from '../../api';
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid,
@@ -123,7 +124,7 @@ export default function AdminDashboard() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/admin/stats?days=${d}`, { credentials: 'include' });
+      const res = await fetch(`${API_BASE}/api/admin/stats?days=${d}`, { credentials: 'include' });
       if (res.status === 403) { setError('Access denied — admin only.'); return; }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();

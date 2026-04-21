@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react"
 import { Search, Plus, AlertTriangle } from "lucide-react"
+import { API_BASE } from '../../api'
 import CodeTemplateList from "./CodeTemplateList"
 import AddSnippetModal from "./AddSnippetModal"
 import SnippetDetailModal from "./SnippetDetailModal"
@@ -28,7 +29,7 @@ export default function CodeTemplate() {
         setLoading(true)
         setFetchError(null)
         try {
-            const res = await fetch("/api/codeTemplate", { credentials: "include" })
+            const res = await fetch(`${API_BASE}/api/codeTemplate`, { credentials: "include" })
             if (res.ok) {
                 const data = await res.json()
                 setSnippets(data)

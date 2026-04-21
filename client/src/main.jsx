@@ -6,6 +6,11 @@ import router from './AppRouter.jsx'
 import { ThemeProvider } from './context/ThemeContext.jsx'
 import { ToastProvider } from './context/ToastContext.jsx'
 import { NotificationProvider } from './context/NotificationContext.jsx'
+import axios from 'axios'
+
+if (import.meta.env.VITE_API_BASE) {
+  axios.defaults.baseURL = import.meta.env.VITE_API_BASE
+}
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

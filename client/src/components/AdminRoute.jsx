@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
+import { API_BASE } from '../api';
 
 /**
  * Guards a route — user must be authenticated AND have role === 'admin'.
@@ -9,7 +10,7 @@ export default function AdminRoute({ children }) {
     const [status, setStatus] = useState('loading'); // 'loading' | 'ok' | 'unauth' | 'forbidden'
 
     useEffect(() => {
-        fetch('/api/auth/verify', { credentials: 'include' })
+        fetch(`${API_BASE}/api/auth/verify`, { credentials: 'include' })
             .then(res => res.json())
             .then(data => {
                 if (!data.authenticated) return setStatus('unauth');

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, NavLink, useNavigate } from "react-router-dom"
+import { API_BASE } from '../../api'
 import { LogOut, Menu, X, Shield, Settings, Sun, Moon, HelpCircle } from 'lucide-react'
 import { useTheme } from '../../hooks/useTheme'
 import NotificationBell from '../Notifications/NotificationBell'
@@ -15,7 +16,7 @@ export default function Header() {
     const navigate = useNavigate();
 
     useEffect(() => {
-        fetch('/api/auth/verify', { credentials: 'include' })
+        fetch(`${API_BASE}/api/auth/verify`, { credentials: 'include' })
             .then(res => res.json())
             .then(data => {
                 if (data.authenticated && data.user) {
@@ -38,7 +39,7 @@ export default function Header() {
 
     const handleLogout = async () => {
         try {
-            await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+            await fetch(`${API_BASE}/api/auth/logout`, { method: 'POST', credentials: 'include' });
             // Fallback clear in case the server cookie clear isn't catching it properly
             document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
             window.location.href = '/login';

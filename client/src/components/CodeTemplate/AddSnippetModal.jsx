@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { X, Code2 } from "lucide-react"
+import { API_BASE } from '../../api'
 
 export default function AddSnippetModal({ onClose, onAddLocal }) {
     const [form, setForm] = useState({
@@ -37,7 +38,7 @@ export default function AddSnippetModal({ onClose, onAddLocal }) {
 
         try {
             setSubmitError(null)
-            const res = await fetch("/api/codeTemplate", {
+            const res = await fetch(`${API_BASE}/api/codeTemplate`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 credentials: "include",
