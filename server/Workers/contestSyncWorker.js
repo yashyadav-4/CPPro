@@ -48,4 +48,15 @@ function startContestSyncWorker() {
     setInterval(runOnce, INTERVAL_MS);
 }
 
-module.exports = { startContestSyncWorker };
+async function forceSyncContests() {
+    const now = Date.now();
+    const count = await syncContests();
+    await GlobalSyncState.updateOne(
+        { syncKey: 'contests' },
+        { $set: { lastSyncedAt: new Date(now) } },
+        { upsert: true }
+    );
+    return count;
+}
+
+module.exports = { startContestSyncWorker, forceSyncContests };

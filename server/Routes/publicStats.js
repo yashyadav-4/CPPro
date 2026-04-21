@@ -8,6 +8,10 @@ let statsCache = {
     expiresAt: 0
 };
 
+function clearStatsCache() {
+    statsCache.expiresAt = 0;
+}
+
 const CACHE_DURATION = 3600000;
 
 router.get('/public/summary', async (req, res) => {
@@ -67,3 +71,4 @@ router.get('/public/summary', async (req, res) => {
 });
 
 module.exports = router;
+module.exports.clearStatsCache = clearStatsCache;

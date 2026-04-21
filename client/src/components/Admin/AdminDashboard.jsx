@@ -119,6 +119,8 @@ export default function AdminDashboard() {
   const [error, setError] = useState(null);
   const [days, setDays] = useState(7);
   const [lastRefresh, setLastRefresh] = useState(null);
+  const [forcing, setForcing] = useState({ contests: false, stats: false });
+  const [forceMsg, setForceMsg] = useState({ contests: null, stats: null });
 
   const fetchStats = useCallback(async (d) => {
     setLoading(true);
@@ -139,6 +141,26 @@ export default function AdminDashboard() {
   }, []);
 
   useEffect(() => { fetchStats(days); }, [days, fetchStats]);
+
+  const forceRefresh = useCallback(async (type) => {
+    setForcing(prev => ({ ...prev, [type]: true }));
+    setForceMsg(prev => ({ ...prev, [type]: null }));
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/refresh/${type}`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      const json = await res.json();
+      setForceMsg(prev => ({
+        ...prev,
+        [type]: { ok: json.success, text: json.message },
+      }));
+    } catch {
+      setForceMsg(prev => ({ ...prev, [type]: { ok: false, text: 'Network error' } }));
+    } finally {
+      setForcing(prev => ({ ...prev, [type]: false }));
+    }
+  }, []);
 
   const ov = data?.overview || {};
   const gr = data?.growth || {};
@@ -208,6 +230,39 @@ export default function AdminDashboard() {
               <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
               Refresh
             </button>
+          </div>
+        </div>
+
+        {/* ── Force Refresh Panel ── */}
+        <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4">
+          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3">Force Refresh</p>
+          <div className="flex flex-wrap gap-3">
+            {[
+              { key: 'contests', label: 'Sync Contest Data', icon: RefreshCw, desc: 'Re-fetches CF + LC contests from APIs (bypasses 6h timer)' },
+              { key: 'stats', label: 'Clear Home Stats Cache', icon: Database, desc: 'Forces home page to re-query user/problem counts from DB' },
+            ].map(({ key, label, icon: Icon, desc }) => (
+              <div key={key} className="flex-1 min-w-[220px] bg-white/[0.03] border border-white/[0.07] rounded-lg p-3">
+                <div className="flex items-center justify-between gap-3 mb-1">
+                  <div>
+                    <p className="text-sm font-semibold text-white">{label}</p>
+                    <p className="text-[11px] text-gray-500 mt-0.5">{desc}</p>
+                  </div>
+                  <button
+                    onClick={() => forceRefresh(key)}
+                    disabled={forcing[key]}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/40 border border-emerald-500/30 text-emerald-400 text-xs font-medium rounded-lg transition-all disabled:opacity-50 flex-shrink-0"
+                  >
+                    <Icon size={11} className={forcing[key] ? 'animate-spin' : ''} />
+                    {forcing[key] ? 'Running…' : 'Run'}
+                  </button>
+                </div>
+                {forceMsg[key] && (
+                  <p className={`text-[11px] mt-2 px-2 py-1 rounded ${forceMsg[key].ok ? 'text-emerald-400 bg-emerald-500/10' : 'text-red-400 bg-red-500/10'}`}>
+                    {forceMsg[key].text}
+                  </p>
+                )}
+              </div>
+            ))}
           </div>
         </div>
 

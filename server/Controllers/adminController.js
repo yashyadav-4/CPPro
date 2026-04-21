@@ -1,4 +1,6 @@
 const User = require('../Model/User');
+const { clearStatsCache } = require('../Routes/publicStats');
+const { forceSyncContests } = require('../Workers/contestSyncWorker');
 const Platform = require('../Model/Platform');
 const Submission = require('../Model/Submissions');
 const Post = require('../Model/Post');
@@ -307,4 +309,24 @@ async function getAdminStats(req, res) {
     }
 }
 
-module.exports = { getAdminStats };
+async function refreshContests(req, res) {
+    try {
+        const count = await forceSyncContests();
+        res.json({ success: true, message: `Contest sync complete — ${count} contests updated.` });
+    } catch (err) {
+        console.error('Admin refreshContests error:', err);
+        res.status(500).json({ success: false, message: 'Contest sync failed: ' + err.message });
+    }
+}
+
+async function refreshStats(req, res) {
+    try {
+        clearStatsCache();
+        res.json({ success: true, message: 'Home stats cache cleared — next visit will re-fetch from DB.' });
+    } catch (err) {
+        console.error('Admin refreshStats error:', err);
+        res.status(500).json({ success: false, message: 'Failed to clear stats cache.' });
+    }
+}
+
+module.exports = { getAdminStats, refreshContests, refreshStats };
