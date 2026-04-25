@@ -42,6 +42,7 @@ const router = createBrowserRouter([
       { path: 'learning', element: withSuspense(<ProtectedRoute><LearningPage /></ProtectedRoute>) },
       { path: 'learning/cp', element: withSuspense(<ProtectedRoute><LearningPage /></ProtectedRoute>) },
       { path: 'learning/dsa', element: withSuspense(<ProtectedRoute><LearningPage /></ProtectedRoute>) },
+      { path: 'learning/resources', element: withSuspense(<ProtectedRoute><LearningPage /></ProtectedRoute>) },
       { path: 'settings', element: withSuspense(<ProtectedRoute><Settings /></ProtectedRoute>) },
 
       { path: 'contest-tracker', element: withSuspense(<ContestTracker />) },

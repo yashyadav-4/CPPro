@@ -40,7 +40,7 @@ export default function ContestTracker() {
                 Contest Tracker
               </h1>
               <p className="text-xs text-gray-400 dark:text-gray-500 font-normal mt-0.5">
-                Codeforces + LeetCode
+                Codeforces + LeetCode + CodeChef
               </p>
             </div>
 
@@ -57,7 +57,7 @@ export default function ContestTracker() {
                   <span>CF Attempted</span>
                 </div>
               </div>
-              
+
               {/* LC */}
               <div className="flex items-center gap-1.5 border-l border-gray-200 dark:border-white/10 pl-4">
                 <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-400/10 dark:bg-amber-400/15 border border-amber-400/20 text-amber-600 dark:text-amber-400">
@@ -67,6 +67,18 @@ export default function ContestTracker() {
                 <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-500 dark:bg-amber-600 border border-amber-600 text-white shadow-sm shadow-amber-500/20">
                   <div className="w-1.5 h-1.5 rounded-full bg-white" />
                   <span>LC Attempted</span>
+                </div>
+              </div>
+
+              {/* CC */}
+              <div className="flex items-center gap-1.5 border-l border-gray-200 dark:border-white/10 pl-4">
+                <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  <span>CC Unattempted</span>
+                </div>
+                <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-500 dark:bg-emerald-600 border border-emerald-600 text-white shadow-sm shadow-emerald-500/20">
+                  <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                  <span>CC Attempted</span>
                 </div>
               </div>
             </div>

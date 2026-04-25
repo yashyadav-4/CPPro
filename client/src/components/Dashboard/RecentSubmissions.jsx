@@ -14,14 +14,23 @@ const LC_BADGE = (
     LC
   </span>
 );
+const CC_BADGE = (
+  <span className="text-[9px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded flex-shrink-0">
+    CC
+  </span>
+);
 
 function timeAgo(value) {
   if (!value) return '';
-  // CF uses Date string, LC uses unix timestamp string
-  const ms = typeof value === 'number' || /^\d+$/.test(String(value))
-    ? Number(value) * 1000
+  // CF uses Date string, LC uses unix timestamp (seconds as string/number)
+  const raw = typeof value === 'number' ? value : Number(value);
+  const ms = !isNaN(raw) && /^\d+$/.test(String(value).trim())
+    ? (raw > 9_999_999_999 ? raw : raw * 1000)   // auto-detect seconds vs ms
     : new Date(value).getTime();
+  if (!ms || isNaN(ms) || ms <= 0) return '';
   const seconds = Math.floor((Date.now() - ms) / 1000);
+  // Negative seconds = future date (bad scraped data) — show the raw date instead
+  if (seconds < 0) return new Date(ms).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' });
   if (seconds < 60) return 'just now';
   if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
   if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
@@ -29,14 +38,24 @@ function timeAgo(value) {
   return new Date(ms).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
+const NOW_MS = Date.now();
+
 function getMs(value) {
   if (!value) return 0;
-  return typeof value === 'number' || /^\d+$/.test(String(value))
-    ? Number(value) * 1000
-    : new Date(value).getTime();
+  const raw = typeof value === 'number' ? value : Number(value);
+  if (!isNaN(raw) && /^\d+$/.test(String(value).trim())) {
+    // Pure numeric string — auto-detect seconds vs ms
+    return raw > 9_999_999_999 ? raw : raw * 1000;
+  }
+  return new Date(value).getTime();
 }
 
-export default function RecentSubmissions({ loading, cfSubmissions, lcSubmissions, view = 'all' }) {
+function isValidTime(value) {
+  const ms = getMs(value);
+  return ms > 0 && ms <= NOW_MS + 172_800_000; // reject epoch + future (48h buffer)
+}
+
+export default function RecentSubmissions({ loading, cfSubmissions, lcSubmissions, ccSubmissions, view = 'all' }) {
   if (loading) {
     return (
       <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4">
@@ -49,17 +68,19 @@ export default function RecentSubmissions({ loading, cfSubmissions, lcSubmission
   }
 
   // Normalise CF items
-  const cfItems = (cfSubmissions || []).map(s => ({
-    platform: 'cf',
-    title: s.title || s.problemId || 'Unknown',
-    url: s.url || null,
-    difficulty: s.difficulty ? `${s.difficulty}` : null,
-    time: s.submittedAt,
-  }));
+  const cfItems = (cfSubmissions || [])
+    .filter(s => isValidTime(s.submittedAt))
+    .map(s => ({
+      platform: 'cf',
+      title: s.title || s.problemId || 'Unknown',
+      url: s.url || null,
+      difficulty: s.difficulty ? `${s.difficulty}` : null,
+      time: s.submittedAt,
+    }));
 
   // Normalise LC items — filter to AC only (with session we get all statuses)
   const lcItems = (lcSubmissions || [])
-    .filter(s => !s.statusDisplay || s.statusDisplay === 'Accepted')
+    .filter(s => (!s.statusDisplay || s.statusDisplay === 'Accepted') && isValidTime(s.timestamp))
     .map(s => {
       const slug = s.titleSlug || s.title?.toLowerCase().replace(/\s+/g, '-') || '';
       return {
@@ -71,8 +92,19 @@ export default function RecentSubmissions({ loading, cfSubmissions, lcSubmission
       };
     });
 
-  // Merge + sort by time desc
-  const merged = [...cfItems, ...lcItems]
+  // Normalise CC items — filter future-dated entries before displaying
+  const ccItems = (ccSubmissions || [])
+    .filter(s => isValidTime(s.submittedAt))
+    .map(s => ({
+      platform: 'cc',
+      title: s.title || s.problemId || 'Unknown',
+      url: s.url || null,
+      difficulty: null,
+      time: s.submittedAt,
+    }));
+
+  // Merge + sort by time desc (most recent first)
+  const merged = [...cfItems, ...lcItems, ...ccItems]
     .sort((a, b) => getMs(b.time) - getMs(a.time))
     .slice(0, 10);
 
@@ -80,7 +112,9 @@ export default function RecentSubmissions({ loading, cfSubmissions, lcSubmission
     ? 'Recent AC Submissions (CF)'
     : view === 'lc'
       ? 'Recent AC Submissions (LC)'
-      : 'Recent AC Submissions';
+      : view === 'cc'
+        ? 'Recent AC Submissions (CC)'
+        : 'Recent AC Submissions';
 
   if (merged.length === 0) {
     return (
@@ -106,7 +140,7 @@ export default function RecentSubmissions({ loading, cfSubmissions, lcSubmission
             }`}
           >
             {/* Platform badge */}
-            {view === 'all' && (item.platform === 'cf' ? CF_BADGE : LC_BADGE)}
+            {view === 'all' && (item.platform === 'cf' ? CF_BADGE : item.platform === 'lc' ? LC_BADGE : CC_BADGE)}
 
             {/* Dot */}
             <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-emerald-500" />

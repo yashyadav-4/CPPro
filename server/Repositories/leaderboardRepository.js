@@ -7,6 +7,7 @@ const SORT_FIELD_MAP = {
     totalQuestions: 'totalSolved',
     leetcodeRating: 'lcRating',
     codeforcesRating: 'cfRating',
+    codechefRating: 'ccRating',
 };
 
 /**
@@ -48,7 +49,7 @@ function buildCorePipeline(scope, scopeValue) {
         }
     );
 
-    // ── 3. Extract CF & LC docs ──
+    // ── 3. Extract CF, LC & CC docs ──
     stages.push({
         $addFields: {
             codeforcesDoc: {
@@ -58,6 +59,18 @@ function buildCorePipeline(scope, scopeValue) {
                             input: "$platformStats",
                             as: 'p',
                             cond: { $eq: ["$$p.platform", "codeforces"] }
+                        }
+                    },
+                    0
+                ]
+            },
+            codechefDoc: {
+                $arrayElemAt: [
+                    {
+                        $filter: {
+                            input: "$platformStats",
+                            as: 'p',
+                            cond: { $eq: ["$$p.platform", "codechef"] }
                         }
                     },
                     0
@@ -107,18 +120,22 @@ function buildCorePipeline(scope, scopeValue) {
     // ── 5. Flatten stats + compute totalSolved early (needed for sort) ──
     stages.push({
         $addFields: {
-            cfRating: { $ifNull: ["$codeforcesDoc.currentRating", 0] },
-            cfSolved: { $ifNull: ["$codeforcesDoc.totalSolved", 0] },
-            lcRating: { $floor: { $ifNull: ["$lcLatestRating", 0] } },
-            cfStreak: { $ifNull: ["$codeforcesDoc.currentStreak", 0] },
-            lcStreak: { $ifNull: ["$lcDoc.calendar.streak", 0] },
+            cfRating:   { $ifNull: ["$codeforcesDoc.currentRating", 0] },
+            cfSolved:   { $ifNull: ["$codeforcesDoc.totalSolved", 0] },
+            lcRating:   { $floor: { $ifNull: ["$lcLatestRating", 0] } },
+            ccRating:   { $ifNull: ["$codechefDoc.currentRating", 0] },
+            ccSolved:   { $ifNull: ["$codechefDoc.totalSolved", 0] },
+            cfStreak:   { $ifNull: ["$codeforcesDoc.currentStreak", 0] },
+            lcStreak:   { $ifNull: ["$lcDoc.calendar.streak", 0] },
             cfContests: { $ifNull: ["$codeforcesDoc.contestsParticipated", 0] },
             lcContests: { $ifNull: ["$lcDoc.contestCount", 0] },
+            ccContests: { $ifNull: ["$codechefDoc.contestsParticipated", 0] },
             cfMaxRating: { $ifNull: ["$codeforcesDoc.maxRating", 0] },
             totalSolved: {
                 $add: [
                     { $ifNull: ["$codeforcesDoc.totalSolved", 0] },
-                    { $ifNull: ["$lcDoc.profile.totalSolved", 0] }
+                    { $ifNull: ["$lcDoc.profile.totalSolved", 0] },
+                    { $ifNull: ["$codechefDoc.totalSolved", 0] }
                 ]
             }
         }
@@ -132,13 +149,14 @@ function buildCorePipeline(scope, scopeValue) {
                     $add: [
                         { $multiply: ["$cfRating", 1.5] },
                         { $multiply: ["$lcRating", 1.2] },
+                        { $multiply: ["$ccRating", 1.1] },
                         { $multiply: [{ $ifNull: ["$codeforcesDoc.hardSolved", 0] }, 15] },
                         { $multiply: [{ $ifNull: ["$codeforcesDoc.mediumSolved", 0] }, 8] },
                         { $multiply: [{ $ifNull: ["$codeforcesDoc.easySolved", 0] }, 2] },
                         { $multiply: [{ $ifNull: ["$lcDoc.profile.hardSolved", 0] }, 20] },
                         { $multiply: [{ $ifNull: ["$lcDoc.profile.mediumSolved", 0] }, 8] },
                         { $multiply: [{ $ifNull: ["$lcDoc.profile.easySolved", 0] }, 2] },
-                        { $multiply: [{ $add: ["$cfContests", "$lcContests"] }, 10] },
+                        { $multiply: [{ $add: ["$cfContests", "$lcContests", "$ccContests"] }, 10] },
                         { $max: [0, { $multiply: [{ $subtract: ["$cfMaxRating", "$cfRating"] }, 0.5] }] },
                         {
                             $min: [
@@ -201,6 +219,8 @@ const getLeaderboardData = async (scope, scopeValue, category) => {
             cfSolved: 1,
             lcRating: 1,
             lcSolved: "$lcTotalSolved",
+            ccRating: 1,
+            ccSolved: 1,
             totalSolved: 1,
             isPublic: { $ifNull: ["$preferences.public", true] }
         }
@@ -233,6 +253,8 @@ const getUserRank = async (userId, scope, scopeValue, category) => {
             cfSolved: 1,
             lcRating: 1,
             lcSolved: "$lcTotalSolved",
+            ccRating: 1,
+            ccSolved: 1,
             totalSolved: 1,
             isPublic: { $ifNull: ["$preferences.public", true] }
         }

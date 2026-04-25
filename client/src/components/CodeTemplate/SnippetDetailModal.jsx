@@ -1,11 +1,11 @@
 import { useState } from "react"
-import { X, Trash2, Copy, Check, Code2, Calendar } from "lucide-react"
+import { X, Trash2, Copy, Check, Code2, Calendar, Pencil } from "lucide-react"
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import DeleteConfirmModal from "../common/DeleteConfirmModal"
 import { useTheme } from "../../hooks/useTheme"
 
-export default function SnippetDetailModal({ snippet, onClose, onDelete }) {
+export default function SnippetDetailModal({ snippet, onClose, onDelete, onEdit }) {
     const { isDark } = useTheme()
     const [copied, setCopied] = useState(false)
     const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -69,23 +69,32 @@ export default function SnippetDetailModal({ snippet, onClose, onDelete }) {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                        <button 
+                    <div className="flex items-center gap-2">
+                        <button
                             onClick={handleCopy}
                             className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-500 transition-all active:scale-95 shadow-lg shadow-emerald-900/20"
                         >
                             {copied ? <Check size={14} /> : <Copy size={14} />}
                             {copied ? "COPIED" : "COPY CODE"}
                         </button>
-                        <div className="w-px h-6 bg-white/10 mx-1" />
-                        <button 
+                        <button
+                            onClick={() => onEdit && onEdit(snippet)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs font-bold hover:bg-amber-500 hover:text-white transition-all active:scale-95"
+                            title="Edit snippet"
+                        >
+                            <Pencil size={13} />
+                            EDIT
+                        </button>
+                        <div className="w-px h-6 bg-white/10 mx-0.5" />
+                        <button
                             onClick={() => setShowDeleteModal(true)}
                             className="w-9 h-9 flex items-center justify-center rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500 hover:text-white transition-all group"
+                            title="Delete snippet"
                         >
-                            <Trash2 size={18} className="group-hover:scale-110 transition-transform" />
+                            <Trash2 size={16} className="group-hover:scale-110 transition-transform" />
                         </button>
-                        <button 
-                            className="w-9 h-9 flex items-center justify-center rounded-lg bg-white/5 text-gray-400 hover:text-white border border-white/10 transition-all hover:rotate-90" 
+                        <button
+                            className="w-9 h-9 flex items-center justify-center rounded-lg bg-white/5 text-gray-400 hover:text-white border border-white/10 transition-all hover:rotate-90"
                             onClick={onClose}
                         >
                             <X size={20} />

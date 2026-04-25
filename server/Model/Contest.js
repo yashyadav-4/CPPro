@@ -11,7 +11,7 @@ const contestSchema = new mongoose.Schema({
     },
     platform: {
         type:     String,
-        enum:     ['codeforces', 'leetcode'],
+        enum:     ['codeforces', 'leetcode', 'codechef'],
         required: true,
         index:    true,
     },

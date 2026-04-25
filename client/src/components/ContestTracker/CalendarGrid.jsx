@@ -21,6 +21,13 @@ const PLATFORM_META = {
     pillAttempted: 'bg-amber-500 dark:bg-amber-600 border-amber-600 text-white shadow-sm shadow-amber-500/20',
     label: 'LC',
   },
+  codechef: {
+    dot:   'bg-emerald-500',
+    pill:  'bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400',
+    dotAttempted: 'bg-white',
+    pillAttempted: 'bg-emerald-500 dark:bg-emerald-600 border-emerald-600 text-white shadow-sm shadow-emerald-500/20',
+    label: 'CC',
+  },
 };
 
 const Skeleton = ({ className = '' }) => (

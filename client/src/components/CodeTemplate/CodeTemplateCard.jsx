@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Code2, Copy, Check, ExternalLink } from "lucide-react"
+import { Code2, Copy, Check, ExternalLink, Pencil } from "lucide-react"
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 
@@ -34,7 +34,7 @@ const LANG_LABEL = {
     javascript: "JavaScript",
 }
 
-export default function CodeTemplateCard({ snippet, onViewSnippet }) {
+export default function CodeTemplateCard({ snippet, onViewSnippet, onEdit }) {
     const [copied, setCopied] = useState(false)
 
     const { _id, title, language, code, tags, createdAt, updatedAt } = snippet
@@ -124,12 +124,21 @@ export default function CodeTemplateCard({ snippet, onViewSnippet }) {
 
             <div className="px-5 py-3 border-t border-white/5 flex justify-between items-center mt-auto bg-white/[0.01]">
                 <span className="text-[10px] text-gray-500 font-bold tracking-wider">EST. {createdDate.toUpperCase()}</span>
-                <button 
-                    onClick={handleViewDetails}
-                    className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-500 hover:text-emerald-400 p-1 group/btn transition-all"
-                >
-                    VIEW DETAILS <ExternalLink size={12} className="group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5 transition-transform" />
-                </button>
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={e => { e.stopPropagation(); onEdit && onEdit(snippet); }}
+                        className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-500 hover:text-amber-400 p-1 transition-all"
+                        title="Edit snippet"
+                    >
+                        <Pencil size={11} /> EDIT
+                    </button>
+                    <button
+                        onClick={handleViewDetails}
+                        className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-500 hover:text-emerald-400 p-1 group/btn transition-all"
+                    >
+                        VIEW <ExternalLink size={12} className="group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5 transition-transform" />
+                    </button>
+                </div>
             </div>
         </div>
     )

@@ -94,6 +94,10 @@ const userSchema = new mongoose.Schema({
         type:Date,
         default:null
     },
+    lastCcUpdate:{
+        type:Date,
+        default:null
+    },
     lcSession: {
         iv:             { type: String, default: null },
         encryptedToken: { type: String, default: null },

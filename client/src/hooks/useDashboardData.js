@@ -6,11 +6,12 @@ const config = { withCredentials: true };
 export function useDashboardData() {
     const [cfData, setCfData] = useState(null);
     const [lcData, setLcData] = useState(null);
+    const [ccData, setCcData] = useState(null);
     const [userId, setUserId] = useState(null);
     const [userRole, setUserRole] = useState('user');
     const [userName, setUserName] = useState('');
     const [userUsername, setUserUsername] = useState('');
-    const [linkedAccounts, setLinkedAccounts] = useState({ codeforces: false, leetcode: false });
+    const [linkedAccounts, setLinkedAccounts] = useState({ codeforces: false, leetcode: false, codechef: false });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
@@ -27,13 +28,14 @@ export function useDashboardData() {
             const uid = user._id;
             const cfLinked = !!user.linkedAccounts?.codeforces;
             const lcLinked = !!user.linkedAccounts?.leetcode;
+            const ccLinked = !!user.linkedAccounts?.codechef;
             const role = user.role || 'user';
 
             setUserId(uid);
             setUserRole(role);
             setUserName(user.name || '');
             setUserUsername(user.username || '');
-            setLinkedAccounts({ codeforces: cfLinked, leetcode: lcLinked });
+            setLinkedAccounts({ codeforces: cfLinked, leetcode: lcLinked, codechef: ccLinked });
 
             // 2. Fire aggregate calls in parallel (only for linked platforms)
             const cfPromise = cfLinked
@@ -44,7 +46,11 @@ export function useDashboardData() {
                 ? axios.get(`/api/lc-dashboard/aggregate/${uid}`, config)
                 : Promise.resolve(null);
 
-            const [cfRes, lcRes] = await Promise.allSettled([cfPromise, lcPromise]);
+            const ccPromise = ccLinked
+                ? axios.get(`/api/cc-dashboard/aggregate/${uid}`, config)
+                : Promise.resolve(null);
+
+            const [cfRes, lcRes, ccRes] = await Promise.allSettled([cfPromise, lcPromise, ccPromise]);
 
             const newCfData = cfRes.status === 'fulfilled' && cfRes.value?.data?.data
                 ? cfRes.value.data.data
@@ -54,8 +60,13 @@ export function useDashboardData() {
                 ? lcRes.value.data.data
                 : null;
 
+            const newCcData = ccRes.status === 'fulfilled' && ccRes.value?.data?.data
+                ? ccRes.value.data.data
+                : null;
+
             setCfData(newCfData);
             setLcData(newLcData);
+            setCcData(newCcData);
         } catch (err) {
             console.error('[useDashboardData] fetch error:', err);
             if (!silent) setError(err.message || 'Failed to load dashboard data');
@@ -66,5 +77,5 @@ export function useDashboardData() {
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
-    return { cfData, lcData, userId, userRole, userName, userUsername, linkedAccounts, loading, error, refetch: fetchData };
+    return { cfData, lcData, ccData, userId, userRole, userName, userUsername, linkedAccounts, loading, error, refetch: fetchData };
 }

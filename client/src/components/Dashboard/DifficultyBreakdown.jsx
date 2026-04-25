@@ -91,7 +91,7 @@ export default function DifficultyBreakdown({ loading, cfBands, lcBands }) {
                className={`text-xs px-2.5 py-1 rounded-md font-medium transition-colors ${activeTab === 'cf'
                  ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-500'
                  : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
-             >CF</button>
+             >Codeforces</button>
           )}
           {hasLc && (
             <button
@@ -99,7 +99,7 @@ export default function DifficultyBreakdown({ loading, cfBands, lcBands }) {
                className={`text-xs px-2.5 py-1 rounded-md font-medium transition-colors ${activeTab === 'lc'
                  ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-500'
                  : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
-             >LC</button>
+             >LeetCode</button>
           )}
         </div>
       </div>

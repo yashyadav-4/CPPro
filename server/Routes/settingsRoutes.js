@@ -7,6 +7,8 @@ const {
     unlinkCodeforcesAccount,
     verifyLeetcodeAccount,
     unlinkLeetcodeAccount,
+    verifyCodeChefAccount,
+    unlinkCodeChefAccount,
     getProfile,
     updateProfile,
     saveLcSession,
@@ -26,6 +28,10 @@ router.delete('/unlink-cf', unlinkCodeforcesAccount);
 //leetcode
 router.post('/verify-lc', verifyLeetcodeAccount);
 router.delete('/unlink-lc', unlinkLeetcodeAccount);
+
+//codechef
+router.post('/verify-cc', verifyCodeChefAccount);
+router.delete('/unlink-cc', unlinkCodeChefAccount);
 
 //profile settings
 router.get('/profile', getProfile);

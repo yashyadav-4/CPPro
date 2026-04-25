@@ -81,6 +81,86 @@ const unlinkCodeforces = async(userId)=>{
     return {message:"Codeforces account unlinked successfully"};
 };
 
+// ── CodeChef verification ────────────────────────────────────────────────────
+// Route through CC server's /verify/:handle endpoint — it proxies through
+// residential proxies so Cloudflare doesn't block datacenter IPs.
+const CC_SYNC_API_SETTINGS    = (process.env.CC_SYNC_API || '').replace(/\/$/, '');
+const CC_SYNC_SECRET_SETTINGS = process.env.CC_SYNC_SECRET || '';
+
+const fetchCcRealName = async (ccHandle) => {
+    if (!CC_SYNC_API_SETTINGS || !CC_SYNC_SECRET_SETTINGS) {
+        throw new Error('CC_SYNC_API / CC_SYNC_SECRET not configured');
+    }
+    const res = await axios.get(`${CC_SYNC_API_SETTINGS}/verify/${encodeURIComponent(ccHandle)}`, {
+        headers: { Authorization: `Bearer ${CC_SYNC_SECRET_SETTINGS}` },
+        timeout: 20_000,
+    });
+    if (!res.data || res.data.name === undefined) throw new Error('CodeChef user not found');
+    return res.data.name || '';
+};
+
+const verifyAndLinkCodechef = async (userId, handle) => {
+    const cleanHandle = handle.trim();
+    const user = await User.findById(userId);
+
+    if (!user.verificationCode) {
+        const err = new Error("No verification code found. Please generate one first");
+        err.status = 400;
+        throw err;
+    }
+
+    let realName;
+    try {
+        realName = await fetchCcRealName(cleanHandle);
+    } catch (error) {
+        const msg = error.message.includes('not found') ? 'CodeChef handle not found' : 'CodeChef API unavailable — try again';
+        const err = new Error(msg);
+        err.status = 400;
+        throw err;
+    }
+
+    const code = user.verificationCode;
+    if (!realName.includes(code)) {
+        const err = new Error("CodeChef handle verification failed. Make sure the verification code is in your CodeChef 'Name' field.");
+        err.status = 400;
+        throw err;
+    }
+
+    await User.findByIdAndUpdate(
+        userId,
+        {
+            $set: { "linkedAccounts.codechef": cleanHandle, lastCcUpdate: null },
+            $unset: { verificationCode: "" }
+        },
+        { new: true }
+    );
+
+    const ccSyncService = require('./ccSyncService');
+    ccSyncService.syncCodeChefProfile(userId, cleanHandle)
+        .then(() => console.log(`[VERIFY-CC] initial sync complete for ${cleanHandle}`))
+        .catch(err => console.error(`[VERIFY-CC] initial sync failed for ${cleanHandle}:`, err.message));
+
+    return { message: `linking CodeChef account successful: ${cleanHandle}` };
+};
+
+const unlinkCodechef = async (userId) => {
+    const user = await User.findById(userId);
+    if (!user?.linkedAccounts?.codechef) {
+        const err = new Error("No CodeChef account is linked");
+        err.status = 400;
+        throw err;
+    }
+    await User.findByIdAndUpdate(userId, {
+        $set: { "linkedAccounts.codechef": "", lastCcUpdate: null },
+        $unset: { verificationCode: "" }
+    });
+    const Platform = require('../Model/Platform');
+    const Submission = require('../Model/Submissions');
+    await Platform.deleteMany({ userId, platform: 'codechef' });
+    await Submission.deleteMany({ userId, platform: 'codechef' });
+    return { message: "CodeChef account unlinked successfully" };
+};
+
 // LeetCode verification — proxy through NexusLC to avoid Cloudflare 403 on datacenter IPs.
 // Falls back to direct call only when NexusLC is not configured (local dev).
 const LC_SYNC_API    = (process.env.LC_SYNC_API || '').replace(/\/$/, '');
@@ -195,7 +275,9 @@ const updateUserProfile = async(userId, fields) =>{
     if(fields.country !== undefined) updateSet["location.country"] = fields.country.trim();
     if(fields.state !== undefined) updateSet["location.state"] = fields.state.trim();
     if(fields.city !== undefined) updateSet["location.city"] = fields.city.trim();
-    if(fields.college !== undefined) updateSet["college"] = fields.college.trim();
+    if(fields.college !== undefined) {
+        updateSet["college"] = fields.college.trim().replace(/\s+/g, ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+    }
     // preferences
     if(fields.public !== undefined) updateSet["preferences.public"] = Boolean(fields.public);
 
@@ -281,6 +363,8 @@ module.exports ={
     unlinkCodeforces,
     verifyAndLinkLeetcode,
     unlinkLeetcode,
+    verifyAndLinkCodechef,
+    unlinkCodechef,
     getProfile,
     updateUserProfile,
     saveLcSession,

@@ -27,7 +27,7 @@ const submissionSchema= new mongoose.Schema({
     verdict:{
         type:String,
         required:true,
-        enum:['AC' , 'WA', 'TLE', 'MLE', 'RE', 'CE', 'OTHER']
+        enum:['AC' , 'WA', 'TLE', 'MLE', 'RE', 'CE', 'PA', 'OTHER']
     },
     difficulty:{
         type:String,

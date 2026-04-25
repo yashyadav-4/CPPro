@@ -23,7 +23,15 @@ function LeetCodeMark({ className = '' }) {
     );
 }
 
-export default function TotalContests({ loading, cfContests = 0, lcContests = 0, cfBestRank, lcBestRank }) {
+function CodeChefMark({ className = '' }) {
+    return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="#5B8A00" className={className}>
+            <path d="M12 2C9.24 2 7 4.24 7 7c0 1.67.82 3.14 2.07 4.05C8.4 11.66 8 12.29 8 13v1h8v-1c0-.71-.4-1.34-1.07-1.95C16.18 10.14 17 8.67 17 7c0-2.76-2.24-5-5-5zm0 2c1.65 0 3 1.35 3 3s-1.35 3-3 3-3-1.35-3-3 1.35-3 3-3zM8 15v1c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-1H8zm-1 3v1c0 .55.45 1 1 1h8c.55 0 1-.45 1-1v-1H7z"/>
+        </svg>
+    );
+}
+
+export default function TotalContests({ loading, cfContests = 0, lcContests = 0, ccContests = 0, cfBestRank, lcBestRank, ccBestRank }) {
   if (loading) {
     return (
       <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-6 flex flex-col justify-center min-h-[140px]">
@@ -35,15 +43,16 @@ export default function TotalContests({ loading, cfContests = 0, lcContests = 0,
           <div className="flex-1 flex flex-col gap-3">
             <Skeleton className="h-8 w-full" />
             <Skeleton className="h-8 w-full" />
+            <Skeleton className="h-8 w-full" />
           </div>
         </div>
       </div>
     );
   }
 
-  const total = cfContests + lcContests;
-  
-  const validRanks = [cfBestRank, lcBestRank].filter(r => r != null && r > 0);
+  const total = cfContests + lcContests + ccContests;
+
+  const validRanks = [cfBestRank, lcBestRank, ccBestRank].filter(r => r != null && r > 0);
   const globalBest = validRanks.length > 0 ? Math.min(...validRanks) : null;
 
   return (
@@ -83,6 +92,18 @@ export default function TotalContests({ loading, cfContests = 0, lcContests = 0,
               </div>
             </div>
             <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{cfContests}</span>
+          </div>
+        )}
+        {ccContests > 0 && (
+          <div className="flex items-center justify-between px-4 py-2.5 bg-gray-50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/[0.05] rounded-lg">
+            <div className="flex items-center gap-2.5">
+              <CodeChefMark />
+              <div className="flex flex-col">
+                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300">CodeChef</span>
+                 {ccBestRank && <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">Best Rank: {ccBestRank}</span>}
+              </div>
+            </div>
+            <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{ccContests}</span>
           </div>
         )}
         {total === 0 && (

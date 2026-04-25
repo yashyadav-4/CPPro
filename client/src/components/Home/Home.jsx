@@ -477,7 +477,7 @@ export default function Home(){
           <motion.div initial="hidden" animate="visible" variants={stagger}>
             <motion.div variants={fadeUp} style={{display:"inline-flex",alignItems:"center",gap:"0.5rem",background:t.accentBg,border:`1px solid ${t.accentBdr}`,borderRadius:20,padding:"0.32rem 0.85rem",marginBottom:"1.8rem"}}>
               <motion.span animate={{scale:[1,1.35,1]}} transition={{duration:2,repeat:Infinity}} style={{display:"inline-block",width:6,height:6,borderRadius:"50%",background:t.accent}}/>
-              <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:"0.6rem",color:t.accent,fontWeight:600,letterSpacing:"0.04em"}}>Codeforces + LeetCode unified</span>
+              <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:"0.6rem",color:t.accent,fontWeight:600,letterSpacing:"0.04em"}}>Codeforces + LeetCode + CodeChef unified</span>
             </motion.div>
 
             <motion.h1 style={{y:heroY,fontFamily:"'DM Sans',sans-serif",fontSize:"clamp(2.9rem,7vw,6.5rem)",fontWeight:800,lineHeight:1.05,color:t.heading,letterSpacing:"-0.03em",marginBottom:"1.5rem",maxWidth:780}}>

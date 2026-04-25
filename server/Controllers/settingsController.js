@@ -59,6 +59,30 @@ const unlinkLeetcodeAccount = async (req, res) => {
     }
 };
 
+const verifyCodeChefAccount = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { handle } = req.body;
+        if (!handle) {
+            return res.status(400).json({ success: false, message: "CodeChef handle required" });
+        }
+        const result = await settingsService.verifyAndLinkCodechef(userId, handle);
+        return res.status(200).json({ success: true, message: result.message });
+    } catch (error) {
+        return res.status(error.status || 500).json({ success: false, message: error.message });
+    }
+};
+
+const unlinkCodeChefAccount = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const result = await settingsService.unlinkCodechef(userId);
+        return res.status(200).json({ success: true, message: result.message });
+    } catch (error) {
+        return res.status(error.status || 500).json({ success: false, message: error.message });
+    }
+};
+
 const getProfile = async (req, res) => {
     try {
         const userId = req.user._id;
@@ -122,6 +146,8 @@ module.exports = {
     unlinkCodeforcesAccount,
     verifyLeetcodeAccount,
     unlinkLeetcodeAccount,
+    verifyCodeChefAccount,
+    unlinkCodeChefAccount,
     getProfile,
     updateProfile,
     saveLcSession,

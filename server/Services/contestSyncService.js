@@ -124,23 +124,66 @@ async function fetchLC() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// CodeChef — starters-api (public JSON endpoint)
+// Returns upcoming + recent rated contests.
+// ─────────────────────────────────────────────────────────────────────────────
+async function fetchCC() {
+    // CodeChef's public contest list endpoint
+    const { data } = await http.get('https://www.codechef.com/api/list/contests/all?sort_by=START&sorting_order=asc&offset=0&mode=all');
+    if (!data || !data.present_contests) throw new Error('CC contest API unexpected response');
+
+    const now    = Date.now();
+    const BACK    = 180 * 24 * 3600 * 1000;
+    const FORWARD = 30 * 24 * 3600 * 1000;
+
+    const all = [
+        ...(data.present_contests || []),
+        ...(data.future_contests || []),
+        ...(data.past_contests || []),
+    ];
+
+    return all
+        .filter(c => {
+            const start = new Date(c.contest_start_date_iso || c.contest_start_date).getTime();
+            return start >= now - BACK && start <= now + FORWARD;
+        })
+        .map(c => {
+            const startTime = new Date(c.contest_start_date_iso || c.contest_start_date);
+            const endTime   = new Date(c.contest_end_date_iso || c.contest_end_date);
+            const durSec    = Math.max(0, (endTime - startTime) / 1000);
+            return {
+                contestId: makeId('codechef', c.contest_name, startTime),
+                platform:  'codechef',
+                name:      c.contest_name,
+                startTime,
+                endTime,
+                duration:  Math.round(durSec / 60),
+                url:       `https://www.codechef.com/${c.contest_code}`,
+                status:    'BEFORE',
+            };
+        });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Main sync function — called by the cron worker
 // ─────────────────────────────────────────────────────────────────────────────
 async function syncContests() {
     console.log('[contestSync] Starting sync…');
 
-    // 1. Fetch from both APIs in parallel (partial failure is OK)
-    const [cfRes, lcRes] = await Promise.allSettled([fetchCF(), fetchLC()]);
+    // 1. Fetch from all APIs in parallel (partial failure is OK)
+    const [cfRes, lcRes, ccRes] = await Promise.allSettled([fetchCF(), fetchLC(), fetchCC()]);
 
     if (cfRes.status === 'rejected') console.error('[contestSync] CF failed:', cfRes.reason?.message);
     if (lcRes.status === 'rejected') console.error('[contestSync] LC failed:', lcRes.reason?.message);
+    if (ccRes.status === 'rejected') console.error('[contestSync] CC failed:', ccRes.reason?.message);
 
     const contests = [
         ...(cfRes.status === 'fulfilled' ? cfRes.value : []),
         ...(lcRes.status === 'fulfilled' ? lcRes.value : []),
+        ...(ccRes.status === 'fulfilled' ? ccRes.value : []),
     ];
 
-    console.log(`[contestSync] Fetched ${contests.length} contests (CF + LC)`);
+    console.log(`[contestSync] Fetched ${contests.length} contests (CF + LC + CC)`);
 
     // 2. Upsert all contests — update fields if the contest already exists
     if (contests.length > 0) {

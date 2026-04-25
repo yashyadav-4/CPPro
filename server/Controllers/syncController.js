@@ -2,8 +2,10 @@ const axios = require('axios');
 const User = require('../Model/User');
 const syncService = require('../Services/cfSyncService');
 const lcSyncService = require('../Services/lcSyncService');
+const ccSyncService = require('../Services/ccSyncService');
 const dashboardService = require('../Services/cfDashboardService');
 const LeetCodeData = require('../Model/LeetCodeData');
+const Platform = require('../Model/Platform');
 const { getDecryptedLcSession } = require('../Services/settingsService');
 
 const CF_SYNC_API    = (process.env.CF_SYNC_API    || 'http://localhost:3001').replace(/\/$/, '');
@@ -154,4 +156,70 @@ async function handleCfHealthCheck(_req, res) {
     }
 }
 
-module.exports = { handleManualRefresh, handleLcManualRefresh, handleLcHealthCheck, handleCfHealthCheck };
+async function handleCcManualRefresh(req, res) {
+    try {
+        const userId = req.user._id;
+        const user = await User.findById(userId);
+
+        if (!user || !user.linkedAccounts || !user.linkedAccounts.codechef) {
+            return res.status(400).json({ success: false, message: 'no codechef account linked' });
+        }
+        const handle = user.linkedAccounts.codechef;
+        const role = user.role || 'user';
+        const cooldown = role === 'admin' ? ADMIN_COOLDOWN : FIFTEEN_MINUTES;
+
+        const timeSinceUpdate = user.lastCcUpdate
+            ? Date.now() - new Date(user.lastCcUpdate).getTime()
+            : Infinity;
+
+        if (timeSinceUpdate < cooldown) {
+            const remainingSeconds = Math.ceil((cooldown - timeSinceUpdate) / 1000);
+            const ccData = await Platform.findOne({ userId, platform: 'codechef' }).lean();
+            return res.status(200).json({
+                success: true,
+                freshness: 'fresh',
+                remainingSeconds,
+                message: 'CodeChef data is up to date',
+                data: ccData,
+            });
+        }
+
+        await User.findByIdAndUpdate(userId, { $set: { lastCcUpdate: new Date() } });
+
+        try {
+            await ccSyncService.syncCodeChefProfile(userId, handle);
+        } catch (err) {
+            console.error('[CC-SYNC] sync failed:', err.message);
+            await User.findByIdAndUpdate(userId, { $set: { lastCcUpdate: user.lastCcUpdate || null } });
+            return res.status(500).json({ success: false, message: `Sync failed: ${err.message}` });
+        }
+
+        const ccData = await Platform.findOne({ userId, platform: 'codechef' }).lean();
+        return res.status(200).json({
+            success: true,
+            freshness: 'synced',
+            remainingSeconds: Math.ceil(cooldown / 1000),
+            message: 'CodeChef data synced successfully',
+            data: ccData,
+        });
+    } catch (error) {
+        console.error('[CC-SYNC] manual refresh error:', error);
+        return res.status(500).json({ success: false, message: 'internal server error during codechef sync' });
+    }
+}
+
+async function handleCcHealthCheck(_req, res) {
+    try {
+        const health = await ccSyncService.checkCcServerHealth();
+        return res.status(200).json({ success: true, ccServer: health });
+    } catch (error) {
+        console.error('[CC-HEALTH] CC server health check failed:', error.message);
+        return res.status(503).json({
+            success: false,
+            message: 'CC server is unreachable',
+            detail: error.message,
+        });
+    }
+}
+
+module.exports = { handleManualRefresh, handleLcManualRefresh, handleLcHealthCheck, handleCfHealthCheck, handleCcManualRefresh, handleCcHealthCheck };

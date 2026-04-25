@@ -271,10 +271,15 @@ export default function PostDetailModal({ post, onClose, onVoteToggle, onPinTogg
                         <span className="text-[10px] text-gray-400 dark:text-gray-600">
                           {timeAgo(comment.createdAt)}
                         </span>
-                        {currentUserId === comment.authorId && (
+                        {(currentUserId === comment.authorId || currentUser?.role === 'admin') && (
                           <button
-                            className="text-gray-300 dark:text-gray-700 hover:text-red-500 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
+                            className={`hover:text-red-500 dark:hover:text-red-400 transition-all ${
+                              currentUser?.role === 'admin' && currentUserId !== comment.authorId
+                                ? 'text-gray-400 dark:text-gray-500 opacity-0 group-hover:opacity-100'
+                                : 'text-gray-300 dark:text-gray-700 opacity-0 group-hover:opacity-100'
+                            }`}
                             onClick={() => setCommentToDelete(comment._id)}
+                            title={currentUser?.role === 'admin' && currentUserId !== comment.authorId ? 'Delete (Admin)' : 'Delete'}
                           >
                             <Trash2 size={12} />
                           </button>

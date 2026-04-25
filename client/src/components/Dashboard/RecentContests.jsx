@@ -35,6 +35,7 @@ export default function RecentContests({ loading, contests }) {
       <div className="flex flex-col divide-y divide-gray-100 dark:divide-white/[0.04] overflow-y-auto custom-scrollbar pr-1">
         {list.map((c, i) => {
           const isCf = c.platform === 'codeforces';
+          const isCc = c.platform === 'codechef';
           const delta = c.ratingChange;
           const deltaStr = delta > 0 ? `+${delta}` : `${delta}`;
           const deltaColor = delta > 0
@@ -43,13 +44,18 @@ export default function RecentContests({ loading, contests }) {
               ? 'text-red-500'
               : 'text-gray-400';
 
+          const badgeStyle = isCf
+            ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-500'
+            : isCc
+              ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-500'
+              : 'bg-amber-50 dark:bg-amber-950/40 text-amber-500';
+          const badgeLabel = isCf ? 'CF' : isCc ? 'CC' : 'LC';
+
           return (
             <a key={i} href={c.url || '#'} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 py-2.5 hover:bg-amber-50 dark:hover:bg-amber-400/10 px-2 -mx-2 rounded-lg transition-colors">
               {/* Platform badge */}
-              <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded shrink-0 ${
-                isCf ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-500' : 'bg-amber-50 dark:bg-amber-950/40 text-amber-500'
-              }`}>
-                {isCf ? 'CF' : 'LC'}
+              <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded shrink-0 ${badgeStyle}`}>
+                {badgeLabel}
               </span>
 
               {/* Name */}

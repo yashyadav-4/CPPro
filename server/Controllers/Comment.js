@@ -27,7 +27,9 @@ async function handleDeleteComment(req , res){
         if(!comment){
             return res.status(404).json({message: "comment not found to delete"});
         }
-        if(comment.authorId.toString()!== req.user._id.toString() ){
+        const isOwner = comment.authorId.toString() === req.user._id.toString();
+        const isAdmin = req.user.role === 'admin';
+        if (!isOwner && !isAdmin) {
             return res.status(403).json({message: "you are unauthorized to delete this comment"});
         }
         const postId= comment.postId;

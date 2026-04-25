@@ -22,6 +22,7 @@ export default function CodeTemplate() {
     const [currentPage, setCurrentPage] = useState(1)
     const [showAddModal, setShowAddModal] = useState(false)
     const [selectedSnippet, setSelectedSnippet] = useState(null)
+    const [editingSnippet, setEditingSnippet] = useState(null)
     const [loading, setLoading] = useState(true)
     const [fetchError, setFetchError] = useState(null)
 
@@ -65,8 +66,14 @@ export default function CodeTemplate() {
 
     const handleSnippetAdded = useCallback(() => {
         setShowAddModal(false)
+        setEditingSnippet(null)
         fetchSnippets()
     }, [fetchSnippets])
+
+    function handleEditSnippet(snippet) {
+        setSelectedSnippet(null)   // close detail modal first
+        setEditingSnippet(snippet) // open edit modal
+    }
 
     const tagPills = [...new Set(snippets.flatMap(s => s.tags || []))]
 
@@ -178,6 +185,7 @@ export default function CodeTemplate() {
                 <CodeTemplateList
                     snippets={paginatedSnippets}
                     onDelete={handleDelete}
+                    onEdit={handleEditSnippet}
                     loading={loading}
                     currentPage={currentPage}
                     totalPages={totalPages}
@@ -193,12 +201,22 @@ export default function CodeTemplate() {
                     />
                 )}
 
+                {/* Edit Modal */}
+                {editingSnippet && (
+                    <AddSnippetModal
+                        initialSnippet={editingSnippet}
+                        onClose={() => setEditingSnippet(null)}
+                        onAddLocal={handleSnippetAdded}
+                    />
+                )}
+
                 {/* Detail Modal */}
                 {selectedSnippet && (
                     <SnippetDetailModal
                         snippet={selectedSnippet}
                         onClose={() => setSelectedSnippet(null)}
                         onDelete={handleDelete}
+                        onEdit={handleEditSnippet}
                     />
                 )}
             </div>

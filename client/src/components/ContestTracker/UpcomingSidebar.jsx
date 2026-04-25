@@ -14,6 +14,11 @@ const PLATFORM_META = {
     badge:  'bg-amber-400/10 dark:bg-amber-400/15 border border-amber-400/20 text-amber-600 dark:text-amber-400',
     abbr:   'LC',
   },
+  codechef: {
+    dot:    'bg-emerald-500',
+    badge:  'bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400',
+    abbr:   'CC',
+  },
 };
 
 const MONTH_ABBR = ['JAN','FEB','MAR','APR','MAY','JUN',

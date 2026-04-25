@@ -6,8 +6,9 @@ import PodiumCard from './PodiumCard';
 const CATEGORIES = [
   { key: 'cpscore', label: 'CPScore', icon: '🏆' },
   { key: 'totalQuestions', label: 'Total Questions', icon: '📝' },
-  { key: 'leetcodeRating', label: 'Leetcode Rating', icon: '💡' },
   { key: 'codeforcesRating', label: 'Codeforces Rating', icon: '⚡' },
+  { key: 'leetcodeRating', label: 'Leetcode Rating', icon: '💡' },
+  { key: 'codechefRating', label: 'CodeChef Rating', icon: '🍴' },
 ];
 
 const SCOPES = [
@@ -21,6 +22,7 @@ const CATEGORY_VALUE_MAP = {
   totalQuestions: 'totalSolved',
   leetcodeRating: 'lcRating',
   codeforcesRating: 'cfRating',
+  codechefRating: 'ccRating',
 };
 
 function getPrimaryValue(user, category) {
@@ -252,6 +254,7 @@ export default function LeaderBoard() {
                   <th className="px-4 py-3 font-semibold text-right">CP Score</th>
                   <th className="px-4 py-3 font-semibold text-right">CF Rating</th>
                   <th className="px-4 py-3 font-semibold text-right">LC Rating</th>
+                  <th className="px-4 py-3 font-semibold text-right">CC Rating</th>
                   <th className="px-4 py-3 font-semibold text-right">Total Solved</th>
                 </tr>
               </thead>
@@ -292,6 +295,11 @@ export default function LeaderBoard() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">
+                      <span className={`text-sm font-medium ${category === 'codechefRating' ? 'text-emerald-400' : 'text-gray-300'}`}>
+                        {user.ccRating || '—'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right">
                       <span className={`text-sm font-medium ${category === 'totalQuestions' ? 'text-emerald-400' : 'text-gray-300'}`}>
                         {user.totalSolved || 0}
                       </span>
@@ -315,7 +323,7 @@ export default function LeaderBoard() {
         {/* Score formula */}
         <div className="mt-6 p-4 bg-gray-50 dark:bg-[#111111] rounded-lg border border-gray-200 dark:border-gray-200 dark:border-white/[0.08]">
           <p className="text-xs text-gray-500 text-center">
-            <strong>Score Formula:</strong> (CF Rating × 1.5) + (LC Rating × 1.2) + Difficulty Weighting + Contest Bonus + Max Rating Bonus + Streak Bonus
+            <strong>Score Formula:</strong> (CF Rating × 1.5) + (LC Rating × 1.2) + (CC Rating × 1.1) + Difficulty Weighting + Contest Bonus + Max Rating Bonus + Streak Bonus
           </p>
         </div>
       </div>

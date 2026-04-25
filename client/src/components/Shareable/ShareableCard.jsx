@@ -47,6 +47,8 @@ function getThemeVars(isDark) {
   }
 }
 
+const CC_EMERALD = EMERALD;
+
 const CF_RANK_COLOR = {
   'newbie': '#9ca3af', 'pupil': '#22c55e', 'specialist': '#06b6d4',
   'expert': '#3b82f6', 'candidate master': '#8b5cf6', 'master': '#f97316',
@@ -59,12 +61,25 @@ const LC_RANK_COLOR = {
   'knight': '#14b8a6', 'guardian': '#10b981',
   'unrated': '#6b7280',
 };
+const CC_RANK_COLOR = {
+  '1 star': '#9ca3af', '2 star': '#22c55e', '3 star': '#06b6d4',
+  '4 star': '#3b82f6', '5 star': '#f59e0b', '6 star': '#f97316',
+  '7 star': '#ef4444', 'unrated': '#6b7280',
+};
 const rankColor = (platform, rank) => {
-  const map = platform === 'cf' ? CF_RANK_COLOR : LC_RANK_COLOR;
+  const map = platform === 'cf' ? CF_RANK_COLOR : platform === 'cc' ? CC_RANK_COLOR : LC_RANK_COLOR;
   return map[(rank || '').toLowerCase()] || '#6b7280';
 };
 
 // ── Platform SVGs ─────────────────────────────────────────────────────────────
+function CodeChefMark({ size = 22 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path d="M12 2C8.5 2 6 5 6 8c0 1.5.5 3 1.5 4C6 13.5 5 15.5 5 17.5 5 20.5 7.5 22 12 22s7-1.5 7-4.5c0-2-.9-4-2.5-5.5C17.5 11 18 9.5 18 8c0-3-2.5-6-6-6z" fill="#10b981" opacity="0.9" />
+      <path d="M12 5c-2 0-3.5 1.5-3.5 3.5S10 12 12 12s3.5-1.5 3.5-3.5S14 5 12 5z" fill="white" opacity="0.85" />
+    </svg>
+  );
+}
 function CodeforcesMark({ size = 22 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -84,15 +99,19 @@ function LeetCodeMark({ size = 22 }) {
 }
 
 // ── Smart headline ─────────────────────────────────────────────────────────────
-function buildHeadline({ totalSolved, bestStreak, solvedThisMonth, activeDays }) {
+function buildHeadline({ totalSolved, bestStreak, solvedThisMonth, activeDays, platforms }) {
+  const names = (platforms || []).join(', ');
   if (solvedThisMonth > 0) {
     return `${solvedThisMonth} problems solved this month — momentum building.`;
   }
   if (bestStreak >= 7 && activeDays > 0) {
     return `Best streak of ${bestStreak} days across ${activeDays} total active days.`;
   }
+  if (totalSolved > 0 && names) {
+    return `${totalSolved.toLocaleString()} problems solved across ${names}.`;
+  }
   if (totalSolved > 0) {
-    return `${totalSolved.toLocaleString()} problems solved across Codeforces and LeetCode.`;
+    return `${totalSolved.toLocaleString()} problems solved and counting.`;
   }
   return `On the climb — every submission counts.`;
 }
@@ -107,7 +126,9 @@ const ShareableCard = forwardRef(function ShareableCard({
   userUsername = '',
   cfHandle = null, cfRating = 0, cfMaxRating = 0, cfRank = null,
   lcHandle = null, lcRating = 0, lcMaxRating = 0, lcRank = null,
-  cfSolved = 0, lcSolved = 0,
+  ccHandle = null, ccRating = 0, ccMaxRating = 0, ccRank = null,
+  cfSolved = 0, lcSolved = 0, ccSolved = 0,
+  ccRatingHistory = [],
   currentStreak = 0, bestStreak = 0,
   cfCurrentStreak = 0, lcStreak = 0,
   acceptanceRate = null,
@@ -134,7 +155,8 @@ const ShareableCard = forwardRef(function ShareableCard({
   
   const RankPill = ({ rank, total, label, accent }) => {
     if (!rank || rank <= 0) return null;
-    const pct = total ? Math.round((1 - rank / total) * 100) : null;
+    // Only show percentage when leaderboard is large enough to be meaningful
+    const pct = (total && total >= 10) ? Math.round((1 - rank / total) * 100) : null;
     const rgbMap = { [EMERALD]: '16,185,129', [CF_BLUE]: '59,130,246', [LC_AMBER]: '245,158,11' };
     const rgb = rgbMap[accent] || '16,185,129';
     return (
@@ -194,10 +216,11 @@ const ShareableCard = forwardRef(function ShareableCard({
 
   const PlatformPanel = ({ platform, handle, rating, maxRating, rank }) => {
     const isCf = platform === 'cf';
-    const name = isCf ? 'Codeforces' : 'LeetCode';
-    const accent = isCf ? CF_BLUE : LC_AMBER;
-    const Icon = isCf ? CodeforcesMark : LeetCodeMark;
-    const rc = rankColor(isCf ? 'cf' : 'lc', rank);
+    const isCc = platform === 'cc';
+    const name = isCf ? 'Codeforces' : isCc ? 'CodeChef' : 'LeetCode';
+    const accent = isCf ? CF_BLUE : isCc ? CC_EMERALD : LC_AMBER;
+    const Icon = isCf ? CodeforcesMark : isCc ? CodeChefMark : LeetCodeMark;
+    const rc = rankColor(platform, rank);
     return (
       <div style={{ background: theme.CARD_BG_ELEVATED, border: `1px solid ${theme.BORDER}`, borderRadius: 14, padding: '18px 22px', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: accent, opacity: 0.9 }} />
@@ -228,12 +251,16 @@ const ShareableCard = forwardRef(function ShareableCard({
 
   const PlatformBadge = ({ platform }) => {
     const isCf = platform === 'cf';
-    const accent = isCf ? CF_BLUE : LC_AMBER;
-    const Icon = isCf ? CodeforcesMark : LeetCodeMark;
+    const isCc = platform === 'cc';
+    const accent = isCf ? CF_BLUE : isCc ? CC_EMERALD : LC_AMBER;
+    const bg = isCf ? 'rgba(59,130,246,0.12)' : isCc ? 'rgba(16,185,129,0.12)' : 'rgba(245,158,11,0.12)';
+    const border = isCf ? 'rgba(59,130,246,0.25)' : isCc ? 'rgba(16,185,129,0.25)' : 'rgba(245,158,11,0.25)';
+    const Icon = isCf ? CodeforcesMark : isCc ? CodeChefMark : LeetCodeMark;
+    const label = isCf ? 'CF' : isCc ? 'CC' : 'LC';
     return (
-      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 999, background: isCf ? 'rgba(59,130,246,0.12)' : 'rgba(245,158,11,0.12)', border: `1px solid ${isCf ? 'rgba(59,130,246,0.25)' : 'rgba(245,158,11,0.25)'}` }}>
+      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 999, background: bg, border: `1px solid ${border}` }}>
         <Icon size={12} />
-        <span style={{ fontFamily: FONT_SANS, fontSize: 11, fontWeight: 700, color: accent, letterSpacing: '0.1em' }}>{isCf ? 'CF' : 'LC'}</span>
+        <span style={{ fontFamily: FONT_SANS, fontSize: 11, fontWeight: 700, color: accent, letterSpacing: '0.1em' }}>{label}</span>
       </div>
     );
   };
@@ -293,18 +320,27 @@ const ShareableCard = forwardRef(function ShareableCard({
     );
   };
 
-  const RatingGraph = ({ cfHistory = [], lcHistory = [], width = 540, height = 70 }) => {
+  const RatingGraph = ({ cfHistory = [], lcHistory = [], ccHistory = [], width = 540, height = 70 }) => {
+    const sparklines = [
+      cfHistory.length >= 2 ? { history: cfHistory, color: CF_BLUE } : null,
+      lcHistory.length >= 2 ? { history: lcHistory, color: LC_AMBER } : null,
+      ccHistory.length >= 2 ? { history: ccHistory, color: CC_EMERALD } : null,
+    ].filter(Boolean);
+    if (sparklines.length === 0) return null;
+    const gap = 16;
+    const w = (width - gap * (sparklines.length - 1)) / sparklines.length;
     return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 20, width }}>
-        <PlatformSparkline history={cfHistory} color={CF_BLUE} width={(width - 20) / 2} height={height} />
-        <PlatformSparkline history={lcHistory} color={LC_AMBER} width={(width - 20) / 2} height={height} />
+      <div style={{ display: 'flex', alignItems: 'center', gap, width }}>
+        {sparklines.map((s, i) => (
+          <PlatformSparkline key={i} history={s.history} color={s.color} width={w} height={height} />
+        ))}
       </div>
     );
   };
 
   // ── Compute final stats ──────────────────────────────────────────────────────
-  const totalSolved = (cfSolved || 0) + (lcSolved || 0);
-  const totalContests = (cfRatingHistory?.length || 0) + (lcRatingHistory?.length || 0);
+  const totalSolved = (cfSolved || 0) + (lcSolved || 0) + (ccSolved || 0);
+  const totalContests = (cfRatingHistory?.length || 0) + (lcRatingHistory?.length || 0) + (ccRatingHistory?.length || 0);
 
   const cpScore = serverCpScore ??
     Math.floor(
@@ -317,15 +353,17 @@ const ShareableCard = forwardRef(function ShareableCard({
 
   const hasCf = !!cfHandle;
   const hasLc = !!lcHandle;
+  const hasCc = !!ccHandle;
   const hasCp = cpScore > 0;
   const heroValue = hasCp ? cpScore : totalSolved;
   const heroLabel = hasCp ? 'CPScore' : 'Total Solved';
 
   const displayName = userName || userUsername || null;
-  const displayHandle = cfHandle || lcHandle || 'competitor';
+  const displayHandle = cfHandle || lcHandle || ccHandle || 'competitor';
 
   const showCurrentStreak = currentStreak >= 7;
-  const headline = buildHeadline({ totalSolved, bestStreak, solvedThisMonth, activeDays });
+  const activePlatforms = [hasCf && 'Codeforces', hasLc && 'LeetCode', hasCc && 'CodeChef'].filter(Boolean);
+  const headline = buildHeadline({ totalSolved, bestStreak, solvedThisMonth, activeDays, platforms: activePlatforms });
 
   const top3Topics = (topics || []).filter(t => t?.name).slice(0, 3);
   const maxTopicCount = top3Topics.reduce((m, t) => Math.max(m, t.count || 0), 0);
@@ -405,6 +443,7 @@ const ShareableCard = forwardRef(function ShareableCard({
                 <div style={{ display: 'flex', gap: 6 }}>
                   {hasCf && <PlatformBadge platform="cf" />}
                   {hasLc && <PlatformBadge platform="lc" />}
+                  {hasCc && <PlatformBadge platform="cc" />}
                 </div>
               </div>
             </div>
@@ -435,10 +474,11 @@ const ShareableCard = forwardRef(function ShareableCard({
           </div>
 
           {/* Right — platform panels */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 14, justifyContent: 'flex-start' }}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 10, justifyContent: 'flex-start' }}>
             {hasCf && <PlatformPanel platform="cf" handle={cfHandle} rating={cfRating} maxRating={cfMaxRating} rank={cfRank} />}
             {hasLc && <PlatformPanel platform="lc" handle={lcHandle} rating={lcRating} maxRating={lcMaxRating} rank={lcRank} />}
-            {!hasCf && !hasLc && (
+            {hasCc && <PlatformPanel platform="cc" handle={ccHandle} rating={ccRating} maxRating={ccMaxRating} rank={ccRank} />}
+            {!hasCf && !hasLc && !hasCc && (
               <div style={{ background: theme.CARD_BG_ELEVATED, border: `1px solid ${theme.BORDER}`, borderRadius: 14, padding: '22px 24px', fontFamily: FONT_SANS, fontSize: 14, color: theme.TEXT_MUTED }}>
                 No platforms linked yet
               </div>
@@ -469,7 +509,7 @@ const ShareableCard = forwardRef(function ShareableCard({
             <StatBlock label="Best Streak" value={bestStreak} suffix="d" accent={ORANGE} />
 
             <div style={{ marginLeft: 'auto' }}>
-               <RatingGraph cfHistory={cfRatingHistory} lcHistory={lcRatingHistory} width={540} height={70} />
+               <RatingGraph cfHistory={cfRatingHistory} lcHistory={lcRatingHistory} ccHistory={ccRatingHistory} width={540} height={70} />
             </div>
           </div>
 

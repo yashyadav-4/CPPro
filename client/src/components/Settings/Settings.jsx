@@ -21,7 +21,17 @@ export default function Settings() {
     name: '', gender: '', age: '', profilePic: '',
     country: '', state: '', city: '', college: '', public: true,
   });
-  const [linked, setLinked] = useState({ codeforces: '', leetcode: '' });
+  const [linked, setLinked] = useState({ codeforces: '', leetcode: '', codechef: '' });
+
+  // CC linking state
+  const [ccLinkOpen, setCcLinkOpen] = useState(false);
+  const [ccHandle, setCcHandle] = useState('');
+  const [ccCode, setCcCode] = useState('');
+  const [ccCodeLoading, setCcCodeLoading] = useState(false);
+  const [ccVerifying, setCcVerifying] = useState(false);
+
+  const [ccLinkError, setCcLinkError] = useState('');
+  const [ccLinkSuccess, setCcLinkSuccess] = useState('');
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
 
@@ -112,6 +122,48 @@ export default function Settings() {
       setLcSessionError('Failed to remove session');
     }
   };
+
+  const handleGenerateCcCode = async () => {
+    setCcLinkError('');
+    setCcCodeLoading(true);
+    try {
+      const res = await axios.get('/api/settings/generate-cf-code', { withCredentials: true });
+      if (res.data.success) {
+        setCcCode(res.data.code);
+      } else {
+        setCcLinkError('Failed to generate code');
+      }
+    } catch {
+      setCcLinkError('Failed to generate code');
+    } finally {
+      setCcCodeLoading(false);
+    }
+  };
+
+  const handleVerifyCc = async () => {
+    if (!ccHandle.trim()) { setCcLinkError('Enter your CodeChef handle'); return; }
+    setCcLinkError('');
+    setCcVerifying(true);
+    try {
+      const res = await axios.post('/api/settings/verify-cc', { handle: ccHandle.trim() }, { withCredentials: true });
+      if (res.data.success) {
+        setLinked(prev => ({ ...prev, codechef: ccHandle.trim() }));
+        setCcLinkOpen(false);
+        setCcCode('');
+        setCcHandle('');
+        setCcLinkSuccess('CodeChef account linked!');
+        setTimeout(() => setCcLinkSuccess(''), 4000);
+      } else {
+        setCcLinkError(res.data.message || 'Verification failed');
+      }
+    } catch (err) {
+      setCcLinkError(err.response?.data?.message || 'Verification failed');
+    } finally {
+      setCcVerifying(false);
+    }
+  };
+
+
 
   const handleSave = async () => {
     setSaving(true);
@@ -300,6 +352,104 @@ export default function Settings() {
                   </Link>
                 )}
               </div>
+
+              {/* ── CodeChef row ── */}
+              <div className="rounded-lg border border-gray-100 dark:border-white/[0.06] overflow-hidden">
+                <div className="flex items-center justify-between p-3 bg-white dark:bg-[#0a0a0a]">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-md bg-emerald-600 flex items-center justify-center">
+                      <span className="text-white text-xs font-black">CC</span>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">CodeChef</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {linked.codechef ? linked.codechef : 'Not linked'}
+                      </p>
+                    </div>
+                  </div>
+                  {linked.codechef ? (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 dark:bg-green-500/15 text-green-700 dark:text-green-400">
+                      <CheckCircle size={12} /> Verified
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => { setCcLinkOpen(p => !p); setCcLinkError(''); }}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium rounded-lg transition-colors">
+                      <Shield size={12} /> {ccLinkOpen ? 'Cancel' : 'Link'}
+                    </button>
+                  )}
+                </div>
+
+                {/* Inline verification flow */}
+                {!linked.codechef && ccLinkOpen && (
+                  <div className="px-4 pb-4 pt-3 bg-gray-50 dark:bg-[#0d0d0d] border-t border-gray-100 dark:border-white/[0.05] space-y-3">
+                    <div className="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-500/[0.07] border border-emerald-200 dark:border-emerald-500/20 flex gap-2.5">
+                      <Info size={14} className="text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
+                      <p className="text-xs text-emerald-800 dark:text-emerald-300 leading-relaxed">
+                        Generate a code, add it to your <strong>CodeChef Name</strong> field (edit profile), then enter your handle and verify.
+                      </p>
+                    </div>
+
+                    {/* Step 1: Generate code */}
+                    <div>
+                      <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5">Step 1 — Verification Code</p>
+                      <div className="flex items-center gap-2">
+                        {ccCode ? (
+                          <code className="flex-1 px-3 py-2 bg-white dark:bg-[#111111] border border-gray-200 dark:border-white/[0.08] rounded-lg text-sm font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
+                            {ccCode}
+                          </code>
+                        ) : (
+                          <span className="flex-1 text-xs text-gray-400 dark:text-gray-500 italic">Click to generate…</span>
+                        )}
+                        <button
+                          onClick={handleGenerateCcCode}
+                          disabled={ccCodeLoading}
+                          className="inline-flex items-center gap-1.5 px-3 py-2 bg-gray-100 dark:bg-white/[0.06] hover:bg-gray-200 dark:hover:bg-white/[0.1] text-gray-700 dark:text-gray-300 text-xs font-medium rounded-lg transition-colors disabled:opacity-50 shrink-0"
+                        >
+                          {ccCodeLoading ? <RefreshCw size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+                          {ccCode ? 'Regenerate' : 'Generate'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Step 2: Enter handle */}
+                    {ccCode && (
+                      <div>
+                        <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5">Step 2 — Enter your CodeChef handle</p>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={ccHandle}
+                            onChange={e => { setCcHandle(e.target.value); setCcLinkError(''); }}
+                            placeholder="your_handle"
+                            className={`${INPUT_CLASS} flex-1`}
+                          />
+                          <button
+                            onClick={handleVerifyCc}
+                            disabled={ccVerifying || !ccHandle.trim()}
+                            className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-medium rounded-lg transition-colors shrink-0"
+                          >
+                            {ccVerifying ? <RefreshCw size={12} className="animate-spin" /> : <Shield size={12} />}
+                            {ccVerifying ? 'Verifying…' : 'Verify'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {ccLinkError && (
+                      <p className="flex items-center gap-1.5 text-xs text-red-600 dark:text-red-400">
+                        <AlertTriangle size={12} /> {ccLinkError}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {ccLinkSuccess && (
+                <p className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400">
+                  <CheckCircle size={12} /> {ccLinkSuccess}
+                </p>
+              )}
             </div>
           </motion.div>
 

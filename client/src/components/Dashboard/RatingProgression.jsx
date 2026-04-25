@@ -29,7 +29,7 @@ const CustomTooltip = ({ active, payload, label }) => {
   );
 };
 
-function buildUnifiedTimeline(cfHistory, lcHistory) {
+function buildUnifiedTimeline(cfHistory, lcHistory, ccHistory) {
   const map = {};
 
   (cfHistory || []).forEach(h => {
@@ -40,18 +40,24 @@ function buildUnifiedTimeline(cfHistory, lcHistory) {
     if (!map[h.date]) map[h.date] = { date: h.date };
     map[h.date].lc = h.rating;
   });
+  (ccHistory || []).forEach(h => {
+    if (!map[h.date]) map[h.date] = { date: h.date };
+    map[h.date].cc = h.rating;
+  });
 
   const sorted = Object.values(map).sort((a, b) => a.date.localeCompare(b.date));
 
   // Forward-fill gaps
-  let lastCf = null, lastLc = null;
+  let lastCf = null, lastLc = null, lastCc = null;
   return sorted.map(d => {
     if (d.cf !== undefined) lastCf = d.cf;
     if (d.lc !== undefined) lastLc = d.lc;
+    if (d.cc !== undefined) lastCc = d.cc;
     return {
       date: d.date.slice(0, 7),
       cf: lastCf,
       lc: lastLc,
+      cc: lastCc,
     };
   });
 }
@@ -91,23 +97,52 @@ function getLcPrediction(history) {
   const recent = history.slice(-10);
   let weightedDeltaSum = 0;
   let weightSum = 0;
-  
+
   for(let i = 1; i < recent.length; i++) {
     const delta = recent[i].rating - recent[i-1].rating;
     const weight = i;
     weightedDeltaSum += delta * weight;
     weightSum += weight;
   }
-  
+
   const avgDelta = weightedDeltaSum / weightSum;
   const currentRating = recent[recent.length - 1].rating;
-  
+
   const dampener = currentRating > 2000 ? 0.3 : currentRating > 1800 ? 0.6 : 1.0;
   const predictedRating = Math.round(currentRating + (avgDelta * 10 * dampener));
   return { val: predictedRating, diff: predictedRating - currentRating };
 }
 
-export default function RatingProgression({ loading, cfRatingHistory, lcRatingHistory }) {
+function getCcPrediction(history) {
+  if (!history || history.length < 3) return null;
+  const recent = history.slice(-15);
+  const n = recent.length;
+  let sumLnX = 0, sumY = 0, sumY_LnX = 0, sumLnX2 = 0;
+
+  recent.forEach((contest, index) => {
+    const x = index + 1;
+    const y = contest.rating;
+    const lnX = Math.log(x);
+    sumLnX += lnX;
+    sumY += y;
+    sumY_LnX += y * lnX;
+    sumLnX2 += lnX * lnX;
+  });
+
+  const denominator = (n * sumLnX2) - (sumLnX * sumLnX);
+  if (denominator === 0) return null;
+
+  const a = ((n * sumY_LnX) - (sumY * sumLnX)) / denominator;
+  const b = (sumY - a * sumLnX) / n;
+
+  const futureX = n + 12;
+  const predictedRating = Math.round(a * Math.log(futureX) + b);
+  const lastRating = recent[n - 1].rating;
+
+  return { val: Math.max(predictedRating, lastRating - 50), diff: predictedRating - lastRating };
+}
+
+export default function RatingProgression({ loading, cfRatingHistory, lcRatingHistory, ccRatingHistory }) {
   if (loading) {
     return (
       <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4">
@@ -119,8 +154,9 @@ export default function RatingProgression({ loading, cfRatingHistory, lcRatingHi
 
   const hasCf = cfRatingHistory && cfRatingHistory.length > 0;
   const hasLc = lcRatingHistory && lcRatingHistory.length > 0;
+  const hasCc = ccRatingHistory && ccRatingHistory.length > 0;
 
-  if (!hasCf && !hasLc) {
+  if (!hasCf && !hasLc && !hasCc) {
     return (
       <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4 flex items-center justify-center h-40">
         <span className="text-sm text-gray-400 font-normal">No contest history yet</span>
@@ -130,51 +166,45 @@ export default function RatingProgression({ loading, cfRatingHistory, lcRatingHi
 
   const cfPrediction = getCfPrediction(cfRatingHistory);
   const lcPrediction = getLcPrediction(lcRatingHistory);
+  const ccPrediction = getCcPrediction(ccRatingHistory);
 
-  let data = buildUnifiedTimeline(cfRatingHistory, lcRatingHistory);
+  let data = buildUnifiedTimeline(cfRatingHistory, lcRatingHistory, ccRatingHistory);
 
-  if (data.length > 0 && (cfPrediction || lcPrediction)) {
+  if (data.length > 0 && (cfPrediction || lcPrediction || ccPrediction)) {
     const lastPoint = data[data.length - 1];
     const lastDate = new Date(lastPoint.date + "-01");
-    
+
     lastPoint.cfPred = lastPoint.cf;
     lastPoint.lcPred = lastPoint.lc;
+    lastPoint.ccPred = lastPoint.cc;
 
-    // Generate 1 final point at 6 months out
     const d = new Date(lastDate);
     d.setMonth(d.getMonth() + 6);
-    
+
     data.push({
-        date: d.toISOString().slice(0, 7),
-        cf: null,
-        lc: null,
-        cfPred: cfPrediction ? cfPrediction.val : null,
-        lcPred: lcPrediction ? lcPrediction.val : null,
+      date: d.toISOString().slice(0, 7),
+      cf: null, lc: null, cc: null,
+      cfPred: cfPrediction ? cfPrediction.val : null,
+      lcPred: lcPrediction ? lcPrediction.val : null,
+      ccPred: ccPrediction ? ccPrediction.val : null,
     });
   }
 
   const minRating = Math.min(
-    ...[...data.map(d => d.cf).filter(Boolean), ...data.map(d => d.lc).filter(Boolean)],
+    ...[...data.map(d => d.cf).filter(Boolean), ...data.map(d => d.lc).filter(Boolean), ...data.map(d => d.cc).filter(Boolean)],
     800
   );
 
-  let cfMaxIndex = -1;
-  let cfMax = -1;
-  let lcMaxIndex = -1;
-  let lcMax = -1;
+  let cfMaxIndex = -1, cfMax = -1;
+  let lcMaxIndex = -1, lcMax = -1;
+  let ccMaxIndex = -1, ccMax = -1;
 
   for (let i = 0; i < data.length; i++) {
-    // If it's the last generated point for prediction, skip it for peak calculation
     if ((cfPrediction || lcPrediction) && i === data.length - 1) continue;
-    
-    if (data[i].cf != null && data[i].cf > cfMax) {
-      cfMax = data[i].cf;
-      cfMaxIndex = i;
-    }
-    if (data[i].lc != null && data[i].lc > lcMax) {
-      lcMax = data[i].lc;
-      lcMaxIndex = i;
-    }
+
+    if (data[i].cf != null && data[i].cf > cfMax) { cfMax = data[i].cf; cfMaxIndex = i; }
+    if (data[i].lc != null && data[i].lc > lcMax) { lcMax = data[i].lc; lcMaxIndex = i; }
+    if (data[i].cc != null && data[i].cc > ccMax) { ccMax = data[i].cc; ccMaxIndex = i; }
   }
 
   const renderPeakLabel = (props, maxIndex, bgColor) => {
@@ -200,18 +230,27 @@ export default function RatingProgression({ loading, cfRatingHistory, lcRatingHi
     <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4">
       <div className="flex items-center justify-between mb-4">
         <p className="text-xs text-gray-400 dark:text-[#9CA3AF] font-normal uppercase tracking-wide">Rating Progression</p>
-        <div className="flex items-center gap-3 text-[10px]">
-          {cfPrediction && (
-            <span className="text-gray-500 dark:text-[#6B7280]">
-              CF Prediction: <span className={`font-medium ${cfPrediction.diff >= 0 ? 'text-green-500' : 'text-red-500'}`}>{cfPrediction.val}</span>
-            </span>
-          )}
-          {lcPrediction && (
-            <span className="text-gray-500 dark:text-[#6B7280]">
-              LC Prediction: <span className={`font-medium ${lcPrediction.diff >= 0 ? 'text-green-500' : 'text-red-500'}`}>{lcPrediction.val}</span>
-            </span>
-          )}
-        </div>
+        {(cfPrediction || lcPrediction || ccPrediction) && (
+          <div className="flex items-center gap-2 text-[10px]">
+            <span className="text-gray-600 dark:text-gray-600 uppercase tracking-wide">6-mo</span>
+            <span className="text-gray-600 dark:text-gray-700">→</span>
+            {cfPrediction && (
+              <span className="text-gray-500 dark:text-[#6B7280]">
+                CF <span className={`font-semibold ${cfPrediction.diff >= 0 ? 'text-blue-400' : 'text-red-400'}`}>{cfPrediction.val}</span>
+              </span>
+            )}
+            {lcPrediction && (
+              <span className="text-gray-500 dark:text-[#6B7280]">
+                LC <span className={`font-semibold ${lcPrediction.diff >= 0 ? 'text-amber-400' : 'text-red-400'}`}>{lcPrediction.val}</span>
+              </span>
+            )}
+            {ccPrediction && (
+              <span className="text-gray-500 dark:text-[#6B7280]">
+                CC <span className={`font-semibold ${ccPrediction.diff >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{ccPrediction.val}</span>
+              </span>
+            )}
+          </div>
+        )}
       </div>
       <ResponsiveContainer width="100%" height={240}>
         <LineChart data={data} margin={{ top: 36, right: 16, bottom: 0, left: 0 }}>
@@ -246,6 +285,12 @@ export default function RatingProgression({ loading, cfRatingHistory, lcRatingHi
             <>
               <Line type="monotone" dataKey="lc" name="LeetCode" stroke="#f59e0b" strokeWidth={2} dot={false} activeDot={{ r: 4 }} connectNulls label={(p) => renderPeakLabel(p, lcMaxIndex, '#f59e0b')} />
               <Line type="monotone" dataKey="lcPred" name="LeetCode" legendType="none" stroke="#f59e0b" strokeWidth={2} strokeDasharray="4 4" dot={{ r: 2 }} activeDot={{ r: 4 }} connectNulls />
+            </>
+          )}
+          {hasCc && (
+            <>
+              <Line type="monotone" dataKey="cc" name="CodeChef" stroke="#10b981" strokeWidth={2} dot={false} activeDot={{ r: 4 }} connectNulls label={(p) => renderPeakLabel(p, ccMaxIndex, '#10b981')} />
+              <Line type="monotone" dataKey="ccPred" name="CodeChef" legendType="none" stroke="#10b981" strokeWidth={2} strokeDasharray="4 4" dot={{ r: 2 }} activeDot={{ r: 4 }} connectNulls />
             </>
           )}
         </LineChart>
