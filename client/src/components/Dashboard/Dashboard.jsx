@@ -24,6 +24,7 @@ import CCQuickStats from './CCQuickStats';
 import CCLanguageChart from './CCLanguageChart';
 import CCVerdictBreakdown from './CCVerdictBreakdown';
 import ShareModal from '../Shareable/ShareModal';
+import DailyWidget from './DailyWidget';
 
 const REFRESH_STATE_KEY_PREFIX = 'dashboard_refresh_state_';
 const ADMIN_COOLDOWN_SECONDS = 10;
@@ -80,6 +81,7 @@ export default function Dashboard() {
   const [cooldown, setCooldown] = useState(0);
   const [shareOpen, setShareOpen] = useState(false);
   const [view, setView] = useState('all'); // 'all' | 'cf' | 'lc'
+  const [ccSyncError, setCcSyncError] = useState(null);
 
   const defaultCooldownSeconds = userRole === 'admin' ? ADMIN_COOLDOWN_SECONDS : USER_COOLDOWN_SECONDS;
   const refreshStateKey = userId ? `${REFRESH_STATE_KEY_PREFIX}${userId}` : null;
@@ -155,14 +157,23 @@ export default function Dashboard() {
   const handleRefresh = useCallback(async () => {
     if (cooldown > 0 || !userId) return;
     setRefreshing(true);
+    setCcSyncError(null);
 
     try {
       const config = { withCredentials: true };
-      const promises = [];
-      if (linkedAccounts.codeforces) promises.push(axios.post('/api/sync/refresh', {}, config));
-      if (linkedAccounts.leetcode) promises.push(axios.post('/api/sync/refresh-lc', {}, config));
-      if (linkedAccounts.codechef) promises.push(axios.post('/api/sync/refresh-cc', {}, config));
-      const results = await Promise.allSettled(promises);
+      const tagged = [];
+      if (linkedAccounts.codeforces) tagged.push({ platform: 'cf', promise: axios.post('/api/sync/refresh', {}, config) });
+      if (linkedAccounts.leetcode)   tagged.push({ platform: 'lc', promise: axios.post('/api/sync/refresh-lc', {}, config) });
+      if (linkedAccounts.codechef)   tagged.push({ platform: 'cc', promise: axios.post('/api/sync/refresh-cc', {}, config) });
+
+      const results = await Promise.allSettled(tagged.map(t => t.promise));
+
+      // Surface CC-specific failures so the user knows their data may be stale.
+      const ccIdx = tagged.findIndex(t => t.platform === 'cc');
+      if (ccIdx !== -1 && results[ccIdx].status === 'rejected') {
+        const errMsg = results[ccIdx].reason?.response?.data?.message || results[ccIdx].reason?.message || 'sync failed';
+        setCcSyncError(errMsg);
+      }
 
       // Always refetch — background syncs (e.g. from account relink) may have updated
       // MongoDB even if the cooldown gate returned 'fresh'. The aggregate read is cheap.
@@ -235,8 +246,7 @@ export default function Dashboard() {
 
   // StatCards - computed early where possible
   const totalSolved = (cf.cfSolved ?? 0) + (lc.lcSolved ?? 0) + (cc.totalSolved ?? 0);
-  // Total Submissions: AC submissions across all platforms
-  const totalSubmissions = (cf.cfAcSubmissions ?? cf.cfTotalSubmissions ?? 0) + (lc.lcAcSubmissions ?? lc.lcTotalSubmissions ?? 0) + (cc.ccAcSubmissions ?? 0);
+  const totalSubmissions = (cf.cfTotalSubmissions ?? 0) + (lc.lcTotalSubmissions ?? 0) + (cc.totalSubmissions ?? 0);
   const solvedThisMonth = (cf.cfSolvedThisMonth ?? 0) + (lc.lcSolvedThisMonth ?? 0) + (cc.ccSolvedThisMonth ?? 0);
   const solvedLastMonth = (cf.cfSolvedLastMonth ?? 0) + (lc.lcSolvedLastMonth ?? 0) + (cc.ccSolvedLastMonth ?? 0);
 
@@ -365,6 +375,16 @@ export default function Dashboard() {
   return (
     <div className="bg-[#ffffff] dark:bg-[#0a0a0a] px-6 py-6 min-h-screen">
       <div className="max-w-[1400px] mx-auto space-y-3">
+        {/* CC sync error banner */}
+        {ccSyncError && (
+          <div className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 text-amber-700 dark:text-amber-400">
+            <div className="flex items-center gap-2 text-xs">
+              <AlertTriangle size={13} />
+              <span><span className="font-medium">CodeChef sync failed</span> — data may be stale. ({ccSyncError})</span>
+            </div>
+            <button onClick={() => setCcSyncError(null)} className="text-amber-500 hover:text-amber-700 dark:hover:text-amber-300 text-lg leading-none">×</button>
+          </div>
+        )}
         {/* Header */}
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
@@ -443,14 +463,14 @@ export default function Dashboard() {
             ccSolved={cc.totalSolved ?? 0}
             activeDays={activeDays}
             totalSubmissions={
-              effectiveView === 'cf' ? (cf.cfAcSubmissions ?? cf.cfTotalSubmissions ?? 0)
-              : effectiveView === 'lc' ? (lc.lcAcSubmissions ?? lc.lcTotalSubmissions ?? 0)
-              : effectiveView === 'cc' ? (cc.ccAcSubmissions ?? 0)
+              effectiveView === 'cf' ? (cf.cfTotalSubmissions ?? 0)
+              : effectiveView === 'lc' ? (lc.lcTotalSubmissions ?? 0)
+              : effectiveView === 'cc' ? (cc.totalSubmissions ?? 0)
               : totalSubmissions
             }
-            cfAcSubmissions={cf.cfAcSubmissions ?? cf.cfTotalSubmissions ?? 0}
-            lcAcSubmissions={lc.lcAcSubmissions ?? lc.lcTotalSubmissions ?? 0}
-            ccAcSubmissions={cc.ccAcSubmissions ?? 0}
+            cfTotalSubmissions={cf.cfTotalSubmissions ?? 0}
+            lcTotalSubmissions={lc.lcTotalSubmissions ?? 0}
+            ccTotalSubmissions={cc.totalSubmissions ?? 0}
             currentStreak={currentStreak}
             bestStreak={bestStreak}
             acceptanceRate={effectiveView === 'cf' ? cfAR : effectiveView === 'lc' ? lcAR : effectiveView === 'cc' ? ccAR : acceptanceRate}
@@ -496,6 +516,7 @@ export default function Dashboard() {
                 totalSubmissions={cc.totalSubmissions}
                 ccAcceptanceRate={cc.ccAcceptanceRate}
                 ccSolvedThisMonth={cc.ccSolvedThisMonth}
+                lastSyncedAt={cc.lastSyncedAt}
               />
             ) : (
               <DifficultyBreakdown
@@ -518,10 +539,15 @@ export default function Dashboard() {
           </ErrorBoundary>
         </div>
 
-        {/* Row 3: Activity heatmap */}
-        <ErrorBoundary>
-          <ActivityHeatmap loading={loading} heatmapData={heatmapData} />
-        </ErrorBoundary>
+        {/* Row 3: Daily widget + Activity heatmap */}
+        <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-3">
+          <ErrorBoundary>
+            <DailyWidget loading={loading} />
+          </ErrorBoundary>
+          <ErrorBoundary>
+            <ActivityHeatmap loading={loading} heatmapData={heatmapData} />
+          </ErrorBoundary>
+        </div>
 
         {/* Row 4: Rating + Total Contests */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">

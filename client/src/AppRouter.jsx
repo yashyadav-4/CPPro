@@ -15,6 +15,7 @@ const VerifyCodeforces = lazy(() => import('./components/VerifyCodeforces/Verify
 const LearningPage = lazy(() => import('./components/LearningTree/LearningPage.jsx'));
 const LevelUpPage = lazy(() => import('./components/LevelUp/LevelUpPage.jsx'));
 const Settings = lazy(() => import('./components/Settings/Settings.jsx'));
+const DailyChallenge = lazy(() => import('./components/DailyChallenge/DailyChallenge.jsx'));
 
 const ContestTracker = lazy(() => import('./components/ContestTracker/ContestTracker.jsx'));
 const AdminDashboard = lazy(() => import('./components/Admin/AdminDashboard.jsx'));
@@ -44,6 +45,7 @@ const router = createBrowserRouter([
       { path: 'learning/dsa', element: withSuspense(<ProtectedRoute><LearningPage /></ProtectedRoute>) },
       { path: 'learning/resources', element: withSuspense(<ProtectedRoute><LearningPage /></ProtectedRoute>) },
       { path: 'settings', element: withSuspense(<ProtectedRoute><Settings /></ProtectedRoute>) },
+      { path: 'daily', element: withSuspense(<ProtectedRoute><DailyChallenge /></ProtectedRoute>) },
 
       { path: 'contest-tracker', element: withSuspense(<ContestTracker />) },
       { path: 'admin', element: withSuspense(<AdminRoute><AdminDashboard /></AdminRoute>) },

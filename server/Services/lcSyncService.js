@@ -1,6 +1,8 @@
 const axios = require('axios');
 const User = require('../Model/User');
 const Notification = require('../Model/Notification');
+const LeetCodeData = require('../Model/LeetCodeData');
+const { checkDailyProblemSolves } = require('./dailyProblemService');
 
 const FIFTEEN_MINUTES = 15 * 60 * 1000;
 const ADMIN_COOLDOWN  = 10 * 1000; // 10 s for admins
@@ -120,6 +122,18 @@ const syncLeetcodeProfile = async (userId, handle, sessionToken = null) => {
         if (state === 'completed') {
             await User.findByIdAndUpdate(userId, { $set: { lastLcUpdate: new Date() } });
             console.log(`[LC-SYNC] >> ${handle} | sync done ✓`);
+            // Post-sync: check if today's daily problem was solved
+            LeetCodeData.findOne({ userId }, 'acSlugs recentSubmissions').lean()
+                .then(lcData => {
+                    const acIds = [
+                        ...(lcData?.acSlugs || []),
+                        ...(lcData?.recentSubmissions || [])
+                            .filter(s => s.statusDisplay === 'Accepted')
+                            .map(s => s.titleSlug),
+                    ];
+                    return checkDailyProblemSolves(userId, 'leetcode', acIds);
+                })
+                .catch(err => console.warn('[DAILY-LC] solve check failed:', err.message));
             return { success: true };
         }
 

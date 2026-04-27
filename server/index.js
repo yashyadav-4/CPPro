@@ -20,6 +20,7 @@ const publicStatsRoute = require('./Routes/publicStats');
 const contestRoutes    = require('./Routes/contestRoutes');
 const notificationRoutes = require('./Routes/notificationRoutes');
 const adminRoutes = require('./Routes/adminRoutes');
+const dailyRoutes = require('./Routes/dailyRoutes');
 const { startContestSyncWorker } = require('./Workers/contestSyncWorker');
 
 connectToMongoDb(process.env.MongoUrl)
@@ -65,6 +66,7 @@ app.use('/api/stats', publicStatsRoute);
 app.use('/api/contests', contestRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/daily', dailyRoutes);
 
 // test
 app.get('/api/test', (req, res)=>{

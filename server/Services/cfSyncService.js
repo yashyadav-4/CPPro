@@ -1,5 +1,7 @@
 const axios = require('axios');
 const User = require('../Model/User');
+const Submission = require('../Model/Submissions');
+const { checkDailyProblemSolves } = require('./dailyProblemService');
 
 const CF_SYNC_API = (process.env.CF_SYNC_API || 'http://localhost:3001').replace(/\/$/, '');
 const CF_SYNC_SECRET = process.env.CF_SYNC_SECRET || '';
@@ -93,6 +95,13 @@ const syncCodeforcesProfile = async (userId, handle) => {
 
         if (state === 'completed') {
             console.log(`[LEAN-NEXUS] >> ${handle} | sync done ✓`);
+            // Post-sync: check if today's daily problem was solved
+            Submission.find(
+                { userId, platform: 'codeforces', verdict: 'AC' },
+                { problemId: 1, _id: 0 }
+            ).sort({ submittedAt: -1 }).limit(50).lean()
+                .then(subs => checkDailyProblemSolves(userId, 'codeforces', subs.map(s => s.problemId)))
+                .catch(err => console.warn('[DAILY-CF] solve check failed:', err.message));
             return { success: true };
         }
 

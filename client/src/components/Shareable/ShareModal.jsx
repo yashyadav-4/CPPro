@@ -1,5 +1,7 @@
 // ShareModal.jsx — dashboard sharing modal, works in both light and dark theme.
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { createRoot } from 'react-dom/client';
+import { flushSync } from 'react-dom';
 import { X, Download, Check, AlertTriangle } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import axios from 'axios';
@@ -10,13 +12,11 @@ import { useTheme } from '../../hooks/useTheme';
 const PREVIEW_SCALE = 0.5; // 1200×630 → 600×315 preview
 
 export default function ShareModal({ isOpen, onClose, cardProps, loading = false }) {
-  const cardRef = useRef(null);
   const [downloading, setDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState(null);
   const [downloaded, setDownloaded] = useState(false);
   const { isDark } = useTheme();
 
-  // Multi-category rank data (fetched per modal open)
   const [rankData, setRankData] = useState({
     serverCpScore: null,
     cpScoreRank: null, cpScoreTotal: null,
@@ -26,7 +26,6 @@ export default function ShareModal({ isOpen, onClose, cardProps, loading = false
   });
   const [rankLoading, setRankLoading] = useState(false);
 
-  // Lock body scroll while open.
   useEffect(() => {
     if (!isOpen) return;
     const prev = document.body.style.overflow;
@@ -34,7 +33,6 @@ export default function ShareModal({ isOpen, onClose, cardProps, loading = false
     return () => { document.body.style.overflow = prev; };
   }, [isOpen]);
 
-  // Close on Escape
   useEffect(() => {
     if (!isOpen) return;
     const onKey = (e) => { if (e.key === 'Escape') onClose(); };
@@ -42,7 +40,6 @@ export default function ShareModal({ isOpen, onClose, cardProps, loading = false
     return () => window.removeEventListener('keydown', onKey);
   }, [isOpen, onClose]);
 
-  // Reset + fetch multi-category ranks when opened
   useEffect(() => {
     if (!isOpen) return;
     setDownloadError(null);
@@ -53,82 +50,98 @@ export default function ShareModal({ isOpen, onClose, cardProps, loading = false
     setRankLoading(true);
     axios.get('/api/leaderboard/my-rank', { withCredentials: true })
       .then(res => {
-        if (!cancelled && res.data?.data) {
-          setRankData(res.data.data);
-        }
+        if (!cancelled && res.data?.data) setRankData(res.data.data);
       })
-      .catch(() => { /* silently ignore — card renders without rank */ })
+      .catch(() => {})
       .finally(() => { if (!cancelled) setRankLoading(false); });
 
     return () => { cancelled = true; };
   }, [isOpen]);
 
   const handleDownload = async () => {
-    if (!cardRef.current || downloading) return;
+    if (downloading) return;
     setDownloading(true);
     setDownloadError(null);
     setDownloaded(false);
 
+    let container = null;
+    let root = null;
+
     try {
+      // Wait for main document fonts to be ready
       if (document.fonts?.ready) await document.fonts.ready;
 
-      const canvas = await html2canvas(cardRef.current, {
+      // Create a fresh, isolated container at the viewport origin.
+      // z-index:-1 hides it behind the modal while fonts/layout still render normally.
+      container = document.createElement('div');
+      container.style.cssText =
+        'position:fixed;top:0;left:0;width:1200px;height:630px;z-index:-1;pointer-events:none;';
+      document.body.appendChild(container);
+
+      // Render ShareableCard into the isolated container synchronously.
+      // flushSync ensures the DOM is fully painted before we capture.
+      root = createRoot(container);
+      const enrichedProps = { ...cardProps, ...rankData, isDark };
+      flushSync(() => {
+        root.render(<ShareableCard {...enrichedProps} />);
+      });
+
+      // Two rAF ticks: first lets React commit, second lets the browser paint.
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+      const canvas = await html2canvas(container, {
         width: 1200,
         height: 630,
         scale: 2,
+        x: 0,
+        y: 0,
         useCORS: true,
         allowTaint: false,
         backgroundColor: isDark ? '#0a0a0a' : '#ffffff',
         logging: false,
         imageTimeout: 15000,
         onclone: (doc, clonedEl) => {
-          // 1. Remove the 0.5x preview scale so the card renders at full 1200×630.
-          clonedEl.style.transform = 'none';
-          // 2. Walk up ancestors and strip any CSS property that creates a containing
-          //    block (backdrop-filter from the modal backdrop, filter, transform).
-          //    Without this, `position:fixed` on clonedEl would still be relative to
-          //    the modal rather than the viewport, giving wrong capture coordinates.
-          let ancestor = clonedEl.parentElement;
-          while (ancestor && ancestor !== doc.body) {
-            ancestor.style.backdropFilter = 'none';
-            ancestor.style.webkitBackdropFilter = 'none';
-            ancestor.style.filter = 'none';
-            ancestor.style.transform = 'none';
-            ancestor = ancestor.parentElement;
-          }
-          // 3. Pin the card to viewport origin so html2canvas always renders from (0,0).
-          clonedEl.style.position = 'fixed';
-          clonedEl.style.top = '0px';
-          clonedEl.style.left = '0px';
+          // Bring the card to the front in the clone so nothing renders over it.
           clonedEl.style.zIndex = '999999';
-          // 4. Inject fonts into the cloned document.
-          const link = doc.createElement('link');
-          link.rel = 'stylesheet';
-          link.href = 'https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap';
-          doc.head.appendChild(link);
+          // Copy all @font-face rules from the live document so custom fonts render.
+          const styleEl = doc.createElement('style');
+          let css = '';
+          for (const sheet of document.styleSheets) {
+            try {
+              for (const rule of sheet.cssRules) css += rule.cssText + '\n';
+            } catch (e) { /* skip cross-origin sheets */ }
+          }
+          styleEl.textContent = css;
+          doc.head.appendChild(styleEl);
         },
       });
 
       const handle = cardProps?.cfHandle || cardProps?.lcHandle || 'cppro';
       const filename = `cppro-${handle}-${new Date().toISOString().slice(0, 10)}.png`;
 
-      canvas.toBlob((blob) => {
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.download = filename;
-        link.href = url;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      }, 'image/png');
+      await new Promise((resolve, reject) => {
+        canvas.toBlob((blob) => {
+          if (!blob) { reject(new Error('toBlob returned null')); return; }
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.download = filename;
+          a.href = url;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          resolve();
+        }, 'image/png');
+      });
 
       setDownloaded(true);
       setTimeout(() => setDownloaded(false), 2200);
     } catch (err) {
-      console.error('[ShareModal] html2canvas export failed:', err);
+      console.error('[ShareModal] export failed:', err);
       setDownloadError('Could not generate PNG. Try again.');
     } finally {
+      try { root?.unmount(); } catch (_) {}
+      if (container?.parentNode) container.parentNode.removeChild(container);
       setDownloading(false);
     }
   };
@@ -137,20 +150,14 @@ export default function ShareModal({ isOpen, onClose, cardProps, loading = false
 
   const previewWidth = Math.round(1200 * PREVIEW_SCALE);
   const previewHeight = Math.round(630 * PREVIEW_SCALE);
-
   const enrichedCardProps = { ...cardProps, ...rankData };
 
   return (
-    /* Backdrop — neutral in both themes */
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center p-4
                  bg-black/40 dark:bg-black/70 backdrop-blur-sm"
       onClick={onClose}
     >
-      {/*
-        Modal shell — light: white card with gray border
-                      dark : near-black card with subtle white border
-      */}
       <div
         className="
           w-full max-w-[720px] overflow-hidden rounded-2xl shadow-2xl
@@ -198,10 +205,7 @@ export default function ShareModal({ isOpen, onClose, cardProps, loading = false
                          shadow-lg border border-gray-200 dark:border-white/[0.08]"
               style={{ width: previewWidth, height: previewHeight }}
             >
-              {/* Capture target: ref here so html2canvas gets the painted element.
-                  onclone strips the scale transform before rendering. */}
               <div
-                ref={cardRef}
                 style={{
                   width: 1200,
                   height: 630,
@@ -214,12 +218,10 @@ export default function ShareModal({ isOpen, onClose, cardProps, loading = false
             </div>
           )}
 
-          {/* Caption under preview */}
           <p className="mt-3 text-center text-[11px] text-gray-400 dark:text-gray-600">
             The exported PNG always renders at full 1200 × 630 resolution.
           </p>
         </div>
-
 
         {/* ── Footer ── */}
         <div className="
@@ -227,7 +229,6 @@ export default function ShareModal({ isOpen, onClose, cardProps, loading = false
           border-t border-gray-100 dark:border-white/[0.06]
           bg-white dark:bg-[#111111]
         ">
-          {/* Status message */}
           <div className="min-h-[18px] flex items-center">
             {downloadError && (
               <span className="inline-flex items-center gap-1.5 text-xs font-medium text-red-500">
@@ -241,7 +242,6 @@ export default function ShareModal({ isOpen, onClose, cardProps, loading = false
             )}
           </div>
 
-          {/* Actions */}
           <div className="flex items-center gap-2">
             <button
               onClick={onClose}

@@ -1,13 +1,13 @@
-import { Trophy, CalendarDays, CheckCircle2, Flame, BarChart2, TrendingUp } from 'lucide-react';
+import { Trophy, CalendarDays, Flame, BarChart2, TrendingUp } from 'lucide-react';
 
 const Skeleton = () => (
-  <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl h-36 animate-pulse" />
+  <div className="bg-gray-100 dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.06] rounded-2xl h-36 animate-pulse" />
 );
 
 const CARDS_META = [
   { label: 'Total Solved',      icon: Trophy,       color: '#3b82f6', glow: 'rgba(59,130,246,0.15)' },
   { label: 'Active Days',       icon: CalendarDays, color: '#10b981', glow: 'rgba(16,185,129,0.15)' },
-  { label: 'AC Submissions',    icon: CheckCircle2, color: '#8b5cf6', glow: 'rgba(139,92,246,0.15)' },
+  { label: 'Total Submissions', icon: BarChart2,    color: '#8b5cf6', glow: 'rgba(139,92,246,0.15)' },
   { label: 'Current Streak',    icon: Flame,        color: '#f97316', glow: 'rgba(249,115,22,0.15)'  },
   { label: 'Acceptance Rate',   icon: BarChart2,    color: '#06b6d4', glow: 'rgba(6,182,212,0.15)'   },
   { label: 'Solved This Month', icon: TrendingUp,   color: '#ec4899', glow: 'rgba(236,72,153,0.15)'  },
@@ -16,18 +16,15 @@ const CARDS_META = [
 function StatCard({ meta, value, sub, extra }) {
   const Icon = meta.icon;
   return (
-    <div className="relative rounded-2xl overflow-hidden group" style={{ background: 'rgba(255,255,255,0.025)' }}>
+    <div className="relative rounded-2xl overflow-hidden group bg-white dark:bg-white/[0.025] border border-gray-100 dark:border-white/[0.06] shadow-sm dark:shadow-none">
       {/* Colored top accent bar */}
       <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: `linear-gradient(90deg, ${meta.color}, transparent)` }} />
 
-      {/* Background glow from bottom-right */}
+      {/* Background glow from bottom-right (dark mode only) */}
       <div
         className="absolute bottom-0 right-0 w-32 h-32 rounded-full blur-[50px] opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
         style={{ background: meta.glow }}
       />
-
-      {/* Border */}
-      <div className="absolute inset-0 rounded-2xl border border-white/[0.06]" />
 
       <div className="relative z-10 p-5 flex flex-col h-full">
         {/* Top row: label + icon */}
@@ -45,7 +42,7 @@ function StatCard({ meta, value, sub, extra }) {
 
         {/* Value */}
         <span
-          className="text-[2rem] font-bold leading-none text-white tracking-tight tabular-nums"
+          className="text-[2rem] font-bold leading-none text-gray-900 dark:text-white tracking-tight tabular-nums"
           style={{ fontFamily: "'JetBrains Mono', monospace" }}
         >
           {value}
@@ -60,7 +57,7 @@ function StatCard({ meta, value, sub, extra }) {
         {extra && (
           <div className="mt-2 flex flex-wrap gap-x-2 gap-y-0.5">
             {extra.map((e, i) => (
-              <span key={i} className="text-[10px] text-gray-400 font-normal tabular-nums">{e}</span>
+              <span key={i} className="text-[10px] text-gray-500 dark:text-gray-400 font-normal tabular-nums">{e}</span>
             ))}
           </div>
         )}
@@ -70,8 +67,9 @@ function StatCard({ meta, value, sub, extra }) {
 }
 
 export default function StatCards({
-  loading, totalSolved, cfSolved, lcSolved, ccSolved, activeDays,
-  totalSubmissions, cfAcSubmissions, lcAcSubmissions, ccAcSubmissions,
+  loading,
+  totalSolved, cfSolved, lcSolved, ccSolved, activeDays,
+  totalSubmissions, cfTotalSubmissions, lcTotalSubmissions, ccTotalSubmissions,
   currentStreak, bestStreak,
   acceptanceRate, cfAcceptanceRate, lcAcceptanceRate, ccAcceptanceRate,
   solvedThisMonth, activeDaysThisMonth,
@@ -109,8 +107,8 @@ export default function StatCards({
     {
       meta: CARDS_META[2],
       value: totalSubmissions ?? '—',
-      sub: 'accepted submissions',
-      extra: platformBreakdown(cfAcSubmissions, lcAcSubmissions, ccAcSubmissions),
+      sub: 'total attempts across platforms',
+      extra: platformBreakdown(cfTotalSubmissions, lcTotalSubmissions, ccTotalSubmissions),
     },
     {
       meta: CARDS_META[3],

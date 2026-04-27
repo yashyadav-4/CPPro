@@ -53,7 +53,7 @@ export default function Header() {
 
     const [activeDropdown, setActiveDropdown] = useState(null);
 
-    const navItems = ['Home', 'Dashboard', 'Leaderboard', 'Contest Tracker', 'Learning', 'Level-up', 'Code Snippet', 'Community'];
+    const navItems = ['Home', 'Dashboard', 'Daily', 'Leaderboard', 'Contest Tracker', 'Learning', 'Level-up', 'Code Snippet', 'Community'];
 
     // Custom path overrides for items whose path can't be derived trivially
     const NAV_PATH = {

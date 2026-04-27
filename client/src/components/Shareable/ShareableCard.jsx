@@ -1,5 +1,7 @@
 // ShareableCard.jsx — fixed 1200×630 OG-sized canvas for social previews.
 // Pure inline styles + hex colors keep html2canvas renders pixel-faithful.
+// NOTE: No CSS `gap` is used — html2canvas v1.x does not support flex gap.
+//       All spacing uses explicit margin on children instead.
 import { forwardRef } from 'react';
 
 // ── Shared Palette (Theme Independent) ───────────────────────────────────────
@@ -120,7 +122,7 @@ function buildHeadline({ totalSolved, bestStreak, solvedThisMonth, activeDays, p
 const ShareableCard = forwardRef(function ShareableCard({
   // Theme context
   isDark = true,
-  
+
   // Identity
   userName = '',
   userUsername = '',
@@ -152,24 +154,26 @@ const ShareableCard = forwardRef(function ShareableCard({
   const theme = getThemeVars(isDark);
 
   // ── Helper Subcomponents (Closed over theme) ───────────────────────────────
-  
+
   const RankPill = ({ rank, total, label, accent }) => {
     if (!rank || rank <= 0) return null;
-    // Only show percentage when leaderboard is large enough to be meaningful
     const pct = (total && total >= 10) ? Math.round((1 - rank / total) * 100) : null;
     const rgbMap = { [EMERALD]: '16,185,129', [CF_BLUE]: '59,130,246', [LC_AMBER]: '245,158,11' };
     const rgb = rgbMap[accent] || '16,185,129';
     return (
+      // marginRight: 8 so rank pills row works without flex gap
       <div style={{
-        display: 'inline-flex', alignItems: 'center', gap: 6,
+        display: 'inline-flex', alignItems: 'center',
         padding: '4px 11px', borderRadius: 6,
         background: `rgba(${rgb},0.10)`,
         border: `1px solid rgba(${rgb},${isDark ? '0.30' : '0.40'})`,
+        marginRight: 8,
+        marginBottom: 4,
       }}>
-        <span style={{ fontFamily: FONT_MONO, fontSize: 13, fontWeight: 700, color: accent }}>#{rank}</span>
-        <span style={{ fontFamily: FONT_SANS, fontSize: 11, fontWeight: 500, color: theme.TEXT_MUTED }}>{label}</span>
+        <span style={{ fontFamily: FONT_MONO, fontSize: 13, fontWeight: 700, color: accent, lineHeight: '1.6', marginRight: 6 }}>#{rank}</span>
+        <span style={{ fontFamily: FONT_SANS, fontSize: 11, fontWeight: 500, color: theme.TEXT_MUTED, lineHeight: '1.6', marginRight: pct !== null && pct > 0 ? 6 : 0 }}>{label}</span>
         {pct !== null && pct > 0 && (
-          <span style={{ fontFamily: FONT_SANS, fontSize: 11, fontWeight: 600, color: GREEN_SUCCESS }}>· Top {pct}%</span>
+          <span style={{ fontFamily: FONT_SANS, fontSize: 11, fontWeight: 600, color: GREEN_SUCCESS, lineHeight: '1.6' }}>· Top {pct}%</span>
         )}
       </div>
     );
@@ -186,8 +190,8 @@ const ShareableCard = forwardRef(function ShareableCard({
           <div style={{ width: 3, height: 12, borderRadius: 2, background: EMERALD, opacity: 0.8, marginRight: 8 }} />
           <div style={{ fontFamily: FONT_SANS, fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: theme.TEXT_DIM, lineHeight: 1.2 }}>Accuracy</div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-          <div style={{ fontFamily: FONT_MONO, fontSize: 36, fontWeight: 700, color: theme.TEXT_PRIMARY, letterSpacing: '-0.02em', lineHeight: 1.15 }}>{acceptanceRate}</div>
+        <div style={{ display: 'flex', alignItems: 'baseline' }}>
+          <div style={{ fontFamily: FONT_MONO, fontSize: 36, fontWeight: 700, color: theme.TEXT_PRIMARY, letterSpacing: '-0.02em', lineHeight: 1.15, marginRight: 4 }}>{acceptanceRate}</div>
           <div style={{ fontFamily: FONT_SANS, fontSize: 16, fontWeight: 500, color: theme.TEXT_MUTED, lineHeight: 1.15 }}>%</div>
         </div>
         {hasCfAvg && (
@@ -199,8 +203,9 @@ const ShareableCard = forwardRef(function ShareableCard({
     );
   };
 
+  // marginRight: 28 so stats row works without flex gap (absorbed by marginLeft:auto on graph)
   const StatBlock = ({ label, value, accent = EMERALD, suffix = null, mono = true }) => (
-    <div style={{ minWidth: 0 }}>
+    <div style={{ minWidth: 0, marginRight: 28 }}>
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
         <div style={{ width: 3, height: 12, borderRadius: 2, background: accent, opacity: 0.8, marginRight: 8 }} />
         <div style={{ fontFamily: FONT_SANS, fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: theme.TEXT_DIM, lineHeight: 1.2 }}>{label}</div>
@@ -214,6 +219,7 @@ const ShareableCard = forwardRef(function ShareableCard({
     </div>
   );
 
+  // marginBottom: 10 so right column works without flex gap
   const PlatformPanel = ({ platform, handle, rating, maxRating, rank }) => {
     const isCf = platform === 'cf';
     const isCc = platform === 'cc';
@@ -222,7 +228,7 @@ const ShareableCard = forwardRef(function ShareableCard({
     const Icon = isCf ? CodeforcesMark : isCc ? CodeChefMark : LeetCodeMark;
     const rc = rankColor(platform, rank);
     return (
-      <div style={{ background: theme.CARD_BG_ELEVATED, border: `1px solid ${theme.BORDER}`, borderRadius: 14, padding: '18px 22px', position: 'relative', overflow: 'hidden' }}>
+      <div style={{ background: theme.CARD_BG_ELEVATED, border: `1px solid ${theme.BORDER}`, borderRadius: 14, padding: '18px 22px', position: 'relative', overflow: 'hidden', marginBottom: 10 }}>
         <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: accent, opacity: 0.9 }} />
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: 10 }}>
           <Icon size={20} />
@@ -238,17 +244,19 @@ const ShareableCard = forwardRef(function ShareableCard({
     );
   };
 
+  // marginRight: 8 applied on TopicPill itself so topics row works without flex gap
   const TopicPill = ({ name, count, maxCount }) => {
     const fillPct = maxCount > 0 ? Math.round((count / maxCount) * 100) : 0;
     return (
-      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '7px 14px', borderRadius: 999, background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.20)', position: 'relative', overflow: 'hidden' }}>
+      <div style={{ display: 'inline-flex', alignItems: 'center', padding: '7px 14px', borderRadius: 999, background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.20)', position: 'relative', overflow: 'hidden', marginRight: 8 }}>
         <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${fillPct}%`, background: 'rgba(16,185,129,0.12)', borderRadius: 999, pointerEvents: 'none' }} />
-        <span style={{ fontFamily: FONT_SANS, fontSize: 14, fontWeight: 600, color: theme.TEXT_BODY, textTransform: 'capitalize', position: 'relative' }}>{name}</span>
+        <span style={{ fontFamily: FONT_SANS, fontSize: 14, fontWeight: 600, color: theme.TEXT_BODY, textTransform: 'capitalize', position: 'relative', marginRight: 8 }}>{name}</span>
         <span style={{ fontFamily: FONT_MONO, fontSize: 12, fontWeight: 700, color: EMERALD, position: 'relative' }}>{count}</span>
       </div>
     );
   };
 
+  // marginRight: 6 applied on PlatformBadge itself so badges row works without flex gap
   const PlatformBadge = ({ platform }) => {
     const isCf = platform === 'cf';
     const isCc = platform === 'cc';
@@ -258,16 +266,16 @@ const ShareableCard = forwardRef(function ShareableCard({
     const Icon = isCf ? CodeforcesMark : isCc ? CodeChefMark : LeetCodeMark;
     const label = isCf ? 'CF' : isCc ? 'CC' : 'LC';
     return (
-      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 999, background: bg, border: `1px solid ${border}` }}>
-        <Icon size={12} />
+      <div style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 10px', borderRadius: 999, background: bg, border: `1px solid ${border}`, marginRight: 6 }}>
+        <div style={{ marginRight: 6 }}><Icon size={12} /></div>
         <span style={{ fontFamily: FONT_SANS, fontSize: 11, fontWeight: 700, color: accent, letterSpacing: '0.1em' }}>{label}</span>
       </div>
     );
   };
 
-  const PlatformSparkline = ({ history = [], color, width = 260, height = 70 }) => {
+  const PlatformSparkline = ({ history = [], color, width = 260, height = 70, marginRight = 0 }) => {
     if (history.length < 2) return (
-      <div style={{ width, height, background: theme.CARD_BG, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${theme.BORDER_SOFT}` }}>
+      <div style={{ width, height, background: theme.CARD_BG, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${theme.BORDER_SOFT}`, marginRight }}>
         <span style={{ fontSize: 9, color: theme.TEXT_DIM, fontFamily: FONT_SANS }}>Not enough data</span>
       </div>
     );
@@ -299,7 +307,7 @@ const ShareableCard = forwardRef(function ShareableCard({
     const endDate = sorted[sorted.length - 1].date.substring(0, 7);
 
     return (
-      <div style={{ width, height, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ width, height, display: 'flex', flexDirection: 'column', marginRight }}>
         <div style={{ display: 'flex', flex: 1 }}>
           <div style={{ width: paddingLeft, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', paddingBottom: 4, paddingRight: 6 }}>
             <span style={{ fontSize: 9, color: theme.TEXT_DIM, fontFamily: FONT_MONO, textAlign: 'right' }}>{Math.round(maxR)}</span>
@@ -327,12 +335,19 @@ const ShareableCard = forwardRef(function ShareableCard({
       ccHistory.length >= 2 ? { history: ccHistory, color: CC_EMERALD } : null,
     ].filter(Boolean);
     if (sparklines.length === 0) return null;
-    const gap = 16;
-    const w = (width - gap * (sparklines.length - 1)) / sparklines.length;
+    const GAP = 16;
+    const w = (width - GAP * (sparklines.length - 1)) / sparklines.length;
     return (
-      <div style={{ display: 'flex', alignItems: 'center', gap, width }}>
+      <div style={{ display: 'flex', alignItems: 'center', width }}>
         {sparklines.map((s, i) => (
-          <PlatformSparkline key={i} history={s.history} color={s.color} width={w} height={height} />
+          <PlatformSparkline
+            key={i}
+            history={s.history}
+            color={s.color}
+            width={w}
+            height={height}
+            marginRight={i < sparklines.length - 1 ? GAP : 0}
+          />
         ))}
       </div>
     );
@@ -399,29 +414,29 @@ const ShareableCard = forwardRef(function ShareableCard({
       <div style={{ position: 'relative', width: '100%', height: '100%', padding: '36px 60px', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
 
         {/* ── Header ────────────────────────────────────────────── */}
-        <div style={{ 
+        <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           paddingBottom: 16,
           marginBottom: 4,
           borderBottom: `1px solid ${theme.BORDER_SOFT}`,
           boxShadow: `0 8px 30px -15px ${EMERALD}40`
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ width: 10, height: 10, borderRadius: 3, background: EMERALD, boxShadow: `0 0 14px ${EMERALD}` }} />
-            <span style={{ fontFamily: FONT_SANS, fontSize: 22, fontWeight: 700, color: theme.TEXT_PRIMARY, letterSpacing: '-0.02em' }}>CPPro</span>
-            <span style={{ width: 1, height: 18, background: theme.BORDER, margin: '0 2px' }} />
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <div style={{ width: 10, height: 10, borderRadius: 3, background: EMERALD, boxShadow: `0 0 14px ${EMERALD}`, marginRight: 12 }} />
+            <span style={{ fontFamily: FONT_SANS, fontSize: 22, fontWeight: 700, color: theme.TEXT_PRIMARY, letterSpacing: '-0.02em', marginRight: 12 }}>CPPro</span>
+            <span style={{ width: 1, height: 18, background: theme.BORDER, marginRight: 12, display: 'inline-block' }} />
             <span style={{ fontFamily: FONT_SANS, fontSize: 13, fontWeight: 500, color: theme.TEXT_MUTED, letterSpacing: '0.04em' }}>Competitive Programming Analytics</span>
           </div>
           <span style={{ fontFamily: FONT_MONO, fontSize: 12, fontWeight: 500, color: theme.TEXT_DIM, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{dateStr}</span>
         </div>
 
         {/* ── Hero ──────────────────────────────────────────────── */}
-        <div style={{ height: 350, width: '100%', display: 'flex', gap: 40, marginTop: 12 }}>
+        <div style={{ height: 350, width: '100%', display: 'flex', marginTop: 12 }}>
           {/* Left */}
-          <div style={{ flex: '1.05', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', gap: 18 }}>
+          <div style={{ flex: '1.05', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', marginRight: 40 }}>
 
-            {/* Identity block */}
-            <div style={{ marginBottom: 6 }}>
+            {/* Identity block — marginBottom replaces flex gap(18) + original 6 = 24 */}
+            <div style={{ marginBottom: 24 }}>
               {displayName && (
                 <div style={{
                   fontFamily: FONT_SANS, fontSize: 24, fontWeight: 700,
@@ -432,15 +447,15 @@ const ShareableCard = forwardRef(function ShareableCard({
                   {displayName}
                 </div>
               )}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
                 <span style={{
                   fontFamily: FONT_SANS, fontSize: 14, fontWeight: 500,
                   color: theme.TEXT_MUTED, overflow: 'hidden', textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap', maxWidth: 280,
+                  whiteSpace: 'nowrap', maxWidth: 280, marginRight: 8,
                 }}>
                   @{displayHandle}
                 </span>
-                <div style={{ display: 'flex', gap: 6 }}>
+                <div style={{ display: 'flex' }}>
                   {hasCf && <PlatformBadge platform="cf" />}
                   {hasLc && <PlatformBadge platform="lc" />}
                   {hasCc && <PlatformBadge platform="cc" />}
@@ -448,8 +463,8 @@ const ShareableCard = forwardRef(function ShareableCard({
               </div>
             </div>
 
-            {/* Hero number */}
-            <div>
+            {/* Hero number — marginBottom replaces flex gap(18) */}
+            <div style={{ marginBottom: 18 }}>
               <span style={{ fontFamily: FONT_MONO, fontSize: 80, fontWeight: 700, color: theme.TEXT_PRIMARY, letterSpacing: '-0.04em', lineHeight: 1.2, display: 'block' }}>
                 {heroValue.toLocaleString()}
               </span>
@@ -458,23 +473,23 @@ const ShareableCard = forwardRef(function ShareableCard({
               </span>
             </div>
 
-            {/* Multi-category rank pills */}
+            {/* Rank pills — marginBottom: 28 = original 10 + flex gap(18) */}
             {rankPills.length > 0 && (
-              <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', marginBottom: 28 }}>
                 {rankPills.map((p, i) => (
                   <RankPill key={i} rank={p.rank} total={p.total} label={p.label} accent={p.accent} />
                 ))}
               </div>
             )}
 
-            {/* Headline */}
+            {/* Headline — last child, no marginBottom needed */}
             <p style={{ fontFamily: FONT_SANS, fontSize: 16, fontWeight: 500, color: theme.TEXT_BODY, lineHeight: 1.45, margin: 0, maxWidth: 480 }}>
               {headline}
             </p>
           </div>
 
-          {/* Right — platform panels */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 10, justifyContent: 'flex-start' }}>
+          {/* Right — platform panels (PlatformPanel has its own marginBottom: 10) */}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
             {hasCf && <PlatformPanel platform="cf" handle={cfHandle} rating={cfRating} maxRating={cfMaxRating} rank={cfRank} />}
             {hasLc && <PlatformPanel platform="lc" handle={lcHandle} rating={lcRating} maxRating={lcMaxRating} rank={lcRank} />}
             {hasCc && <PlatformPanel platform="cc" handle={ccHandle} rating={ccRating} maxRating={ccMaxRating} rank={ccRank} />}
@@ -487,16 +502,17 @@ const ShareableCard = forwardRef(function ShareableCard({
         </div>
 
         {/* ── Footer ────────────────────────────────────────────── */}
-        <div style={{ height: 140, width: '100%', marginTop: 'auto', paddingTop: 14, borderTop: `1px solid ${theme.BORDER_SOFT}`, display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
+        <div style={{ height: 140, width: '100%', marginTop: 'auto', paddingTop: 14, borderTop: `1px solid ${theme.BORDER_SOFT}`, display: 'flex', flexDirection: 'column' }}>
+          {/* Stats row — StatBlock has marginRight: 28; dividers also get marginRight: 28 */}
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: 14 }}>
 
             <StatBlock label="Total Solved" value={totalSolved.toLocaleString()} accent={EMERALD} />
-            <div style={{ width: 1, height: 40, background: theme.BORDER_SOFT }} />
+            <div style={{ width: 1, height: 40, background: theme.BORDER_SOFT, marginRight: 28 }} />
 
             {totalContests > 0 && (
               <>
                 <StatBlock label="Total Contests" value={totalContests} accent={CF_BLUE} />
-                <div style={{ width: 1, height: 40, background: theme.BORDER_SOFT }} />
+                <div style={{ width: 1, height: 40, background: theme.BORDER_SOFT, marginRight: 28 }} />
               </>
             )}
 
@@ -504,22 +520,22 @@ const ShareableCard = forwardRef(function ShareableCard({
               ? <StatBlock label="Current Streak" value={currentStreak} suffix="d" accent={ORANGE} />
               : <StatBlock label="Active Days" value={activeDays > 0 ? activeDays : bestStreak} suffix={activeDays > 0 ? null : 'd'} accent={ORANGE} />
             }
-            <div style={{ width: 1, height: 40, background: theme.BORDER_SOFT }} />
+            <div style={{ width: 1, height: 40, background: theme.BORDER_SOFT, marginRight: 28 }} />
 
             <StatBlock label="Best Streak" value={bestStreak} suffix="d" accent={ORANGE} />
 
             <div style={{ marginLeft: 'auto' }}>
-               <RatingGraph cfHistory={cfRatingHistory} lcHistory={lcRatingHistory} ccHistory={ccRatingHistory} width={540} height={70} />
+              <RatingGraph cfHistory={cfRatingHistory} lcHistory={lcRatingHistory} ccHistory={ccRatingHistory} width={540} height={70} />
             </div>
           </div>
 
-          {/* Bottom row: Topics */}
+          {/* Topics row — TopicPill has marginRight: 8 */}
           {top3Topics.length > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 'auto' }}>
-              <span style={{ fontFamily: FONT_SANS, fontSize: 11, fontWeight: 700, color: theme.TEXT_DIM, letterSpacing: '0.2em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', marginTop: 'auto' }}>
+              <span style={{ fontFamily: FONT_SANS, fontSize: 11, fontWeight: 700, color: theme.TEXT_DIM, letterSpacing: '0.2em', textTransform: 'uppercase', whiteSpace: 'nowrap', marginRight: 14 }}>
                 Top Topics
               </span>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'nowrap', overflow: 'hidden' }}>
+              <div style={{ display: 'flex', flexWrap: 'nowrap', overflow: 'hidden' }}>
                 {top3Topics.map((t) => (
                   <TopicPill key={t.name} name={t.name} count={t.count} maxCount={maxTopicCount} />
                 ))}

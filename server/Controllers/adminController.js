@@ -6,6 +6,7 @@ const Submission = require('../Model/Submissions');
 const Post = require('../Model/Post');
 const Comment = require('../Model/Comment');
 const LeetCodeData = require('../Model/LeetCodeData');
+const Notification = require('../Model/Notification');
 
 /**
  * GET /api/admin/stats?days=7|30
@@ -329,4 +330,78 @@ async function refreshStats(req, res) {
     }
 }
 
-module.exports = { getAdminStats, refreshContests, refreshStats };
+/**
+ * POST /api/admin/notify
+ * Send an in-platform notification to all users or a specific user.
+ * Body: { title, message, type?, actionUrl?, targetType: 'all'|'user', targetUserId? }
+ * targetType='user' requires targetUserId (MongoDB _id) or targetUsername/targetEmail.
+ */
+async function sendNotification(req, res) {
+    try {
+        const {
+            title,
+            message,
+            type = 'general',
+            actionUrl = null,
+            targetType,
+            targetUserId,
+            targetUsername,
+            targetEmail,
+        } = req.body;
+
+        if (!title?.trim() || !message?.trim()) {
+            return res.status(400).json({ success: false, message: 'Title and message are required.' });
+        }
+
+        const VALID_TYPES = ['lc_session_expired', 'lc_session_saved', 'sync_failed', 'rating_milestone', 'streak_milestone', 'daily_problem', 'general'];
+        if (!VALID_TYPES.includes(type)) {
+            return res.status(400).json({ success: false, message: 'Invalid notification type.' });
+        }
+
+        if (targetType === 'all') {
+            const users = await User.find({}, '_id').lean();
+            if (!users.length) {
+                return res.json({ success: true, message: 'No users found.', sent: 0 });
+            }
+            const docs = users.map(u => ({
+                userId: u._id,
+                type,
+                title: title.trim(),
+                message: message.trim(),
+                actionUrl: actionUrl?.trim() || null,
+            }));
+            await Notification.insertMany(docs, { ordered: false });
+            return res.json({ success: true, message: `Notification sent to ${users.length} users.`, sent: users.length });
+        }
+
+        if (targetType === 'user') {
+            let user = null;
+            if (targetUserId) {
+                user = await User.findById(targetUserId).select('_id name username').lean();
+            } else if (targetUsername) {
+                user = await User.findOne({ username: targetUsername.trim() }).select('_id name username').lean();
+            } else if (targetEmail) {
+                user = await User.findOne({ email: targetEmail.trim().toLowerCase() }).select('_id name username').lean();
+            }
+            if (!user) {
+                return res.status(404).json({ success: false, message: 'User not found.' });
+            }
+            await Notification.create({
+                userId: user._id,
+                type,
+                title: title.trim(),
+                message: message.trim(),
+                actionUrl: actionUrl?.trim() || null,
+            });
+            return res.json({ success: true, message: `Notification sent to @${user.username}.`, sent: 1 });
+        }
+
+        return res.status(400).json({ success: false, message: 'targetType must be "all" or "user".' });
+
+    } catch (err) {
+        console.error('Admin sendNotification error:', err);
+        res.status(500).json({ success: false, message: 'Failed to send notification.' });
+    }
+}
+
+module.exports = { getAdminStats, refreshContests, refreshStats, sendNotification };

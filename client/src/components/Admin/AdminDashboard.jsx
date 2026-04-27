@@ -8,7 +8,7 @@ import {
   Users, UserCheck, Activity, RefreshCw, Server,
   TrendingUp, MessageSquare, Shield, Zap, Database,
   Code2, Globe, GraduationCap, Clock, CheckCircle,
-  AlertCircle, Target,
+  AlertCircle, Target, Bell, Send, ChevronDown,
 } from 'lucide-react';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -108,6 +108,187 @@ function BarList({ items, color }) {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+// ── Notification type options ─────────────────────────────────────────────────
+const NOTIF_TYPES = [
+  { value: 'general',          label: 'General' },
+  { value: 'rating_milestone', label: 'Rating Milestone' },
+  { value: 'streak_milestone', label: 'Streak Milestone' },
+  { value: 'daily_problem',    label: 'Daily Problem' },
+  { value: 'sync_failed',      label: 'Sync Failed' },
+];
+
+// ── Send Notification Panel ───────────────────────────────────────────────────
+function SendNotificationPanel() {
+  const [targetType, setTargetType] = useState('all');
+  const [targetQuery, setTargetQuery]   = useState('');
+  const [notifType, setNotifType]   = useState('general');
+  const [title, setTitle]           = useState('');
+  const [message, setMessage]       = useState('');
+  const [actionUrl, setActionUrl]   = useState('');
+  const [sending, setSending]       = useState(false);
+  const [result, setResult]         = useState(null);
+
+  const handleSend = async () => {
+    if (!title.trim() || !message.trim()) {
+      setResult({ ok: false, text: 'Title and message are required.' });
+      return;
+    }
+    if (targetType === 'user' && !targetQuery.trim()) {
+      setResult({ ok: false, text: 'Enter a username or email for targeted send.' });
+      return;
+    }
+    setSending(true);
+    setResult(null);
+    try {
+      const isEmail = targetQuery.includes('@');
+      const body = {
+        title: title.trim(),
+        message: message.trim(),
+        type: notifType,
+        actionUrl: actionUrl.trim() || null,
+        targetType,
+        ...(targetType === 'user' && (isEmail
+          ? { targetEmail: targetQuery.trim() }
+          : { targetUsername: targetQuery.trim() }
+        )),
+      };
+      const res = await fetch(`${API_BASE}/api/admin/notify`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const json = await res.json();
+      setResult({ ok: json.success, text: json.message });
+      if (json.success) {
+        setTitle('');
+        setMessage('');
+        setActionUrl('');
+        setTargetQuery('');
+      }
+    } catch {
+      setResult({ ok: false, text: 'Network error — could not send.' });
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4">
+      <div className="flex items-center gap-2 mb-4">
+        <Bell size={14} className="text-emerald-400" />
+        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Send Notification</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Left column — content */}
+        <div className="space-y-3">
+          {/* Title */}
+          <div>
+            <label className="block text-[11px] text-gray-500 mb-1 font-medium uppercase tracking-wide">Title</label>
+            <input
+              type="text"
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              placeholder="Notification title…"
+              maxLength={120}
+              className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-emerald-500/50 transition-colors"
+            />
+          </div>
+
+          {/* Message */}
+          <div>
+            <label className="block text-[11px] text-gray-500 mb-1 font-medium uppercase tracking-wide">Message</label>
+            <textarea
+              value={message}
+              onChange={e => setMessage(e.target.value)}
+              placeholder="Notification body…"
+              rows={3}
+              maxLength={500}
+              className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-emerald-500/50 transition-colors resize-none"
+            />
+          </div>
+
+          {/* Action URL */}
+          <div>
+            <label className="block text-[11px] text-gray-500 mb-1 font-medium uppercase tracking-wide">Action URL <span className="text-gray-600 normal-case">(optional)</span></label>
+            <input
+              type="text"
+              value={actionUrl}
+              onChange={e => setActionUrl(e.target.value)}
+              placeholder="/settings, /dashboard, …"
+              className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-emerald-500/50 transition-colors"
+            />
+          </div>
+        </div>
+
+        {/* Right column — targeting */}
+        <div className="space-y-3">
+          {/* Type */}
+          <div>
+            <label className="block text-[11px] text-gray-500 mb-1 font-medium uppercase tracking-wide">Type</label>
+            <div className="relative">
+              <select
+                value={notifType}
+                onChange={e => setNotifType(e.target.value)}
+                className="w-full appearance-none bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-emerald-500/50 transition-colors pr-8"
+              >
+                {NOTIF_TYPES.map(t => (
+                  <option key={t.value} value={t.value} className="bg-[#111]">{t.label}</option>
+                ))}
+              </select>
+              <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+            </div>
+          </div>
+
+          {/* Target */}
+          <div>
+            <label className="block text-[11px] text-gray-500 mb-1 font-medium uppercase tracking-wide">Target</label>
+            <div className="flex bg-white/5 border border-white/10 rounded-lg p-0.5 text-xs mb-3">
+              {[{ v: 'all', l: 'All Users' }, { v: 'user', l: 'Specific User' }].map(({ v, l }) => (
+                <button
+                  key={v}
+                  onClick={() => { setTargetType(v); setTargetQuery(''); setResult(null); }}
+                  className={`flex-1 py-1.5 rounded-md font-medium transition-all ${
+                    targetType === v ? 'bg-emerald-600 text-white' : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  {l}
+                </button>
+              ))}
+            </div>
+            {targetType === 'user' && (
+              <input
+                type="text"
+                value={targetQuery}
+                onChange={e => setTargetQuery(e.target.value)}
+                placeholder="Username or email address…"
+                className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-emerald-500/50 transition-colors"
+              />
+            )}
+          </div>
+
+          {/* Send button */}
+          <button
+            onClick={handleSend}
+            disabled={sending}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600/20 hover:bg-emerald-600/40 border border-emerald-500/30 text-emerald-400 text-sm font-medium rounded-lg transition-all disabled:opacity-50 mt-auto"
+          >
+            <Send size={13} className={sending ? 'animate-pulse' : ''} />
+            {sending ? 'Sending…' : targetType === 'all' ? 'Broadcast to All' : 'Send to User'}
+          </button>
+
+          {result && (
+            <p className={`text-[11px] px-3 py-2 rounded-lg ${result.ok ? 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/20' : 'text-red-400 bg-red-500/10 border border-red-500/20'}`}>
+              {result.text}
+            </p>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -260,6 +441,9 @@ export default function AdminDashboard() {
             ))}
           </div>
         </div>
+
+        {/* ── Send Notification ── */}
+        <SendNotificationPanel />
 
         {/* ── Overview stat cards ── */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">

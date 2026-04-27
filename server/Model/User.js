@@ -105,6 +105,11 @@ const userSchema = new mongoose.Schema({
         status:         { type: String, enum: ['not_set', 'active', 'expired'], default: 'not_set' },
         updatedAt:      { type: Date,   default: null },
     },
+    dailyStreak: {
+        current:    { type: Number, default: 0 },
+        longest:    { type: Number, default: 0 },
+        lastSolved: { type: Date,   default: null },
+    },
 }, {timestamps:true});
 
 

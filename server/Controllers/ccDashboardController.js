@@ -36,19 +36,36 @@ async function getCcAggregateDashboard(req, res) {
 
         // Discard submissions with invalid / future / epoch dates — bad scrape artifacts.
         const nowMs = Date.now();
-        const ccSubmissions = rawCcSubmissions.filter(s => {
-            if (!s.submittedAt) return false;
-            const t = new Date(s.submittedAt).getTime();
-            return !isNaN(t) && t > 0 && t <= nowMs + 172_800_000; // reject epoch + future (48h buffer)
-        });
+        const ccSubmissions = (() => {
+            const valid = rawCcSubmissions.filter(s => {
+                if (!s.submittedAt) return false;
+                const t = new Date(s.submittedAt).getTime();
+                return !isNaN(t) && t > 0 && t <= nowMs + 172_800_000;
+            });
+            // Dedup by {problemId, hour-bucket, verdict} — catches duplicate DB records where
+            // the same submission was stored with submittedAt values up to 1 hour apart.
+            // Relative-time strings ("5 hours ago") are now rounded to the hour at parse time,
+            // so same-hour syncs hit the unique index. This layer catches cross-hour-boundary
+            // stragglers without needing a delete-all before each sync.
+            const seen = new Map();
+            for (const s of valid) {
+                const hour = Math.floor(new Date(s.submittedAt).getTime() / 3600000);
+                const key = `${s.problemId}\x00${hour}\x00${s.verdict || ''}`;
+                if (!seen.has(key)) seen.set(key, s);
+            }
+            return [...seen.values()];
+        })();
 
         if (!ccPlatform) {
             return res.status(200).json({ success: true, data: null });
         }
 
         const currentRating = ccPlatform.currentRating || 0;
-        const maxRating     = ccPlatform.maxRating || 0;
+        const maxRating = ccPlatform.maxRating || 0;
         const now = new Date();
+        // Use IST "today" for all date string comparisons — submissions are IST-stamped
+        // and monthStr must match. Using UTC month would diverge by ~5.5h at boundaries.
+        const todayIST = getISTDate(now);
 
         // ── Heatmap from cumulative submissions (5-year cap) ─────────────────
         const fiveYearsAgoStr = (() => {
@@ -76,7 +93,7 @@ async function getCcAggregateDashboard(req, res) {
             if (diff === 1) { cur++; bestStreak = Math.max(bestStreak, cur); }
             else if (diff > 1) cur = 1;
         }
-        const today = getISTDate(new Date());
+        const today = todayIST;
         const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
         const yStr = getISTDate(yesterday);
         const last = sorted[sorted.length - 1];
@@ -94,13 +111,13 @@ async function getCcAggregateDashboard(req, res) {
         const acSubmissions = ccSubmissions.filter(s => s.verdict === 'AC');
         const acProblemIds = new Set(acSubmissions.map(s => s.problemId));
 
-        // Solved this month / last month (unique problems only)
-        const monthStr     = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        // Derive month strings from IST "today" so they match getISTDate() output on submissions
+        const monthStr = todayIST.slice(0, 7);
         const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        const lastMonthStr  = `${lastMonthDate.getFullYear()}-${String(lastMonthDate.getMonth() + 1).padStart(2, '0')}`;
+        const lastMonthStr = getISTDate(lastMonthDate).slice(0, 7);
 
-        const acThisMonthIds  = new Set(acSubmissions.filter(s => getISTDate(new Date(s.submittedAt)).startsWith(monthStr)).map(s => s.problemId));
-        const acLastMonthIds  = new Set(acSubmissions.filter(s => getISTDate(new Date(s.submittedAt)).startsWith(lastMonthStr)).map(s => s.problemId));
+        const acThisMonthIds = new Set(acSubmissions.filter(s => getISTDate(new Date(s.submittedAt)).startsWith(monthStr)).map(s => s.problemId));
+        const acLastMonthIds = new Set(acSubmissions.filter(s => getISTDate(new Date(s.submittedAt)).startsWith(lastMonthStr)).map(s => s.problemId));
         const ccSolvedThisMonth = acThisMonthIds.size;
         const ccSolvedLastMonth = acLastMonthIds.size;
 
@@ -164,9 +181,19 @@ async function getCcAggregateDashboard(req, res) {
                 };
             });
 
-        // ── Recent AC submissions (last 15) ───────────────────────────────────
+        // ── Recent AC submissions (last 15, one per problem) ─────────────────
+        // Dedup by problemId — the same problem can appear twice in the DB when
+        // relative-time strings ("3h ago") were parsed across two sync runs at
+        // slightly different wall-clock times, producing different submittedAt
+        // values that bypass the unique index. Show only the most recent AC per problem.
+        const seenProblems = new Set();
         const recentCcAcSubmissions = [...acSubmissions]
             .sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt))
+            .filter(s => {
+                if (seenProblems.has(s.problemId)) return false;
+                seenProblems.add(s.problemId);
+                return true;
+            })
             .slice(0, 15)
             .map(s => ({
                 title: s.problemTitle || s.problemId || 'Unknown',
@@ -179,15 +206,15 @@ async function getCcAggregateDashboard(req, res) {
         return res.status(200).json({
             success: true,
             data: {
-                ccHandle:             ccPlatform.platformUsername,
+                ccHandle: ccPlatform.platformUsername,
                 currentRating,
                 maxRating,
-                currentRank:          ccPlatform.currentRank || getCcRankLabel(currentRating),
-                maxRank:              ccPlatform.maxRank || getCcRankLabel(maxRating),
-                totalSolved:          ccPlatform.totalSolved || 0,
+                currentRank: ccPlatform.currentRank || getCcRankLabel(currentRating),
+                maxRank: ccPlatform.maxRank || getCcRankLabel(maxRating),
+                totalSolved: ccPlatform.totalSolved || 0,
                 contestsParticipated: ccPlatform.contestsParticipated || 0,
-                globalRank:           ccPlatform.globalRank || 0,
-                countryRank:          ccPlatform.countryRank || 0,
+                globalRank: ccPlatform.globalRank || 0,
+                countryRank: ccPlatform.countryRank || 0,
                 currentStreak,
                 bestStreak,
                 activeDaysThisMonth,
@@ -196,16 +223,16 @@ async function getCcAggregateDashboard(req, res) {
                 ccSolvedLastMonth,
                 ccHeatmap,
                 ccLast7Days,
-                ratingHistory:        ratedHistory,
+                ratingHistory: ratedHistory,
                 recentCcContests,
-                totalSubmissions:     ccSubmissions.length,
-                ccAcSubmissions:      acSubmissions.length,
-                uniqueSolved:         acProblemIds.size,
+                totalSubmissions: ccSubmissions.length,
+                ccAcSubmissions: acSubmissions.length,
+                uniqueSolved: acProblemIds.size,
                 ccAcceptanceRate,
                 languageDistribution,
                 verdictBreakdown,
                 recentCcAcSubmissions,
-                lastSyncedAt:         ccPlatform.lastSyncedAt || null,
+                lastSyncedAt: ccPlatform.lastSyncedAt || null,
             },
         });
     } catch (error) {

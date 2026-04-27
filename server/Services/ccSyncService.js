@@ -1,5 +1,7 @@
 const axios = require('axios');
 const User = require('../Model/User');
+const Submission = require('../Model/Submissions');
+const { checkDailyProblemSolves } = require('./dailyProblemService');
 
 const FIFTEEN_MINUTES = 15 * 60 * 1000;
 const ADMIN_COOLDOWN  = 10 * 1000;
@@ -107,6 +109,13 @@ const syncCodeChefProfile = async (userId, handle) => {
         if (state === 'completed') {
             await User.findByIdAndUpdate(userId, { $set: { lastCcUpdate: new Date() } });
             console.log(`[CC-SYNC] >> ${handle} | sync done ✓`);
+            // Post-sync: check if today's daily problem was solved
+            Submission.find(
+                { userId, platform: 'codechef', verdict: 'AC' },
+                { problemId: 1, _id: 0 }
+            ).sort({ submittedAt: -1 }).limit(50).lean()
+                .then(subs => checkDailyProblemSolves(userId, 'codechef', subs.map(s => s.problemId)))
+                .catch(err => console.warn('[DAILY-CC] solve check failed:', err.message));
             return { success: true };
         }
 
