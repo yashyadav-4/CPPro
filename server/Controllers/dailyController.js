@@ -1,6 +1,6 @@
 const DailyProblem = require('../Model/DailyProblem');
 const User         = require('../Model/User');
-const { generateDailyProblems, markSolved } = require('../Services/dailyProblemService');
+const { generateDailyProblems } = require('../Services/dailyProblemService');
 const { getTodayIST, getNDaysAgoIST } = require('../Utils/dateUtils');
 
 async function getToday(req, res) {
@@ -32,20 +32,6 @@ async function getToday(req, res) {
     } catch (err) {
         console.error('[DAILY] getToday error:', err.message);
         return res.status(500).json({ success: false, message: err.message });
-    }
-}
-
-async function markSolvedHandler(req, res) {
-    try {
-        const userId = req.user._id;
-        const { type } = req.body;
-        if (!type) return res.status(400).json({ success: false, message: 'type required' });
-
-        const daily = await markSolved(userId, type);
-        return res.status(200).json({ success: true, data: daily });
-    } catch (err) {
-        console.error('[DAILY] markSolved error:', err.message);
-        return res.status(400).json({ success: false, message: err.message });
     }
 }
 
@@ -101,4 +87,4 @@ async function getHistory(req, res) {
     }
 }
 
-module.exports = { getToday, markSolvedHandler, getStreak, getHistory };
+module.exports = { getToday, getStreak, getHistory };

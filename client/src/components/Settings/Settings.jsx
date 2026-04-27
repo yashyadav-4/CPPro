@@ -385,9 +385,10 @@ export default function Settings() {
                   <div className="px-4 pb-4 pt-3 bg-gray-50 dark:bg-[#0d0d0d] border-t border-gray-100 dark:border-white/[0.05] space-y-3">
                     <div className="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-500/[0.07] border border-emerald-200 dark:border-emerald-500/20 flex gap-2.5">
                       <Info size={14} className="text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
-                      <p className="text-xs text-emerald-800 dark:text-emerald-300 leading-relaxed">
-                        Generate a code, add it to your <strong>CodeChef Name</strong> field (edit profile), then enter your handle and verify.
-                      </p>
+                      <div className="text-xs text-emerald-800 dark:text-emerald-300 leading-relaxed space-y-1">
+                        <p>Generate a code → set it as your <strong>Name</strong> field at <a href="https://www.codechef.com/settings/" target="_blank" rel="noopener noreferrer" className="underline font-medium">codechef.com/settings/</a> → enter your handle below and verify.</p>
+                        <p className="text-emerald-600 dark:text-emerald-500">You can restore your real name once linked.</p>
+                      </div>
                     </div>
 
                     {/* Step 1: Generate code */}
@@ -415,6 +416,10 @@ export default function Settings() {
                     {/* Step 2: Enter handle */}
                     {ccCode && (
                       <div>
+                        <a href="https://www.codechef.com/settings/" target="_blank" rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 underline font-medium mb-3">
+                          Open codechef.com/settings/ → set the Name field to the code above, then verify below
+                        </a>
                         <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5">Step 2 — Enter your CodeChef handle</p>
                         <div className="flex items-center gap-2">
                           <input
@@ -476,13 +481,54 @@ export default function Settings() {
                 )}
               </div>
 
-              <div className="p-3 mb-4 rounded-lg bg-amber-50 dark:bg-amber-500/[0.07] border border-amber-200 dark:border-amber-500/20 flex gap-2.5">
-                <Info size={15} className="text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
-                <p className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
-                  Adding your session enables full submission history (status, language) instead of the last 20 AC-only.
-                  Your session is encrypted with AES-256-GCM and never logged or shared.
-                  Find it in your browser cookies at <strong>leetcode.com</strong> — the key is <code className="font-mono">LEETCODE_SESSION</code>.
-                </p>
+              <div className="space-y-3 mb-4">
+                {/* Without vs With comparison */}
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div className="p-3 rounded-lg bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.06]">
+                    <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Without session</p>
+                    <ul className="space-y-1.5 text-xs text-gray-500 dark:text-gray-400">
+                      <li className="flex items-start gap-1.5"><span className="shrink-0 text-red-400 mt-0.5">✗</span>Last 20 AC submissions only</li>
+                      <li className="flex items-start gap-1.5"><span className="shrink-0 text-red-400 mt-0.5">✗</span>No WA / TLE / RE verdicts</li>
+                      <li className="flex items-start gap-1.5"><span className="shrink-0 text-red-400 mt-0.5">✗</span>No language per submission</li>
+                      <li className="flex items-start gap-1.5"><span className="shrink-0 text-red-400 mt-0.5">✗</span>Heatmap current year only</li>
+                    </ul>
+                  </div>
+                  <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-500/[0.07] border border-amber-200 dark:border-amber-500/20">
+                    <p className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-2">With session</p>
+                    <ul className="space-y-1.5 text-xs text-amber-700 dark:text-amber-300">
+                      <li className="flex items-start gap-1.5"><span className="shrink-0 mt-0.5">✓</span>Up to 800 submissions synced</li>
+                      <li className="flex items-start gap-1.5"><span className="shrink-0 mt-0.5">✓</span>All verdict types tracked</li>
+                      <li className="flex items-start gap-1.5"><span className="shrink-0 mt-0.5">✓</span>Language per submission</li>
+                      <li className="flex items-start gap-1.5"><span className="shrink-0 mt-0.5">✓</span>Full heatmap across all years</li>
+                    </ul>
+                  </div>
+                </div>
+
+                {/* How to find the cookie */}
+                <div className="p-3 rounded-lg bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.06]">
+                  <p className="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-2">How to find your LEETCODE_SESSION cookie</p>
+                  <ol className="space-y-1.5 text-xs text-gray-500 dark:text-gray-400">
+                    {[
+                      'Log in to leetcode.com in your browser',
+                      'Open DevTools (F12) → Application tab → Cookies → leetcode.com',
+                      <>Find <code className="font-mono bg-gray-100 dark:bg-white/10 px-1 rounded">LEETCODE_SESSION</code> and copy its full Value</>,
+                      'Paste the value below and click Save Session',
+                    ].map((step, i) => (
+                      <li key={i} className="flex items-start gap-2">
+                        <span className="shrink-0 w-4 h-4 rounded-full bg-gray-200 dark:bg-white/10 flex items-center justify-center text-[10px] font-bold mt-0.5">{i + 1}</span>
+                        <span>{step}</span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+
+                {/* Security trust note */}
+                <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-500/[0.07] border border-blue-200 dark:border-blue-500/20 flex gap-2.5">
+                  <Shield size={14} className="text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-blue-800 dark:text-blue-300 leading-relaxed">
+                    <strong>Your privacy:</strong> the token is encrypted with AES-256-GCM before storage — only your own server holds the key. It is never logged, never sent to any third party, and used solely to fetch your own submission list from LeetCode's API.
+                  </p>
+                </div>
               </div>
 
               {lcSessionStatus !== 'feature_disabled' && (

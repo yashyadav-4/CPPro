@@ -1,6 +1,7 @@
 const User = require('../Model/User');
 const { clearStatsCache } = require('../Routes/publicStats');
 const { forceSyncContests } = require('../Workers/contestSyncWorker');
+const { forceRefreshLeaderboard } = require('../Workers/leaderboardSyncWorker');
 const Platform = require('../Model/Platform');
 const Submission = require('../Model/Submissions');
 const Post = require('../Model/Post');
@@ -320,6 +321,16 @@ async function refreshContests(req, res) {
     }
 }
 
+async function refreshLeaderboard(req, res) {
+    try {
+        await forceRefreshLeaderboard();
+        res.json({ success: true, message: 'Leaderboard cache recomputed — all 4 global categories updated.' });
+    } catch (err) {
+        console.error('Admin refreshLeaderboard error:', err);
+        res.status(500).json({ success: false, message: 'Leaderboard recompute failed: ' + err.message });
+    }
+}
+
 async function refreshStats(req, res) {
     try {
         clearStatsCache();
@@ -404,4 +415,4 @@ async function sendNotification(req, res) {
     }
 }
 
-module.exports = { getAdminStats, refreshContests, refreshStats, sendNotification };
+module.exports = { getAdminStats, refreshContests, refreshLeaderboard, refreshStats, sendNotification };

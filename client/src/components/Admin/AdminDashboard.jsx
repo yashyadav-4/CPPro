@@ -300,8 +300,8 @@ export default function AdminDashboard() {
   const [error, setError] = useState(null);
   const [days, setDays] = useState(7);
   const [lastRefresh, setLastRefresh] = useState(null);
-  const [forcing, setForcing] = useState({ contests: false, stats: false });
-  const [forceMsg, setForceMsg] = useState({ contests: null, stats: null });
+  const [forcing, setForcing] = useState({ contests: false, leaderboard: false, stats: false, all: false });
+  const [forceMsg, setForceMsg] = useState({ contests: null, leaderboard: null, stats: null, all: null });
 
   const fetchStats = useCallback(async (d) => {
     setLoading(true);
@@ -340,6 +340,29 @@ export default function AdminDashboard() {
       setForceMsg(prev => ({ ...prev, [type]: { ok: false, text: 'Network error' } }));
     } finally {
       setForcing(prev => ({ ...prev, [type]: false }));
+    }
+  }, []);
+
+  const forceRefreshAll = useCallback(async () => {
+    setForcing(prev => ({ ...prev, all: true }));
+    setForceMsg(prev => ({ ...prev, all: null }));
+    try {
+      const results = await Promise.allSettled([
+        fetch(`${API_BASE}/api/admin/refresh/contests`,    { method: 'POST', credentials: 'include' }),
+        fetch(`${API_BASE}/api/admin/refresh/leaderboard`, { method: 'POST', credentials: 'include' }),
+        fetch(`${API_BASE}/api/admin/refresh/stats`,       { method: 'POST', credentials: 'include' }),
+      ]);
+      const failed = results.filter(r => r.status === 'rejected').length;
+      setForceMsg(prev => ({
+        ...prev,
+        all: failed === 0
+          ? { ok: true,  text: 'Contests, leaderboard cache, and home stats all refreshed.' }
+          : { ok: false, text: `${failed} of 3 operations failed — check individual panels.` },
+      }));
+    } catch {
+      setForceMsg(prev => ({ ...prev, all: { ok: false, text: 'Network error' } }));
+    } finally {
+      setForcing(prev => ({ ...prev, all: false }));
     }
   }, []);
 
@@ -411,11 +434,27 @@ export default function AdminDashboard() {
 
         {/* ── Force Refresh Panel ── */}
         <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4">
-          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3">Force Refresh</p>
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Force Refresh</p>
+            <button
+              onClick={forceRefreshAll}
+              disabled={forcing.all || forcing.contests || forcing.leaderboard || forcing.stats}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600/30 hover:bg-emerald-600/50 border border-emerald-500/40 text-emerald-300 text-xs font-semibold rounded-lg transition-all disabled:opacity-50"
+            >
+              <RefreshCw size={11} className={forcing.all ? 'animate-spin' : ''} />
+              {forcing.all ? 'Refreshing All…' : 'Refresh All'}
+            </button>
+          </div>
+          {forceMsg.all && (
+            <p className={`text-[11px] mb-3 px-2 py-1 rounded ${forceMsg.all.ok ? 'text-emerald-400 bg-emerald-500/10' : 'text-red-400 bg-red-500/10'}`}>
+              {forceMsg.all.text}
+            </p>
+          )}
           <div className="flex flex-wrap gap-3">
             {[
-              { key: 'contests', label: 'Sync Contest Data', icon: RefreshCw, desc: 'Re-fetches CF + LC contests from APIs (bypasses 6h timer)' },
-              { key: 'stats', label: 'Clear Home Stats Cache', icon: Database, desc: 'Forces home page to re-query user/problem counts from DB' },
+              { key: 'contests',    label: 'Sync Contest Data',       icon: RefreshCw, desc: 'Re-fetches CF + LC contests from APIs (bypasses 6h timer)' },
+              { key: 'leaderboard', label: 'Recompute Leaderboard',   icon: RefreshCw, desc: 'Rebuilds global leaderboard cache for all 4 categories (bypasses 15m timer)' },
+              { key: 'stats',       label: 'Clear Home Stats Cache',  icon: Database,  desc: 'Forces home page to re-query user/problem counts from DB' },
             ].map(({ key, label, icon: Icon, desc }) => (
               <div key={key} className="flex-1 min-w-[220px] bg-white/[0.03] border border-white/[0.07] rounded-lg p-3">
                 <div className="flex items-center justify-between gap-3 mb-1">

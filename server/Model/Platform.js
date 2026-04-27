@@ -42,6 +42,7 @@ const platformSchema= new mongoose.Schema({
         date:{type:Date},
         contestName:{type:String},
         rank:{type:Number},
+        contestCode:{type:String, default:''},
     }],
     totalSolved:{
         type:Number,

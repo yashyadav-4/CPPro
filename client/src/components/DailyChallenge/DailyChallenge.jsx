@@ -15,8 +15,6 @@ export default function DailyChallenge() {
     const [histPage, setHistPage] = useState(1);
     const [histTotal, setHistTotal] = useState(0);
     const [histLoading, setHistLoading] = useState(false);
-    const [markingType, setMarkingType] = useState(null);
-
     useEffect(() => { fetchToday(); }, []);
 
     async function fetchToday() {
@@ -34,15 +32,6 @@ export default function DailyChallenge() {
         } finally {
             setLoading(false);
         }
-    }
-
-    async function markSolved(type) {
-        setMarkingType(type);
-        try {
-            await axios.post(`${API_BASE}/api/daily/mark-solved`, { type }, { withCredentials: true });
-            await fetchToday();
-        } catch (_) {}
-        setMarkingType(null);
     }
 
     async function loadHistory(page = 1) {
@@ -125,28 +114,6 @@ export default function DailyChallenge() {
                 <ProblemCard type="workout" problem={data?.workout} loading={loading} />
                 <ProblemCard type="challenger" problem={data?.challenger} loading={loading} />
             </div>
-
-            {/* Manual solve buttons (edge case fallback) */}
-            {!loading && data && (
-                <div className="flex gap-3 justify-center">
-                    {data.workout && !data.workout.isSolved && (
-                        <button
-                            onClick={() => markSolved('workout')}
-                            disabled={markingType === 'workout'}
-                            className="text-[12px] text-gray-400 hover:text-emerald-500 dark:hover:text-emerald-400 transition-colors disabled:opacity-50">
-                            {markingType === 'workout' ? 'Marking...' : 'Manually mark workout solved'}
-                        </button>
-                    )}
-                    {data.challenger && !data.challenger.isSolved && (
-                        <button
-                            onClick={() => markSolved('challenger')}
-                            disabled={markingType === 'challenger'}
-                            className="text-[12px] text-gray-400 hover:text-amber-500 dark:hover:text-amber-400 transition-colors disabled:opacity-50">
-                            {markingType === 'challenger' ? 'Marking...' : 'Manually mark challenger solved'}
-                        </button>
-                    )}
-                </div>
-            )}
 
             {/* History panel */}
             {historyOpen && (

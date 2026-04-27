@@ -1,15 +1,10 @@
-// useContestData.js
-// Fetches pre-normalised contest data from our Express proxy at /api/contests.
-// The proxy calls the official Codeforces REST API + LeetCode GraphQL API
-// server-side and returns { platform, name, startTime, endTime, duration, url }.
 import { useState, useEffect, useCallback } from 'react';
 import { API_BASE } from '../api';
 
-const PROXY_URL = `${API_BASE}/api/contests`;
+const PROXY_URL  = `${API_BASE}/api/contests`;
+const CACHE_KEY  = 'contest_data';
+const CACHE_TTL  = 60 * 60 * 1000; // 1 hour
 
-/**
- * Hydrate ISO date strings → Date objects and add a stable id.
- */
 function hydrate(raw) {
   return {
     id:        raw.contestId ?? (raw._id?.toString() ?? (raw.name + raw.startTime)),
@@ -24,15 +19,36 @@ function hydrate(raw) {
   };
 }
 
-/**
- * Custom hook.
- * Returns { contests, loading, error, refetch }
- * contests → sorted ascending by startTime, CF + LC only.
- */
+function readCache() {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const { data, cachedAt } = JSON.parse(raw);
+    if (Date.now() - cachedAt > CACHE_TTL) return null; // expired
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+function writeCache(data) {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ data, cachedAt: Date.now() }));
+  } catch {}
+}
+
 export function useContestData() {
   const [contests, setContests] = useState([]);
   const [loading,  setLoading]  = useState(true);
   const [error,    setError]    = useState(null);
+
+  const applyRaw = useCallback((rawList) => {
+    const hydrated = (Array.isArray(rawList) ? rawList : [])
+      .map(hydrate)
+      .filter(c => c.startTime !== null)
+      .sort((a, b) => a.startTime - b.startTime);
+    setContests(hydrated);
+  }, []);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -41,22 +57,26 @@ export function useContestData() {
       const res = await fetch(PROXY_URL, { credentials: 'include' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
-
-      const hydrated = (Array.isArray(json) ? json : [])
-        .map(hydrate)
-        .filter(c => c.startTime !== null)
-        .sort((a, b) => a.startTime - b.startTime);
-
-      setContests(hydrated);
+      const rawList = Array.isArray(json) ? json : [];
+      writeCache(rawList);
+      applyRaw(rawList);
     } catch (err) {
       console.error('[useContestData]', err);
       setError(err.message || 'Failed to fetch contests');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [applyRaw]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    const cached = readCache();
+    if (cached) {
+      applyRaw(cached);
+      setLoading(false);
+    } else {
+      fetchData();
+    }
+  }, [applyRaw, fetchData]);
 
   return { contests, loading, error, refetch: fetchData };
 }

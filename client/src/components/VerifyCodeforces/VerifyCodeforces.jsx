@@ -35,7 +35,7 @@ const LC_STATE = {
 const LC_STEPS = [
   { step: '1', title: 'Enter Username', desc: 'Input your LeetCode username in the field above' },
   { step: '2', title: 'Generate Code', desc: 'Click the button to get a unique verification code' },
-  { step: '3', title: 'Update LeetCode', desc: 'Set your "Display Name" to the code on LeetCode' },
+  { step: '3', title: 'Update LeetCode', desc: 'Set your "Name" field to the code on your LC profile page' },
   { step: '4', title: 'Verify', desc: "Click verify and we'll confirm the link automatically" },
 ];
 
@@ -226,10 +226,10 @@ function LeetCodeSection() {
                   <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Instructions</p>
                   <ol className="space-y-2.5">
                     {[
-                      'Go to leetcode.com and click your avatar → "Edit Profile"',
-                      'Find the "Basic Info" section',
-                      'Change the "Display Name" field to the verification code above',
-                      'Click "Save", then come back here and click "Verify Account"',
+                      <><a href="https://leetcode.com/profile/" target="_blank" rel="noopener noreferrer" className="text-amber-600 dark:text-amber-400 underline font-medium">leetcode.com/profile/</a> — open your profile page</>,
+                      'Find the "Name" field and set it to the verification code above',
+                      'Click "Save"',
+                      'Come back here and click "Verify Account"',
                     ].map((txt, i) => (
                       <li key={i} className="flex items-start gap-2.5 text-sm text-gray-600 dark:text-gray-400">
                         <span className="shrink-0 w-5 h-5 rounded-full bg-amber-50 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center text-xs font-bold mt-0.5">{i + 1}</span>
@@ -512,10 +512,10 @@ function CodeChefSection() {
                   <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Instructions</p>
                   <ol className="space-y-2.5">
                     {[
-                      'Go to codechef.com and click your avatar → "Edit Profile"',
-                      'Find the "Name" field under Basic Information',
-                      'Replace your name with the verification code above',
-                      'Save changes, then come back here and click "Verify Account"',
+                      <><a href="https://www.codechef.com/settings/" target="_blank" rel="noopener noreferrer" className="text-emerald-600 dark:text-emerald-400 underline font-medium">codechef.com/settings/</a> — open your profile settings</>,
+                      'Find the "Name" field under "Personal Details" and set it to the verification code above',
+                      'Click "Save"',
+                      'Come back here and click "Verify Account"',
                     ].map((txt, i) => (
                       <li key={i} className="flex items-start gap-2.5 text-sm text-gray-600 dark:text-gray-400">
                         <span className="shrink-0 w-5 h-5 rounded-full bg-emerald-50 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xs font-bold mt-0.5">{i + 1}</span>
@@ -524,9 +524,9 @@ function CodeChefSection() {
                     ))}
                   </ol>
                 </div>
-                <a href="https://www.codechef.com/settings/profile" target="_blank" rel="noopener noreferrer"
+                <a href="https://www.codechef.com/settings/" target="_blank" rel="noopener noreferrer"
                   className="mt-5 inline-flex items-center gap-2 text-sm font-medium text-emerald-600 dark:text-emerald-400 hover:underline group">
-                  <ExternalLink size={14} /> Open CodeChef Profile Settings <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
+                  <ExternalLink size={14} /> Open CodeChef Settings <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
                 </a>
               </div>
             </motion.div>
@@ -841,7 +841,12 @@ export default function VerifyCodeforces() {
                           <div className="space-y-3">
                             <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Instructions</p>
                             <ol className="space-y-2.5">
-                              {['Go to codeforces.com and open Settings', 'Navigate to the "Social" tab', 'Change "First Name (English)" to the code above', 'Save changes, then come back and click "Verify Account"'].map((txt, i) => (
+                              {[
+                                <><a href="https://codeforces.com/settings/social" target="_blank" rel="noopener noreferrer" className="text-indigo-600 dark:text-indigo-400 underline font-medium">codeforces.com/settings/social</a> — open your social settings</>,
+                                'Find "First Name (English)" and set it to the code above',
+                                'Click "Save"',
+                                'Come back here and click "Verify Account"',
+                              ].map((txt, i) => (
                                 <li key={i} className="flex items-start gap-2.5 text-sm text-gray-600 dark:text-gray-400">
                                   <span className="shrink-0 w-5 h-5 rounded-full bg-indigo-50 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-xs font-bold mt-0.5">{i + 1}</span>
                                   <span>{txt}</span>

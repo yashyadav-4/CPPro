@@ -30,7 +30,7 @@ async function getCcAggregateDashboard(req, res) {
         const [ccPlatform, rawCcSubmissions] = await Promise.all([
             Platform.findOne({ userId, platform: 'codechef' }).lean(),
             Submission.find({ userId: userObjectId, platform: 'codechef' })
-                .select('submittedAt verdict problemId problemTitle language')
+                .select('submittedAt verdict problemId problemTitle language contestId')
                 .lean(),
         ]);
 
@@ -161,15 +161,27 @@ async function getCcAggregateDashboard(req, res) {
                 date: h.date ? new Date(h.date).toISOString().split('T')[0] : '',
                 rating: h.rating || 0,
                 rank: h.rank || null,
+                contestCode: h.contestCode || '',
             }))
             .filter(h => h.date)
             .sort((a, b) => a.date.localeCompare(b.date));
+
+        // Build contestCode → Set<problemId> map for AC submissions so we can count
+        // how many unique problems the user solved in each contest.
+        const contestAcMap = {};
+        ccSubmissions.forEach(s => {
+            if (s.verdict === 'AC' && s.contestId) {
+                if (!contestAcMap[s.contestId]) contestAcMap[s.contestId] = new Set();
+                contestAcMap[s.contestId].add(s.problemId);
+            }
+        });
 
         const recentCcContests = [...ratedHistory]
             .sort((a, b) => b.date.localeCompare(a.date))
             .slice(0, 15)
             .map((c, i, arr) => {
                 const prevRating = i < arr.length - 1 ? arr[i + 1].rating : c.rating;
+                const solvedSet = c.contestCode ? contestAcMap[c.contestCode] : undefined;
                 return {
                     platform: 'codechef',
                     name: c.contestName,
@@ -178,6 +190,7 @@ async function getCcAggregateDashboard(req, res) {
                     rating: c.rating,
                     date: c.date,
                     url: 'https://www.codechef.com/',
+                    solved: solvedSet && solvedSet.size > 0 ? solvedSet.size : undefined,
                 };
             });
 

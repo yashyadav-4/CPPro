@@ -2,6 +2,7 @@ const axios = require('axios');
 const User = require('../Model/User');
 const Notification = require('../Model/Notification');
 const LeetCodeData = require('../Model/LeetCodeData');
+const Submission = require('../Model/Submissions');
 const { checkDailyProblemSolves } = require('./dailyProblemService');
 
 const FIFTEEN_MINUTES = 15 * 60 * 1000;
@@ -122,18 +123,51 @@ const syncLeetcodeProfile = async (userId, handle, sessionToken = null) => {
         if (state === 'completed') {
             await User.findByIdAndUpdate(userId, { $set: { lastLcUpdate: new Date() } });
             console.log(`[LC-SYNC] >> ${handle} | sync done ✓`);
-            // Post-sync: check if today's daily problem was solved
+
+            // Post-sync fire-and-forget: persist LC AC slugs to Submissions collection so
+            // buildAttemptedSet's Submission.find query starts working for LC over time.
+            // Uses bulkWrite with updateOne+upsert so repeated syncs don't create duplicates.
             LeetCodeData.findOne({ userId }, 'acSlugs recentSubmissions').lean()
-                .then(lcData => {
+                .then(async lcData => {
                     const acIds = [
                         ...(lcData?.acSlugs || []),
                         ...(lcData?.recentSubmissions || [])
                             .filter(s => s.statusDisplay === 'Accepted')
                             .map(s => s.titleSlug),
                     ];
+
+                    // Persist unique AC slugs to Submissions — one doc per slug, fake date
+                    // of epoch+slug-hash avoids the unique(userId,problemId,submittedAt) conflict
+                    // while still deduplicating naturally across syncs.
+                    const uniqueSlugs = [...new Set(acIds.filter(Boolean))];
+                    if (uniqueSlugs.length) {
+                        // submittedAt: new Date(0) is the sentinel for "LC AC placeholder".
+                        // Including it in the filter aligns with the unique index {userId,problemId,submittedAt}
+                        // so MongoDB can do an index-based find and won't duplicate on re-sync.
+                        const LC_PLACEHOLDER_DATE = new Date(0);
+                        const ops = uniqueSlugs.map(slug => ({
+                            updateOne: {
+                                filter: { userId, problemId: slug, platform: 'leetcode', submittedAt: LC_PLACEHOLDER_DATE },
+                                update: {
+                                    $setOnInsert: {
+                                        userId,
+                                        problemId: slug,
+                                        problemTitle: slug,
+                                        platform: 'leetcode',
+                                        verdict: 'AC',
+                                        submittedAt: LC_PLACEHOLDER_DATE,
+                                        difficulty: '0',
+                                    },
+                                },
+                                upsert: true,
+                            },
+                        }));
+                        await Submission.bulkWrite(ops, { ordered: false });
+                    }
+
                     return checkDailyProblemSolves(userId, 'leetcode', acIds);
                 })
-                .catch(err => console.warn('[DAILY-LC] solve check failed:', err.message));
+                .catch(err => console.warn('[DAILY-LC] post-sync hook failed:', err.message));
             return { success: true };
         }
 

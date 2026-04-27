@@ -379,7 +379,7 @@ async function getLcAggregateDashboard(req, res) {
                 lcMedium,
                 lcHard,
                 // Stats
-                lcActiveDays: calendar.totalActiveDays || 0,
+                lcActiveDays: lcCalendarParsed.filter(d => d.count > 0).length || calendar.totalActiveDays || 0,
                 lcActiveDaysThisMonth,
                 lcSolvedThisMonth,
                 lcSolvedLastMonth,

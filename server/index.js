@@ -22,12 +22,13 @@ const notificationRoutes = require('./Routes/notificationRoutes');
 const adminRoutes = require('./Routes/adminRoutes');
 const dailyRoutes = require('./Routes/dailyRoutes');
 const { startContestSyncWorker } = require('./Workers/contestSyncWorker');
+const { startLeaderboardSyncWorker } = require('./Workers/leaderboardSyncWorker');
 
 connectToMongoDb(process.env.MongoUrl)
 .then(() => {
     console.log('MongoDb is connected to server');
-    //start the 6-hour contest sync worker once the DB is ready
     startContestSyncWorker();
+    startLeaderboardSyncWorker();
 })
 .catch(err => console.log('Error ' , err));
 

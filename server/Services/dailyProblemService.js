@@ -96,9 +96,20 @@ async function buildAttemptedSet(userId, linkedPlatforms, lcData) {
         if (d.challenger?.problemId) set.add(`${d.challenger.platform}::${d.challenger.problemId}`);
     }
 
-    // Extra safety for LC: block acSlugs if present
+    // Block all accumulated LC AC slugs (NexusLC grows this set over every sync)
     if (lcData?.acSlugs?.length) {
         for (const slug of lcData.acSlugs) set.add(`leetcode::${slug}`);
+    }
+
+    // Also block recentSubmissions titleSlugs — with a session token NexusLC returns
+    // up to 200 mixed-verdict entries; AC ones extend coverage beyond the 100-slug window.
+    // For public-only sync every recentSubmissions entry is already AC (statusDisplay = 'Accepted').
+    if (lcData?.recentSubmissions?.length) {
+        for (const s of lcData.recentSubmissions) {
+            if (s.titleSlug && s.statusDisplay === 'Accepted') {
+                set.add(`leetcode::${s.titleSlug}`);
+            }
+        }
     }
 
     return set;
@@ -214,7 +225,7 @@ async function generateDailyProblems(userId) {
         User.findById(userId, 'linkedAccounts dailyStreak').lean(),
         Platform.findOne({ userId, platform: 'codeforces' }, 'currentRating solvedByTopics').lean(),
         Platform.findOne({ userId, platform: 'codechef' },   'currentRating solvedByTopics').lean(),
-        LeetCodeData.findOne({ userId }, 'skillStats contestHistory profile acSlugs').lean(),
+        LeetCodeData.findOne({ userId }, 'skillStats contestHistory profile acSlugs recentSubmissions').lean(),
     ]);
 
     const cfLinked = !!(user?.linkedAccounts?.codeforces);
