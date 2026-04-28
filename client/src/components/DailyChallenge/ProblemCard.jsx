@@ -1,4 +1,4 @@
-import { ExternalLink, CheckCircle2, Clock, Zap, Dumbbell, Tag } from 'lucide-react';
+import { ExternalLink, CheckCircle2, Clock, Zap, Dumbbell, Tag, Star } from 'lucide-react';
 
 const PLATFORM_COLORS = {
     codeforces: { bg: 'rgba(59,130,246,0.1)',  border: 'rgba(59,130,246,0.25)',  text: '#3b82f6',  label: 'CF'  },
@@ -27,9 +27,10 @@ function DifficultyBadge({ platform, difficulty }) {
 
 export default function ProblemCard({ type, problem, loading }) {
     const isChallenger = type === 'challenger';
-    const Icon = isChallenger ? Zap : Dumbbell;
-    const title = isChallenger ? 'DAILY CHALLENGER' : 'DAILY WORKOUT';
-    const accentColor = isChallenger ? '#f59e0b' : '#22c55e';
+    const isBonus = type === 'bonus';
+    const Icon = isBonus ? Star : isChallenger ? Zap : Dumbbell;
+    const title = isBonus ? 'BONUS CHALLENGE' : isChallenger ? 'DAILY CHALLENGER' : 'DAILY WORKOUT';
+    const accentColor = isBonus ? '#8b5cf6' : isChallenger ? '#f59e0b' : '#22c55e';
 
     if (loading) {
         return (
@@ -47,7 +48,7 @@ export default function ProblemCard({ type, problem, loading }) {
             <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-5 flex-1 flex flex-col items-center justify-center min-h-[200px] gap-2">
                 <Icon size={28} className="text-gray-300 dark:text-gray-700" />
                 <p className="text-[13px] text-gray-400 dark:text-gray-600">
-                    {isChallenger ? 'No challenger assigned' : 'No workout assigned'}
+                    {isBonus ? 'No bonus today — link a 3rd platform to unlock' : isChallenger ? 'No challenger assigned' : 'No workout assigned'}
                 </p>
             </div>
         );

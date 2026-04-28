@@ -82,7 +82,9 @@ export default function DailyChallenge() {
         );
     }
 
-    const todaySolved = (data?.workout?.isSolved ? 1 : 0) + (data?.challenger?.isSolved ? 1 : 0);
+    const hasBonus = !loading && data && !data.noAccount;
+    const todaySolved = (data?.workout?.isSolved ? 1 : 0) + (data?.challenger?.isSolved ? 1 : 0) + (data?.bonus?.isSolved ? 1 : 0);
+    const todayTotal = data?.bonus ? 3 : 2;
 
     return (
         <div className="max-w-4xl mx-auto px-4 py-8">
@@ -106,14 +108,22 @@ export default function DailyChallenge() {
                     current={data?.streak?.current || 0}
                     longest={data?.streak?.longest || 0}
                     todaySolved={todaySolved}
+                    todayTotal={todayTotal}
                 />
             </div>
 
-            {/* Problem cards */}
-            <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            {/* Problem cards — workout + challenger always side by side */}
+            <div className="flex flex-col sm:flex-row gap-4 mb-4">
                 <ProblemCard type="workout" problem={data?.workout} loading={loading} />
                 <ProblemCard type="challenger" problem={data?.challenger} loading={loading} />
             </div>
+
+            {/* Bonus card — full width below, only shown when assigned or loading */}
+            {(loading || hasBonus) && (
+                <div className="mb-6">
+                    <ProblemCard type="bonus" problem={data?.bonus} loading={loading} />
+                </div>
+            )}
 
             {/* History panel */}
             {historyOpen && (
@@ -137,11 +147,13 @@ export default function DailyChallenge() {
                                             <p className="text-[11px] text-gray-400 dark:text-gray-600">
                                                 {d.workout?.title ? `W: ${d.workout.title}` : 'No workout'} ·{' '}
                                                 {d.challenger?.title ? `C: ${d.challenger.title}` : 'No challenger'}
+                                                {d.bonus?.title ? ` · B: ${d.bonus.title}` : ''}
                                             </p>
                                         </div>
                                         <div className="flex gap-1.5">
                                             <span className={`w-2 h-2 rounded-full ${d.workout?.isSolved ? 'bg-emerald-400' : 'bg-gray-200 dark:bg-white/10'}`} title="Workout" />
                                             <span className={`w-2 h-2 rounded-full ${d.challenger?.isSolved ? 'bg-amber-400' : 'bg-gray-200 dark:bg-white/10'}`} title="Challenger" />
+                                            {d.bonus && <span className={`w-2 h-2 rounded-full ${d.bonus.isSolved ? 'bg-violet-400' : 'bg-gray-200 dark:bg-white/10'}`} title="Bonus" />}
                                         </div>
                                     </div>
                                 ))}

@@ -8,6 +8,8 @@ const Post = require('../Model/Post');
 const Comment = require('../Model/Comment');
 const LeetCodeData = require('../Model/LeetCodeData');
 const Notification = require('../Model/Notification');
+const DailyProblem = require('../Model/DailyProblem');
+const { getTodayIST } = require('../Utils/dateUtils');
 
 /**
  * GET /api/admin/stats?days=7|30
@@ -415,4 +417,23 @@ async function sendNotification(req, res) {
     }
 }
 
-module.exports = { getAdminStats, refreshContests, refreshLeaderboard, refreshStats, sendNotification };
+/**
+ * POST /api/admin/refresh/daily
+ * Deletes all DailyProblem docs for today (IST). Each user gets fresh problems
+ * generated lazily on their next GET /api/daily request.
+ */
+async function refreshDailyProblems(req, res) {
+    try {
+        const today = getTodayIST();
+        const result = await DailyProblem.deleteMany({ date: today });
+        res.json({
+            success: true,
+            message: `Deleted ${result.deletedCount} daily problem record${result.deletedCount !== 1 ? 's' : ''} for ${today}. Users will get fresh problems on next visit.`,
+        });
+    } catch (err) {
+        console.error('Admin refreshDailyProblems error:', err);
+        res.status(500).json({ success: false, message: 'Failed to reset daily problems: ' + err.message });
+    }
+}
+
+module.exports = { getAdminStats, refreshContests, refreshLeaderboard, refreshStats, sendNotification, refreshDailyProblems };

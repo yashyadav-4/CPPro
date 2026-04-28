@@ -8,7 +8,7 @@ import {
   Users, UserCheck, Activity, RefreshCw, Server,
   TrendingUp, MessageSquare, Shield, Zap, Database,
   Code2, Globe, GraduationCap, Clock, CheckCircle,
-  AlertCircle, Target, Bell, Send, ChevronDown,
+  AlertCircle, Target, Bell, Send, ChevronDown, CalendarX,
 } from 'lucide-react';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -300,8 +300,8 @@ export default function AdminDashboard() {
   const [error, setError] = useState(null);
   const [days, setDays] = useState(7);
   const [lastRefresh, setLastRefresh] = useState(null);
-  const [forcing, setForcing] = useState({ contests: false, leaderboard: false, stats: false, all: false });
-  const [forceMsg, setForceMsg] = useState({ contests: null, leaderboard: null, stats: null, all: null });
+  const [forcing, setForcing] = useState({ contests: false, leaderboard: false, stats: false, daily: false, all: false });
+  const [forceMsg, setForceMsg] = useState({ contests: null, leaderboard: null, stats: null, daily: null, all: null });
 
   const fetchStats = useCallback(async (d) => {
     setLoading(true);
@@ -452,10 +452,11 @@ export default function AdminDashboard() {
           )}
           <div className="flex flex-wrap gap-3">
             {[
-              { key: 'contests',    label: 'Sync Contest Data',       icon: RefreshCw, desc: 'Re-fetches CF + LC contests from APIs (bypasses 6h timer)' },
-              { key: 'leaderboard', label: 'Recompute Leaderboard',   icon: RefreshCw, desc: 'Rebuilds global leaderboard cache for all 4 categories (bypasses 15m timer)' },
-              { key: 'stats',       label: 'Clear Home Stats Cache',  icon: Database,  desc: 'Forces home page to re-query user/problem counts from DB' },
-            ].map(({ key, label, icon: Icon, desc }) => (
+              { key: 'contests',    label: 'Sync Contest Data',       icon: RefreshCw,  desc: 'Re-fetches CF + LC contests from APIs (bypasses 6h timer)' },
+              { key: 'leaderboard', label: 'Recompute Leaderboard',   icon: RefreshCw,  desc: 'Rebuilds global leaderboard cache for all 4 categories (bypasses 15m timer)' },
+              { key: 'stats',       label: 'Clear Home Stats Cache',  icon: Database,   desc: 'Forces home page to re-query user/problem counts from DB' },
+              { key: 'daily',       label: 'Reset Daily Problems',    icon: CalendarX,  desc: 'Deletes today\'s daily problems for ALL users — fresh problems generated on next visit', danger: true },
+            ].map(({ key, label, icon: Icon, desc, danger }) => (
               <div key={key} className="flex-1 min-w-[220px] bg-white/[0.03] border border-white/[0.07] rounded-lg p-3">
                 <div className="flex items-center justify-between gap-3 mb-1">
                   <div>
@@ -465,7 +466,11 @@ export default function AdminDashboard() {
                   <button
                     onClick={() => forceRefresh(key)}
                     disabled={forcing[key]}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/40 border border-emerald-500/30 text-emerald-400 text-xs font-medium rounded-lg transition-all disabled:opacity-50 flex-shrink-0"
+                    className={`flex items-center gap-1.5 px-3 py-1.5 border text-xs font-medium rounded-lg transition-all disabled:opacity-50 flex-shrink-0 ${
+                      danger
+                        ? 'bg-red-600/20 hover:bg-red-600/40 border-red-500/30 text-red-400'
+                        : 'bg-emerald-600/20 hover:bg-emerald-600/40 border-emerald-500/30 text-emerald-400'
+                    }`}
                   >
                     <Icon size={11} className={forcing[key] ? 'animate-spin' : ''} />
                     {forcing[key] ? 'Running…' : 'Run'}

@@ -75,7 +75,7 @@ function mergeContests(cfContests, lcContests, ccContests) {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { cfData, lcData, ccData, userId, userRole, userName, userUsername, linkedAccounts, loading, error, refetch } = useDashboardData();
+  const { cfData, lcData, ccData, userId, userRole, userName, userUsername, linkedAccounts, lcSessionStatus, loading, error, refetch } = useDashboardData();
 
   const [refreshing, setRefreshing] = useState(false);
   const [cooldown, setCooldown] = useState(0);
@@ -621,7 +621,7 @@ export default function Dashboard() {
 
         {/* Row 7: Achievements */}
         <ErrorBoundary>
-          <Achievements loading={loading} achievements={achievements} />
+          <Achievements loading={loading} achievements={achievements} lcLinked={!!linkedAccounts.leetcode} lcSessionStatus={lcSessionStatus} />
         </ErrorBoundary>
       </div>
 

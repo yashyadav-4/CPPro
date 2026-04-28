@@ -18,6 +18,7 @@ const dailyProblemSchema = new mongoose.Schema({
     date:        { type: String, required: true }, // "YYYY-MM-DD" IST
     workout:     { type: problemSlotSchema, default: null },
     challenger:  { type: problemSlotSchema, default: null },
+    bonus:       { type: problemSlotSchema, default: null }, // from a 3rd platform, different from workout+challenger
     generatedAt: { type: Date, default: Date.now },
 }, { timestamps: true });
 

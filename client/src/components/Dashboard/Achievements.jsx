@@ -41,7 +41,7 @@ function AchievementCard({ icon, label, platform, earned, progress }) {
   );
 }
 
-export default function Achievements({ loading, achievements }) {
+export default function Achievements({ loading, achievements, lcLinked, lcSessionStatus }) {
   if (loading) {
     return (
       <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-[#404040] rounded-xl p-4">
@@ -58,12 +58,30 @@ export default function Achievements({ loading, achievements }) {
   const inProgress = list.filter(a => !a.earned);
   const earnedCount = earned.length;
 
+  const showSessionWarning = !loading && lcLinked && lcSessionStatus !== 'active';
+  const sessionMsg = lcSessionStatus === 'expired'
+    ? 'Your LeetCode session has expired — only your 100 most recent solved problems are tracked. Add a fresh session token in Settings for full coverage.'
+    : 'You haven\'t added a LeetCode session token — only your 100 most recent solved problems are tracked. Without it, already-solved problems may appear in your daily challenges. Add it in Settings for full coverage.';
+
   return (
     <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4">
       <div className="flex items-center justify-between mb-4">
         <p className="text-[11px] font-medium text-gray-400 dark:text-[#9CA3AF] uppercase tracking-widest">Achievements</p>
         <span className="text-xs text-gray-400 dark:text-[#9CA3AF] font-normal">{earnedCount} / {list.length} earned</span>
       </div>
+
+      {showSessionWarning && (
+        <div className="mb-4 flex items-start gap-2 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/50 rounded-lg px-3 py-2.5">
+          <span className="text-red-500 mt-0.5 shrink-0 text-sm">⚠</span>
+          <p className="text-[11px] text-red-600 dark:text-red-400 leading-relaxed">
+            {sessionMsg}{' '}
+            <a href="/settings" className="underline font-medium hover:text-red-700 dark:hover:text-red-300 transition-colors">
+              Go to Settings →
+            </a>
+          </p>
+        </div>
+      )}
+
       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
         {/* Earned first */}
         {earned.map((a, i) => <AchievementCard key={`e-${i}`} {...a} />)}

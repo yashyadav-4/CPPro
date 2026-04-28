@@ -26,6 +26,7 @@ async function getToday(req, res) {
                 date:       daily.date,
                 workout:    daily.workout,
                 challenger: daily.challenger,
+                bonus:      daily.bonus || null,
                 streak:     user?.dailyStreak || { current: 0, longest: 0 },
             },
         });
@@ -40,18 +41,20 @@ async function getStreak(req, res) {
         const userId = req.user._id;
         const user   = await User.findById(userId, 'dailyStreak').lean();
         const today  = getTodayIST();
-        const todayDoc = await DailyProblem.findOne({ userId, date: today }, 'workout.isSolved challenger.isSolved').lean();
+        const todayDoc = await DailyProblem.findOne({ userId, date: today }, 'workout.isSolved challenger.isSolved bonus').lean();
 
         const workoutSolved    = todayDoc?.workout?.isSolved    || false;
         const challengerSolved = todayDoc?.challenger?.isSolved || false;
-        const todaySolved      = (workoutSolved ? 1 : 0) + (challengerSolved ? 1 : 0);
+        const bonusSolved      = todayDoc?.bonus?.isSolved      || false;
+        const todaySolved      = (workoutSolved ? 1 : 0) + (challengerSolved ? 1 : 0) + (bonusSolved ? 1 : 0);
+        const todayTotal       = todayDoc?.bonus ? 3 : 2;
 
         return res.status(200).json({
             success: true,
             data: {
                 ...user?.dailyStreak,
                 todaySolved,
-                todayTotal: 2,
+                todayTotal,
             },
         });
     } catch (err) {

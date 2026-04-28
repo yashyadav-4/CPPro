@@ -79,12 +79,14 @@ function getCCChallengerBand(rating) {
 async function buildAttemptedSet(userId, linkedPlatforms, lcData) {
     const [submissions, recentDaily] = await Promise.all([
         Submission.find(
-            { userId, platform: { $in: linkedPlatforms } },
+            { userId, platform: { $in: linkedPlatforms }, verdict: 'AC' },
             { problemId: 1, platform: 1, _id: 0 }
         ).lean(),
         DailyProblem.find(
             { userId, date: { $gte: getNDaysAgoIST(14) } },
-            { 'workout.problemId': 1, 'workout.platform': 1, 'challenger.problemId': 1, 'challenger.platform': 1 }
+            { 'workout.problemId': 1, 'workout.platform': 1,
+              'challenger.problemId': 1, 'challenger.platform': 1,
+              'bonus.problemId': 1, 'bonus.platform': 1 }
         ).lean(),
     ]);
 
@@ -94,6 +96,7 @@ async function buildAttemptedSet(userId, linkedPlatforms, lcData) {
     for (const d of recentDaily) {
         if (d.workout?.problemId)    set.add(`${d.workout.platform}::${d.workout.problemId}`);
         if (d.challenger?.problemId) set.add(`${d.challenger.platform}::${d.challenger.problemId}`);
+        if (d.bonus?.problemId)      set.add(`${d.bonus.platform}::${d.bonus.problemId}`);
     }
 
     // Block all accumulated LC AC slugs (NexusLC grows this set over every sync)
@@ -218,6 +221,57 @@ async function pickCCChallenger(ccRating, weakTopics, attemptedSet) {
     return { ...picked, weakTag: picked.tags?.find(t => weakTopics.includes(t)) || null };
 }
 
+// ── Bonus problem selection ───────────────────────────────────────────────────
+// Picks a problem from a platform NOT used by either workout or challenger.
+// Returns null if no unused linked platform has available problems.
+
+async function pickBonus(workoutPlatform, challengerPlatform, { cfRating, ccRating, lcData, cfLinked, lcLinked, ccLinked, attemptedSet }) {
+    // Rule: all three problems must NOT be from the same platform.
+    // If workout and challenger are already different, the set is diverse — bonus can be any linked platform.
+    // If workout and challenger are the same, bonus MUST come from a different platform.
+    const allLinked = [
+        cfLinked && 'codeforces',
+        lcLinked && 'leetcode',
+        ccLinked && 'codechef',
+    ].filter(Boolean);
+
+    if (allLinked.length === 0) return null;
+
+    const sameUsed = workoutPlatform && challengerPlatform && workoutPlatform === challengerPlatform;
+
+    let candidates;
+    if (sameUsed) {
+        // Must differ from the shared platform
+        candidates = allLinked.filter(p => p !== workoutPlatform);
+    } else {
+        // Any linked platform is fine — prefer unused ones first for variety
+        const used = new Set([workoutPlatform, challengerPlatform].filter(Boolean));
+        candidates = [
+            ...allLinked.filter(p => !used.has(p)),
+            ...allLinked.filter(p =>  used.has(p)),
+        ];
+    }
+
+    if (candidates.length === 0) return null;
+
+    for (const platform of candidates) {
+        let problem = null;
+        if (platform === 'leetcode') {
+            const diff = getLCDifficultyForUser(lcData);
+            problem = await pickLCWorkout(diff, attemptedSet).catch(() => null);
+        } else if (platform === 'codeforces') {
+            problem = await pickCFWorkout(cfRating, attemptedSet).catch(() => null);
+        } else if (platform === 'codechef') {
+            problem = await pickCCWorkout(ccRating, attemptedSet).catch(err => {
+                console.warn('[DAILY] CC bonus failed:', err.message);
+                return null;
+            });
+        }
+        if (problem) return problem;
+    }
+    return null;
+}
+
 // ── Main generation ───────────────────────────────────────────────────────────
 
 async function generateDailyProblems(userId) {
@@ -281,10 +335,21 @@ async function generateDailyProblems(userId) {
         });
     }
 
+    // ── BONUS: must come from a platform different from both workout and challenger ──
+    const bonusCtx = { cfRating, ccRating, lcData, cfLinked, lcLinked, ccLinked, attemptedSet };
+    const bonus = await pickBonus(
+        workout?.platform   || null,
+        challenger?.platform || null,
+        bonusCtx
+    ).catch(err => {
+        console.warn('[DAILY] bonus failed:', err.message);
+        return null;
+    });
+
     const today = getTodayIST();
     const doc = await DailyProblem.findOneAndUpdate(
         { userId, date: today },
-        { $setOnInsert: { userId, date: today, workout, challenger, generatedAt: new Date() } },
+        { $setOnInsert: { userId, date: today, workout, challenger, bonus, generatedAt: new Date() } },
         { upsert: true, new: true }
     );
 
@@ -314,7 +379,7 @@ async function checkDailyProblemSolves(userId, platform, acProblemIds) {
     const acSet = new Set(acProblemIds.map(String));
     let changed = false;
 
-    for (const slot of ['workout', 'challenger']) {
+    for (const slot of ['workout', 'challenger', 'bonus']) {
         const p = daily[slot];
         if (!p || p.platform !== platform || p.isSolved) continue;
         if (!acSet.has(p.problemId)) continue;
@@ -325,12 +390,14 @@ async function checkDailyProblemSolves(userId, platform, acProblemIds) {
 
         const msg = slot === 'challenger'
             ? `Challenger solved! You tackled ${p.weakTag || p.tags[0] || 'a hard problem'} today.`
+            : slot === 'bonus'
+            ? 'Bonus challenge solved! Cross-platform sweep complete.'
             : 'Daily Workout complete! Great consistency.';
 
         Notification.create({
             userId,
             type: 'daily_problem',
-            title: slot === 'challenger' ? 'Challenger Solved!' : 'Workout Complete',
+            title: slot === 'challenger' ? 'Challenger Solved!' : slot === 'bonus' ? 'Bonus Solved!' : 'Workout Complete',
             message: msg,
             actionUrl: '/daily',
         }).catch(() => {});
@@ -385,7 +452,7 @@ async function updateDailyStreak(userId) {
 // ── Manual mark solved ────────────────────────────────────────────────────────
 
 async function markSolved(userId, type) {
-    if (!['workout', 'challenger'].includes(type)) throw new Error('Invalid type');
+    if (!['workout', 'challenger', 'bonus'].includes(type)) throw new Error('Invalid type');
     const today = getTodayIST();
     const daily = await DailyProblem.findOne({ userId, date: today });
     if (!daily) throw new Error('No daily problem found for today');

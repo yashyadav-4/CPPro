@@ -13,6 +13,7 @@ export function useDashboardData() {
     const [userName, setUserName] = useState('');
     const [userUsername, setUserUsername] = useState('');
     const [linkedAccounts, setLinkedAccounts] = useState({ codeforces: false, leetcode: false, codechef: false });
+    const [lcSessionStatus, setLcSessionStatus] = useState('not_set');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
@@ -76,6 +77,7 @@ export function useDashboardData() {
                 setUserName(user.name || '');
                 setUserUsername(user.username || '');
                 setLinkedAccounts(linked);
+                setLcSessionStatus(user.lcSession?.status || 'not_set');
 
                 // Try cache first — show instantly with no backend call
                 let hasCached = false;
@@ -112,5 +114,5 @@ export function useDashboardData() {
         await fetchPlatformData(uid, linked, silent);
     }, [fetchPlatformData]);
 
-    return { cfData, lcData, ccData, userId, userRole, userName, userUsername, linkedAccounts, loading, error, refetch };
+    return { cfData, lcData, ccData, userId, userRole, userName, userUsername, linkedAccounts, lcSessionStatus, loading, error, refetch };
 }

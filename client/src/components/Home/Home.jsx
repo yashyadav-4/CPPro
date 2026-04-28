@@ -48,7 +48,7 @@ const fadeUp = {
 const stagger = {hidden:{},visible:{transition:{staggerChildren:0.06}}};
 
 /* ── TYPEWRITER ─────────────────────────────────────── */
-const TW=["Rating.","Rankings.","Progress.","Consistency.","Mastery."];
+const TW=["Rating.","Rankings.","Progress.","Consistency.","Mastery.","Stars."];
 function Typewriter({color}){
   const[idx,setIdx]=useState(0);
   const[text,setText]=useState("");
@@ -222,9 +222,10 @@ function UpsolveVisual({t}){
   const items=[
     {name:"Div.2 E — Tree DP",contest:"Round 921",diff:"2100",pl:"CF"},
     {name:"Weekly 385 — Q4",contest:"Weekly 385",diff:"Hard",pl:"LC"},
+    {name:"Cook-Off — Div1 C",contest:"Dec Cook-Off",diff:"★★★★",pl:"CC"},
     {name:"Div.2 D — Seg Tree",contest:"Round 918",diff:"1900",pl:"CF"},
   ];
-  const plS={CF:{bg:t.accentBg,color:t.accent},LC:{bg:"rgba(168,85,247,0.1)",color:"#a855f7"}};
+  const plS={CF:{bg:t.accentBg,color:t.accent},LC:{bg:"rgba(168,85,247,0.1)",color:"#a855f7"},CC:{bg:"rgba(251,146,60,0.1)",color:"#f97316"}};
   return(
     <div ref={ref} style={{padding:"0.4rem 0"}}>
       {items.map((item,i)=>(
@@ -326,6 +327,42 @@ function TreeVisual({t}){
   );
 }
 
+function DailyVisual({t}){
+  const ref=useRef(null);const inView=useInView(ref,{once:true});
+  const problems=[
+    {type:"WORKOUT",name:"Maximum Subarray XOR",platform:"LC",diff:"Medium",tag:"Bit Manipulation"},
+    {type:"CHALLENGER",name:"Tree Path Queries",platform:"CF",diff:"1900",tag:"Segment Tree"},
+    {type:"BONUS",name:"Chef and Sequences",platform:"CC",diff:"★★★★",tag:"DP"},
+  ];
+  const plC={LC:{bg:"rgba(168,85,247,0.1)",color:"#a855f7"},CF:{bg:t.accentBg,color:t.accent},CC:{bg:"rgba(251,146,60,0.1)",color:"#f97316"}};
+  const typeC={WORKOUT:{bg:t.accentBg,color:t.accent},CHALLENGER:{bg:"rgba(168,85,247,0.08)",color:"#a855f7"},BONUS:{bg:"rgba(139,92,246,0.08)",color:"#8b5cf6"}};
+  return(
+    <div ref={ref} style={{padding:"0.2rem 0"}}>
+      {problems.map((p,i)=>(
+        <motion.div key={i} initial={{opacity:0,y:8}} animate={inView?{opacity:1,y:0}:{}}
+          transition={{delay:0.1+i*0.12,ease}}
+          style={{background:t.bg2,border:`1px solid ${t.border}`,borderRadius:7,padding:"0.75rem 0.8rem",marginBottom:7}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"0.35rem"}}>
+            <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:"0.44rem",letterSpacing:"0.1em",
+              color:typeC[p.type].color,fontWeight:700,background:typeC[p.type].bg,padding:"0.1rem 0.38rem",borderRadius:3}}>{p.type}</span>
+            <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:"0.46rem",padding:"0.1rem 0.38rem",
+              background:plC[p.platform].bg,color:plC[p.platform].color,borderRadius:3,fontWeight:700}}>{p.platform}</span>
+          </div>
+          <div style={{fontSize:"0.68rem",color:t.heading,fontWeight:700,fontFamily:"'JetBrains Mono',monospace",marginBottom:"0.22rem"}}>{p.name}</div>
+          <div style={{display:"flex",gap:"0.5rem",alignItems:"center"}}>
+            <span style={{fontSize:"0.54rem",color:t.muted,fontFamily:"'JetBrains Mono',monospace"}}>{p.diff}</span>
+            <span style={{fontSize:"0.52rem",color:t.subtle,fontFamily:"'JetBrains Mono',monospace",background:t.bg3,padding:"0.08rem 0.32rem",borderRadius:3}}>{p.tag}</span>
+          </div>
+        </motion.div>
+      ))}
+      <motion.div initial={{opacity:0}} animate={inView?{opacity:1}:{}} transition={{delay:0.55}}
+        style={{textAlign:"center",padding:"0.45rem",fontFamily:"'JetBrains Mono',monospace",fontSize:"0.56rem",color:t.accent,fontWeight:600,background:t.accentBg,borderRadius:6}}>
+        🔥 14-day streak · 3/3 solved today
+      </motion.div>
+    </div>
+  );
+}
+
 function CardWindow({t,children}){
   return(
     <div style={{background:t.bgCard,border:`1px solid ${t.border}`,borderRadius:12,padding:"1.4rem",boxShadow:`0 4px 16px ${t.shadow}`}}>
@@ -341,11 +378,12 @@ function CardWindow({t,children}){
 }
 
 const FEATURES=[
-  {tag:"ANALYTICS",title:"Unified Activity Heatmap",badge:"14-day streak 🔥",badgeClr:"#16a34a",visual:"heatmap",desc:"Your Codeforces and LeetCode submission history merged into a single GitHub-style contribution grid. Spot inactive weeks instantly. No more excuses."},
+  {tag:"ANALYTICS",title:"Unified Activity Heatmap",badge:"14-day streak 🔥",badgeClr:"#16a34a",visual:"heatmap",desc:"Your Codeforces, LeetCode, and CodeChef submission history merged into a single GitHub-style contribution grid. Spot inactive weeks instantly. No more excuses."},
   {tag:"GROWTH",title:"NextTarget Rating Engine",badge:"Next: +50 pts",badgeClr:"#3b82f6",visual:"targets",desc:"Break your goal into 50-point sprints. Three problem tiers — Master First, Current Bracket, and Stretch Goals — updated as you progress."},
-  {tag:"PRACTICE",title:"Upsolve Bucket",badge:"8 queued",badgeClr:"#a855f7",visual:"upsolve",desc:"Every contest problem you attempted but couldn't solve gets automatically queued. Highest-ROI practice habit in CP — fully automated."},
+  {tag:"DAILY",title:"Daily Problem Engine",badge:"3/3 solved today 🔥",badgeClr:"#f97316",visual:"daily",desc:"Two handpicked problems every day — a Workout at your comfort level and a Challenger targeting your weakest topic. Across Codeforces, LeetCode, and CodeChef. Streaks tracked automatically."},
+  {tag:"PRACTICE",title:"Upsolve Bucket",badge:"8 queued",badgeClr:"#a855f7",visual:"upsolve",desc:"Every contest problem you attempted but couldn't solve across CF, LC, and CC gets automatically queued. Highest-ROI practice habit in CP — fully automated."},
   {tag:"CURRICULUM",title:"3D Learning Tree",badge:"42% mastered",badgeClr:"#f97316",visual:"tree",desc:"An interactive Three.js visualization of your algorithmic mastery. Nodes glow as you solve problems. See the full path to grandmaster."},
-  {tag:"RANKINGS",title:"CPScore Leaderboard",badge:"#1,204 Global",badgeClr:"#16a34a",visual:"leaderboard",desc:"A weighted composite score synthesizing CF/LC ratings, difficulty solves, contest count, and streaks. Global, College, and Country views."},
+  {tag:"RANKINGS",title:"CPScore Leaderboard",badge:"#1,204 Global",badgeClr:"#16a34a",visual:"leaderboard",desc:"A weighted composite score synthesizing CF/LC/CC ratings, difficulty solves, contest count, and streaks. Global, College, and Country views."},
   {tag:"TOOLING",title:"Snippet Manager",badge:"340+ templates",badgeClr:"#64748b",visual:"snippets",desc:"Personal + community C++/Java/Python template library. Public templates ranked by upvotes. Best algorithms always at the top."},
 ];
 
@@ -354,7 +392,7 @@ function FeatureCard({f,i,t}){
   const inView=useInView(ref,{once:true,margin:"-60px"});
   const isEven=i%2===0;
   const[hov,setHov]=useState(false);
-  const visuals={heatmap:<HeatmapPreview t={t}/>,targets:<TargetsVisual t={t}/>,upsolve:<UpsolveVisual t={t}/>,tree:<TreeVisual t={t}/>,leaderboard:<LeaderboardVisual t={t}/>,snippets:<SnippetsVisual t={t}/>};
+  const visuals={heatmap:<HeatmapPreview t={t}/>,targets:<TargetsVisual t={t}/>,daily:<DailyVisual t={t}/>,upsolve:<UpsolveVisual t={t}/>,tree:<TreeVisual t={t}/>,leaderboard:<LeaderboardVisual t={t}/>,snippets:<SnippetsVisual t={t}/>};
   return(
     <motion.div ref={ref} initial={{opacity:0,y:32}} animate={inView?{opacity:1,y:0}:{}}
       transition={{duration:0.6,delay:0.05,ease}} className="feat-row"
@@ -379,15 +417,15 @@ function FeatureCard({f,i,t}){
 }
 
 const HOME_STEPS=[
-  {n:"01",icon:<Link2 size={32} className="text-emerald-500" />,title:"Connect your handles",desc:"Link Codeforces and LeetCode via our secure verification loop. No passwords — just a quick one-time hex token check."},
-  {n:"02",icon:<Zap size={32} className="text-emerald-500" />,title:"Data syncs automatically",desc:"The Nexus background engine pulls submissions, ratings, and contest history every 10 minutes. Always fresh."},
-  {n:"03",icon:<LineChart size={32} className="text-emerald-500" />,title:"Track, practice, improve",desc:"Work your upsolve queue, follow unified analytics, and let NextTarget guide you to the next rating milestone."},
+  {n:"01",icon:<Link2 size={32} className="text-emerald-500" />,title:"Connect your handles",desc:"Link Codeforces, LeetCode, and CodeChef via our secure verification loop. No passwords — just a quick one-time hex token check."},
+  {n:"02",icon:<Zap size={32} className="text-emerald-500" />,title:"Data syncs automatically",desc:"The Nexus background engine pulls submissions, ratings, and contest history every 10 minutes across all three platforms. Always fresh."},
+  {n:"03",icon:<LineChart size={32} className="text-emerald-500" />,title:"Track, practice, improve",desc:"Work your upsolve queue, solve today's daily problem, and let NextTarget guide you to the next rating milestone — on every platform."},
 ];
 
 const TESTIMONIALS=[
   {handle:"@cf_grinder_2k",rating:"Expert → Candidate Master",text:"The upsolve bucket changed how I practice entirely. Expert to CM in 3 months just by working through the queued problems.",cf:"1964"},
   {handle:"@lc_weekly",rating:"LC 1800 → 2100",text:"The unified heatmap showed I was barely solving on weekdays. That single insight bumped my weekly solve count by 40%.",cf:"2104"},
-  {handle:"@icpc_regional_r",rating:"ICPC Regionalist",text:"The 3D learning tree is the best algorithmic curriculum visualizer I've seen. It shows exactly where I'm weak.",cf:"2318"},
+  {handle:"@cc_rising_star",rating:"CC 3★ → 5★ in 4 months",text:"Having CodeChef fully integrated finally got me to take it seriously. Daily Challenger kept targeting my DP weakness — two stars up in four months.",cf:"2014"},
 ];
 
 function Badge({t,children}){
@@ -493,7 +531,7 @@ export default function Home(){
             </motion.h1>
 
             <motion.p variants={fadeUp} custom={4} style={{maxWidth:520,fontSize:"1rem",lineHeight:1.78,color:t.subtle,marginBottom:"2.4rem",fontFamily:"'DM Sans',sans-serif"}}>
-              CPPro unifies your Codeforces and LeetCode data into one analytics engine — rating sprints, upsolve queues, topic mastery, and a leaderboard that actually makes sense.
+              CPPro unifies your Codeforces, LeetCode, and CodeChef data into one analytics engine — rating sprints, daily problems, upsolve queues, topic mastery, and a leaderboard that actually makes sense.
             </motion.p>
 
             <motion.div variants={fadeUp} custom={5} style={{display:"flex",gap:"0.85rem",flexWrap:"wrap",marginBottom:"3.5rem"}}>
@@ -553,25 +591,24 @@ export default function Home(){
                   <div style={{marginTop:"0.8rem"}}><HeatmapPreview t={t}/></div>
                 </div>
                 <div style={{background:t.bgCard,padding:"1.4rem"}}>
-                  <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:"0.5rem",color:t.muted,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:"0.8rem"}}>Next Target</div>
-                  {[{l:"Master First",f:72},{l:"Current",f:48},{l:"Stretch",f:20}].map((item,i)=>(
-                    <motion.div key={i} initial={{opacity:0}} animate={{opacity:1}} transition={{delay:1.1+i*0.08}} style={{marginBottom:"0.65rem"}}>
-                      <div style={{display:"flex",justifyContent:"space-between",marginBottom:"0.22rem"}}>
-                        <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:"0.56rem",color:t.body}}>{item.l}</span>
-                        <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:"0.52rem",color:t.muted}}>{item.f}%</span>
-                      </div>
-                      <div style={{height:4,background:t.bg3,borderRadius:2,overflow:"hidden"}}>
-                        <motion.div initial={{width:0}} animate={{width:`${item.f}%`}} transition={{duration:0.8,delay:1.2+i*0.1,ease}} style={{height:"100%",background:t.accent,borderRadius:2}}/>
-                      </div>
-                    </motion.div>
-                  ))}
-                  <div style={{marginTop:"1.1rem",paddingTop:"1rem",borderTop:`1px solid ${t.border}`}}>
-                    <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:"0.5rem",color:t.muted,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:"0.55rem"}}>Upsolve Queue</div>
-                    {["Div2 E — Tree DP","Weekly Q4 — Hard","Div2 D — Segment"].map((name,i)=>(
-                      <motion.div key={i} initial={{opacity:0,x:8}} animate={{opacity:1,x:0}} transition={{delay:1.3+i*0.07}}
-                        style={{fontFamily:"'JetBrains Mono',monospace",fontSize:"0.58rem",color:t.subtle,padding:"0.26rem 0",borderBottom:`1px solid ${t.border}`,display:"flex",alignItems:"center",gap:"0.4rem"}}>
-                        <span style={{width:5,height:5,borderRadius:"50%",background:"#a855f7",display:"inline-block",flexShrink:0}}/>
-                        {name}
+                  <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:"0.5rem",color:t.muted,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:"0.5rem"}}>CodeChef</div>
+                  <motion.div initial={{opacity:0}} animate={{opacity:1}} transition={{delay:1.0}} style={{fontFamily:"'DM Sans',sans-serif",fontSize:"2.2rem",color:t.heading,lineHeight:1,fontWeight:800}}>1758</motion.div>
+                  <div style={{display:"flex",alignItems:"center",gap:"0.4rem",marginTop:"0.3rem"}}>
+                    <span style={{fontSize:"0.62rem",color:"#f97316",fontWeight:700}}>▲ +124</span>
+                    <span style={{fontSize:"0.56rem",color:t.muted,fontFamily:"'JetBrains Mono',monospace"}}>this month</span>
+                  </div>
+                  <motion.div initial={{opacity:0,scale:0.9}} animate={{opacity:1,scale:1}} transition={{delay:1.15}}
+                    style={{marginTop:"0.85rem",display:"inline-flex",alignItems:"center",gap:"0.3rem",background:"rgba(251,146,60,0.1)",border:"1px solid rgba(251,146,60,0.25)",borderRadius:6,padding:"0.32rem 0.65rem"}}>
+                    <span style={{fontSize:"0.7rem",color:"#f97316"}}>★★★★</span>
+                    <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:"0.54rem",color:"#f97316",fontWeight:700}}>4 Star</span>
+                  </motion.div>
+                  <div style={{marginTop:"1rem",paddingTop:"0.9rem",borderTop:`1px solid ${t.border}`}}>
+                    <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:"0.5rem",color:t.muted,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:"0.5rem"}}>Rankings</div>
+                    {[{lbl:"Global Rank",val:"#23,841"},{lbl:"Country Rank",val:"#1,204"},{lbl:"Problems Solved",val:"312"}].map((r,i)=>(
+                      <motion.div key={i} initial={{opacity:0,x:6}} animate={{opacity:1,x:0}} transition={{delay:1.25+i*0.07}}
+                        style={{display:"flex",justifyContent:"space-between",padding:"0.28rem 0",borderBottom:`1px solid ${t.border}`}}>
+                        <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:"0.55rem",color:t.subtle}}>{r.lbl}</span>
+                        <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:"0.58rem",color:t.heading,fontWeight:700}}>{r.val}</span>
                       </motion.div>
                     ))}
                   </div>
@@ -691,7 +728,7 @@ export default function Home(){
               Start tracking what<br/>actually matters.
             </motion.h2>
             <motion.p variants={fadeUp} custom={2} style={{fontSize:"0.97rem",color:t.ctaSub,lineHeight:1.75,marginBottom:"2.5rem",fontFamily:"'DM Sans',sans-serif"}}>
-              Connect your handles in 60 seconds. Your first upsolve queue fills itself. Your dashboard is already waiting.
+              Connect your Codeforces, LeetCode, and CodeChef handles in 60 seconds. Your first upsolve queue fills itself. Your daily problems are already waiting.
             </motion.p>
             <motion.div variants={fadeUp} custom={3} style={{display:"flex",justifyContent:"center",gap:"1rem",flexWrap:"wrap"}}>
               <motion.div whileHover={{scale:1.03,boxShadow:`0 8px 32px ${t.accent}55`}} whileTap={{scale:0.97}}>

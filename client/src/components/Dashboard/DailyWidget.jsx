@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
-import { Dumbbell, Zap, CheckCircle2, ArrowRight, Flame } from 'lucide-react';
+import { Dumbbell, Zap, CheckCircle2, ArrowRight, Flame, Star } from 'lucide-react';
 import { API_BASE } from '../../api';
 
 const Skeleton = ({ className = '' }) => (
@@ -76,7 +76,8 @@ export default function DailyWidget({ loading: parentLoading }) {
 
     const isLoading = loading || parentLoading;
     const streak = data?.streak?.current || 0;
-    const todaySolved = (data?.workout?.isSolved ? 1 : 0) + (data?.challenger?.isSolved ? 1 : 0);
+    const todaySolved = (data?.workout?.isSolved ? 1 : 0) + (data?.challenger?.isSolved ? 1 : 0) + (data?.bonus?.isSolved ? 1 : 0);
+    const todayTotal = data?.bonus ? 3 : 2;
 
     return (
         <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4 flex flex-col gap-3">
@@ -94,7 +95,7 @@ export default function DailyWidget({ loading: parentLoading }) {
                 </div>
                 <div className="flex items-center gap-2">
                     {!isLoading && (
-                        <span className="text-[11px] text-gray-400 dark:text-gray-600">{todaySolved}/2</span>
+                        <span className="text-[11px] text-gray-400 dark:text-gray-600">{todaySolved}/{todayTotal}</span>
                     )}
                     <Link to="/daily"
                         className="flex items-center gap-0.5 text-[11px] text-emerald-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors font-medium">
@@ -119,6 +120,15 @@ export default function DailyWidget({ loading: parentLoading }) {
                     accentColor="#f59e0b"
                     loading={isLoading}
                 />
+                {(isLoading || data?.bonus) && (
+                    <ProblemRow
+                        icon={Star}
+                        label="Bonus"
+                        problem={data?.bonus}
+                        accentColor="#8b5cf6"
+                        loading={isLoading}
+                    />
+                )}
             </div>
         </div>
     );
