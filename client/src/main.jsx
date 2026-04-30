@@ -15,7 +15,7 @@ if (import.meta.env.VITE_API_BASE) {
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
+    <GoogleOAuthProvider clientId="1026362052157-cj1k1mo96fdv5rp19u5fbq3rtb5af296.apps.googleusercontent.com">
       <ThemeProvider>
         <ToastProvider>
           <NotificationProvider>
