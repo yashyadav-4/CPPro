@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { API_BASE } from '../../api';
 import { motion } from "framer-motion";
 import { Mail, Lock, Eye, EyeOff, ArrowRight, ShieldCheck } from "lucide-react";
+import { GoogleLogin } from '@react-oauth/google';
 import { useTheme } from "../../hooks/useTheme";
 import FallingStars from "./FallingStar";
 import './Auth.css';
@@ -168,6 +169,44 @@ export default function Login() {
             {!loading && <ArrowRight size={18} />}
           </motion.button>
         </form>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', margin: '1.25rem 0' }}>
+          <div style={{ flex: 1, height: '1px', backgroundColor: theme.border }}></div>
+          <span style={{ fontSize: '0.8rem', color: theme.subtle, fontWeight: 500 }}>OR</span>
+          <div style={{ flex: 1, height: '1px', backgroundColor: theme.border }}></div>
+        </div>
+        
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <GoogleLogin
+            onSuccess={async (credentialResponse) => {
+              setLoading(true);
+              try {
+                const response = await fetch(`${API_BASE}/api/auth/google`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  credentials: 'include',
+                  body: JSON.stringify({ credential: credentialResponse.credential })
+                });
+                const data = await response.json();
+                if (data.message && data.message.toLowerCase().includes('successful')) {
+                  navigate('/');
+                } else {
+                  setMessage(data.message || "Google Login failed");
+                }
+              } catch (err) {
+                setMessage("Connection error. Please try again.");
+              } finally {
+                setLoading(false);
+              }
+            }}
+            onError={() => {
+              setMessage("Google Login Failed");
+            }}
+            useOneTap
+            theme={isDark ? "filled_black" : "outline"}
+            text="continue_with"
+          />
+        </div>
 
         {message && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ marginTop: '1.25rem', padding: '0.75rem', borderRadius: '8px', backgroundColor: '#fef2f2', border: '1px solid #fee2e2', color: '#ef4444', fontSize: '0.85rem', textAlign: 'center' }}>

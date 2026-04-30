@@ -49,7 +49,7 @@ const postSchema= new mongoose.Schema({
 } , {timestamps: true});
 
 postSchema.index({title:'text' , content:'text'});
-postSchema.index({authorId:1 , created:-1});
+postSchema.index({authorId:1 , createdAt:-1});
 postSchema.index({tags:1});
 
 
