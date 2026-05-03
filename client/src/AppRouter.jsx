@@ -19,6 +19,7 @@ const DailyChallenge = lazy(() => import('./components/DailyChallenge/DailyChall
 
 const ContestTracker = lazy(() => import('./components/ContestTracker/ContestTracker.jsx'));
 const AdminDashboard = lazy(() => import('./components/Admin/AdminDashboard.jsx'));
+const HelpSupport = lazy(() => import('./components/HelpSupport/HelpSupport.jsx'));
 
 const PageLoader = () => (
   <div className="min-h-screen bg-white dark:bg-[#0a0a0a] flex items-center justify-center">
@@ -48,6 +49,7 @@ const router = createBrowserRouter([
       { path: 'daily', element: withSuspense(<ProtectedRoute><DailyChallenge /></ProtectedRoute>) },
 
       { path: 'contest-tracker', element: withSuspense(<ContestTracker />) },
+      { path: 'help-support', element: withSuspense(<HelpSupport />) },
       { path: 'admin', element: withSuspense(<AdminRoute><AdminDashboard /></AdminRoute>) },
       { path: 'login', element: withSuspense(<Login />) },
       { path: 'signup', element: withSuspense(<Signup />) },

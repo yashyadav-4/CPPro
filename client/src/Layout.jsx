@@ -1,14 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import Header from './components/Header/Header'
 import Footer from "./components/Footer/Footer";
 import LoadingScreen from "./components/common/LoadingScreen";
-import HelpSupport from "./components/HelpSupport/HelpSupport";
+import HelpButton from "./components/HelpSupport/HelpButton";
 
 function Layout() {
     const location = useLocation();
     const isAuthPage = ['/login', '/signup'].includes(location.pathname);
+
+    // Always start at top when navigating to a new route
+    useEffect(() => {
+        window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    }, [location.pathname]);
 
     const [isLoading, setIsLoading] = useState(() => {
         const lastShown = localStorage.getItem('loader-last-shown');
@@ -38,7 +43,7 @@ function Layout() {
                 <Outlet />
             </main>
             {!isAuthPage && <Footer/>}
-            {!isAuthPage && <HelpSupport />}
+            {!isAuthPage && <HelpButton />}
         </div>
     )
 }

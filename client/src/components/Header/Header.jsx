@@ -147,7 +147,6 @@ export default function Header() {
 
                     {/* Right Section - Actions & Profile */}
                     <div className="hidden md:flex flex-shrink-0 items-center justify-end gap-3 xl:gap-4">
-                        {isAuthenticated && <NotificationBell />}
                         <button
                             onClick={toggleTheme}
                             title={isDark ? 'Light mode' : 'Dark mode'}
@@ -156,6 +155,7 @@ export default function Header() {
                             {isDark ? <Sun size={16} className="flex-shrink-0" /> : <Moon size={16} className="flex-shrink-0" />}
                             <span>{isDark ? 'Light' : 'Dark'}</span>
                         </button>
+                        {isAuthenticated && <NotificationBell />}
 
                         {isAuthenticated ? (
                             <div className="relative flex-shrink-0">
