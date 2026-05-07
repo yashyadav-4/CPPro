@@ -48,17 +48,17 @@ const verifyAndLinkCodeforces = async(userId ,handle)=>{
     await User.findByIdAndUpdate(
         userId,
         {
-            $set:{"linkedAccounts.codeforces":cleanHandle, lastCfUpdate: null},
+            $set:{"linkedAccounts.codeforces":cleanHandle, lastCfUpdate: null, lastCfHardSync: new Date()},
             $unset:{verificationCode :""}
         },
         {new:true}
     );
 
-    //trigger immediate sync in background so dashboard has data right away
+    //trigger immediate hard sync in background so dashboard has data right away
     const syncService = require('./cfSyncService');
-    syncService.syncCodeforcesProfile(userId, cleanHandle, 'high')
-        .then(() => console.log(`[VERIFY] initial sync complete for ${cleanHandle}`))
-        .catch(err => console.error(`[VERIFY] initial sync failed for ${cleanHandle}:`, err.message));
+    syncService.syncCodeforcesProfile(userId, cleanHandle, { syncDepth: 'hard' })
+        .then(() => console.log(`[VERIFY] initial hard sync complete for ${cleanHandle}`))
+        .catch(err => console.error(`[VERIFY] initial hard sync failed for ${cleanHandle}:`, err.message));
 
     return {message: `linking codeforces account successful: ${cleanHandle}`};
 };
@@ -129,16 +129,16 @@ const verifyAndLinkCodechef = async (userId, handle) => {
     await User.findByIdAndUpdate(
         userId,
         {
-            $set: { "linkedAccounts.codechef": cleanHandle, lastCcUpdate: null },
+            $set: { "linkedAccounts.codechef": cleanHandle, lastCcUpdate: null, lastCcHardSync: new Date() },
             $unset: { verificationCode: "" }
         },
         { new: true }
     );
 
     const ccSyncService = require('./ccSyncService');
-    ccSyncService.syncCodeChefProfile(userId, cleanHandle)
-        .then(() => console.log(`[VERIFY-CC] initial sync complete for ${cleanHandle}`))
-        .catch(err => console.error(`[VERIFY-CC] initial sync failed for ${cleanHandle}:`, err.message));
+    ccSyncService.syncCodeChefProfile(userId, cleanHandle, { syncDepth: 'hard' })
+        .then(() => console.log(`[VERIFY-CC] initial hard sync complete for ${cleanHandle}`))
+        .catch(err => console.error(`[VERIFY-CC] initial hard sync failed for ${cleanHandle}:`, err.message));
 
     return { message: `linking CodeChef account successful: ${cleanHandle}` };
 };
@@ -219,16 +219,16 @@ const verifyAndLinkLeetcode = async (userId, handle) => {
     await User.findByIdAndUpdate(
         userId,
         {
-            $set:{ "linkedAccounts.leetcode": cleanHandle},
+            $set:{ "linkedAccounts.leetcode": cleanHandle, lastLcHardSync: new Date()},
             $unset: {verificationCode: ""}
         },
         {new: true}
     );
 
     const lcSyncService = require('./lcSyncService');
-    lcSyncService.syncLeetcodeProfile(userId, cleanHandle)
-        .then(() => console.log(`[VERIFY-LC] initial sync complete for ${cleanHandle}`))
-        .catch(err => console.error(`[VERIFY-LC] initial sync failed for ${cleanHandle}:`, err.message));
+    lcSyncService.syncLeetcodeProfile(userId, cleanHandle, null, { syncDepth: 'hard' })
+        .then(() => console.log(`[VERIFY-LC] initial hard sync complete for ${cleanHandle}`))
+        .catch(err => console.error(`[VERIFY-LC] initial hard sync failed for ${cleanHandle}:`, err.message));
 
     return {message: `linking LeetCode account successful: ${cleanHandle}`};
 };
@@ -251,7 +251,7 @@ const unlinkLeetcode= async(userId) =>{
 
 const getProfile = async(userId) => {
     const user = await User.findById(userId).select(
-        'name username email profilePic gender age location college linkedAccounts preferences'
+        'name username email profilePic gender age location college linkedAccounts preferences lastCfHardSync lastCcHardSync lastLcHardSync role'
     ).lean();
     if(!user){
         const err = new Error('User not found');
@@ -346,10 +346,16 @@ const removeLcSession = async (userId) => {
 };
 
 /** Internal use only — decrypts and returns the raw session token for sync dispatch. */
-const getDecryptedLcSession = async (userId) => {
+const getDecryptedLcSession = async (userId, opts = {}) => {
     if (!isEnabled()) return null;
     const user = await User.findById(userId).select('lcSession').lean();
-    if (!user?.lcSession?.encryptedToken || user.lcSession.status !== 'active') return null;
+    if (!user?.lcSession?.encryptedToken) return null;
+    // Only block if status is 'expired' AND allowExpired is false (default).
+    // When allowExpired=true (regular sync probing), we pass the token anyway so
+    // NexusLC can attempt auth and throw SESSION_EXPIRED — this is the only way to
+    // confirm & notify the user of a stale session.
+    const { allowExpired = false } = opts;
+    if (!allowExpired && user.lcSession.status !== 'active') return null;
     try {
         return decrypt(user.lcSession);
     } catch {

@@ -76,12 +76,16 @@ function getCCChallengerBand(rating) {
 
 // ── Block list construction ───────────────────────────────────────────────────
 
-async function buildAttemptedSet(userId, linkedPlatforms, lcData) {
+async function buildAttemptedSet(userId, linkedPlatforms) {
     const [submissions, recentDaily] = await Promise.all([
+        // All AC submissions from our DB — this is the canonical solved-set.
+        // For LC, lcSyncService writes acSlugs as placeholder Submission docs after
+        // every sync, so this query covers all synced solved problems across all platforms.
         Submission.find(
             { userId, platform: { $in: linkedPlatforms }, verdict: 'AC' },
             { problemId: 1, platform: 1, _id: 0 }
         ).lean(),
+        // Block problems shown in last 14 days to prevent repeats regardless of solve status.
         DailyProblem.find(
             { userId, date: { $gte: getNDaysAgoIST(14) } },
             { 'workout.problemId': 1, 'workout.platform': 1,
@@ -92,27 +96,10 @@ async function buildAttemptedSet(userId, linkedPlatforms, lcData) {
 
     const set = new Set(submissions.map(s => `${s.platform}::${s.problemId}`));
 
-    // Block problems shown in last 14 days to prevent repeats
     for (const d of recentDaily) {
         if (d.workout?.problemId)    set.add(`${d.workout.platform}::${d.workout.problemId}`);
         if (d.challenger?.problemId) set.add(`${d.challenger.platform}::${d.challenger.problemId}`);
         if (d.bonus?.problemId)      set.add(`${d.bonus.platform}::${d.bonus.problemId}`);
-    }
-
-    // Block all accumulated LC AC slugs (NexusLC grows this set over every sync)
-    if (lcData?.acSlugs?.length) {
-        for (const slug of lcData.acSlugs) set.add(`leetcode::${slug}`);
-    }
-
-    // Also block recentSubmissions titleSlugs — with a session token NexusLC returns
-    // up to 200 mixed-verdict entries; AC ones extend coverage beyond the 100-slug window.
-    // For public-only sync every recentSubmissions entry is already AC (statusDisplay = 'Accepted').
-    if (lcData?.recentSubmissions?.length) {
-        for (const s of lcData.recentSubmissions) {
-            if (s.titleSlug && s.statusDisplay === 'Accepted') {
-                set.add(`leetcode::${s.titleSlug}`);
-            }
-        }
     }
 
     return set;
@@ -279,7 +266,7 @@ async function generateDailyProblems(userId) {
         User.findById(userId, 'linkedAccounts dailyStreak').lean(),
         Platform.findOne({ userId, platform: 'codeforces' }, 'currentRating solvedByTopics').lean(),
         Platform.findOne({ userId, platform: 'codechef' },   'currentRating solvedByTopics').lean(),
-        LeetCodeData.findOne({ userId }, 'skillStats contestHistory profile acSlugs recentSubmissions').lean(),
+        LeetCodeData.findOne({ userId }, 'skillStats contestHistory profile').lean(),
     ]);
 
     const cfLinked = !!(user?.linkedAccounts?.codeforces);
@@ -294,7 +281,7 @@ async function generateDailyProblems(userId) {
         lcLinked && 'leetcode',
     ].filter(Boolean);
 
-    const attemptedSet = await buildAttemptedSet(userId, linkedPlatforms, lcData);
+    const attemptedSet = await buildAttemptedSet(userId, linkedPlatforms);
 
     const cfRating = cfPlatform?.currentRating || 1200;
     const ccRating = ccPlatform?.currentRating || 1400;

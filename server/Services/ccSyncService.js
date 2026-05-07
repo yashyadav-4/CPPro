@@ -63,17 +63,18 @@ const getCodeChefData = async (userId, handle, role = 'user') => {
 // Enqueue a sync job on the CC server and poll until completion.
 // The CC server scrapes CodeChef and writes directly to MongoDB.
 // ══════════════════════════════════════════════════════════════════════════
-const syncCodeChefProfile = async (userId, handle) => {
+const syncCodeChefProfile = async (userId, handle, opts = {}) => {
+    const syncDepth = opts.syncDepth || 'incremental';
     if (!CC_SYNC_API || !CC_SYNC_SECRET) {
         throw new Error('CC_SYNC_API / CC_SYNC_SECRET not configured');
     }
 
     let jobId;
     try {
-        const enqRes = await ccApi.post('/sync', { userId: String(userId), ccHandle: handle, force: true });
+        const enqRes = await ccApi.post('/sync', { userId: String(userId), ccHandle: handle, force: true, syncDepth });
         jobId = enqRes.data && enqRes.data.jobId;
         if (!jobId) throw new Error('CC server did not return a jobId');
-        console.log(`[CC-SYNC] >> ${handle} | job queued: ${jobId}`);
+        console.log(`[CC-SYNC] >> ${handle} | job queued: ${jobId} (syncDepth=${syncDepth})`);
     } catch (err) {
         let msg;
         if (err.response) {

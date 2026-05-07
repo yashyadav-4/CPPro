@@ -509,8 +509,8 @@ export default function AdminDashboard() {
           <StatCard icon={Target} label="Retention (30d)" value={ov.retentionRate}
             sub={`${fmt(ov.retainedUsers)} of ${fmt(ov.totalUsers)} users`}
             color="#ec4899" loading={loading} />
-          <StatCard icon={Database} label="Platform Links" value={fmt(ov.cfLinkedUsers + ov.lcLinkedUsers)}
-            sub={`CF: ${fmt(ov.cfLinkedUsers)} · LC: ${fmt(ov.lcLinkedUsers)} · Both: ${fmt(ov.bothLinked)}`}
+          <StatCard icon={Database} label="Platform Links" value={fmt((ov.cfLinkedUsers || 0) + (ov.lcLinkedUsers || 0) + (ov.ccLinkedUsers || 0))}
+            sub={`CF: ${fmt(ov.cfLinkedUsers)} · LC: ${fmt(ov.lcLinkedUsers)} · CC: ${fmt(ov.ccLinkedUsers)}`}
             color="#f97316" loading={loading} />
           <StatCard icon={MessageSquare} label="Community" value={fmt(ov.totalPosts)}
             sub={`${fmt(ov.postsThisWeek)} posts this week · ${fmt(ov.totalComments)} comments`}
@@ -645,21 +645,17 @@ export default function AdminDashboard() {
             )}
           </div>
 
-          {/* Languages */}
+          {/* CC Rating */}
           <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-5">
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Top Languages</p>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">CC Rating Distribution</p>
             {loading ? <Sk className="h-40" /> : (
               <ResponsiveContainer width="100%" height={150}>
-                <BarChart
-                  data={(dist.languages || []).slice(0, 6)}
-                  layout="vertical"
-                  margin={{ top: 0, right: 10, left: 20, bottom: 0 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" horizontal={false} />
-                  <XAxis type="number" tick={{ fill: '#6b7280', fontSize: 10 }} allowDecimals={false} />
-                  <YAxis type="category" dataKey="label" tick={{ fill: '#9ca3af', fontSize: 10 }} width={60} />
+                <BarChart data={dist.ccRating || []} margin={{ top: 0, right: 0, left: -30, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" vertical={false} />
+                  <XAxis dataKey="label" tick={{ fill: '#6b7280', fontSize: 9 }} />
+                  <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} allowDecimals={false} />
                   <Tooltip content={<ChartTooltip />} cursor={{ fill: '#ffffff08' }} />
-                  <Bar dataKey="count" name="Submissions" fill="#10b981" radius={[0, 3, 3, 0]} />
+                  <Bar dataKey="count" name="Users" fill="#10b981" radius={[3, 3, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -705,7 +701,7 @@ export default function AdminDashboard() {
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b border-white/[0.06]">
-                    {['User', 'Email', 'Role', 'Verified', 'CF', 'LC', 'Last Login', 'Joined'].map(h => (
+                    {['User', 'Email', 'Role', 'Verified', 'CF', 'LC', 'CC', 'Last Login', 'Joined'].map(h => (
                       <th key={h} className="text-left text-gray-500 font-medium pb-2 pr-4 uppercase tracking-wide text-[10px]">{h}</th>
                     ))}
                   </tr>
@@ -745,6 +741,11 @@ export default function AdminDashboard() {
                       <td className="py-2.5 pr-4">
                         <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${u.lcLinked ? 'bg-yellow-500/15 text-yellow-400' : 'text-gray-700'}`}>
                           {u.lcLinked ? 'LC' : '—'}
+                        </span>
+                      </td>
+                      <td className="py-2.5 pr-4">
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${u.ccLinked ? 'bg-emerald-500/15 text-emerald-400' : 'text-gray-700'}`}>
+                          {u.ccLinked ? 'CC' : '—'}
                         </span>
                       </td>
                       <td className="py-2.5 pr-4 text-gray-500">{timeAgo(u.lastLogin)}</td>

@@ -21,6 +21,7 @@ const contestRoutes    = require('./Routes/contestRoutes');
 const notificationRoutes = require('./Routes/notificationRoutes');
 const adminRoutes = require('./Routes/adminRoutes');
 const dailyRoutes = require('./Routes/dailyRoutes');
+const userProfileRoutes = require('./Routes/userProfileRoutes');
 const { startContestSyncWorker } = require('./Workers/contestSyncWorker');
 const { startLeaderboardSyncWorker } = require('./Workers/leaderboardSyncWorker');
 
@@ -68,6 +69,7 @@ app.use('/api/contests', contestRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/daily', dailyRoutes);
+app.use('/api/users', userProfileRoutes);
 
 // test
 app.get('/api/test', (req, res)=>{

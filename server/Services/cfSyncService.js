@@ -55,7 +55,8 @@ const getCodeforcesData = async (userId, handle, role = 'user') => {
 };
 
 // Enqueues a sync job on the CF worker and polls until completion — mirrors lcSyncService polling.
-const syncCodeforcesProfile = async (userId, handle) => {
+const syncCodeforcesProfile = async (userId, handle, opts = {}) => {
+    const syncDepth = opts.syncDepth || 'incremental';
     const headers = { 'Content-Type': 'application/json' };
     if (CF_SYNC_SECRET) headers['Authorization'] = `Bearer ${CF_SYNC_SECRET}`;
 
@@ -65,10 +66,11 @@ const syncCodeforcesProfile = async (userId, handle) => {
         const { data } = await axios.post(`${CF_SYNC_API}/sync`, {
             userId: userId.toString(),
             cfHandle: handle,
+            syncDepth,
         }, { headers, timeout: 10_000 });
         jobId = data && data.jobId;
         if (!jobId) throw new Error('CF worker did not return a jobId');
-        console.log(`[LEAN-NEXUS] >> ${handle} | job queued: ${jobId}`);
+        console.log(`[LEAN-NEXUS] >> ${handle} | job queued: ${jobId} (syncDepth=${syncDepth})`);
     } catch (err) {
         const msg = err.response ? JSON.stringify(err.response.data) : err.message;
         throw new Error(`CF worker enqueue failed: ${msg}`);

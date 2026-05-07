@@ -71,7 +71,7 @@ const userSchema = new mongoose.Schema({
     preferences:{
         theme:{
             type:String,
-            default:'light',
+            default:'dark',
         },
         public: {
             type:Boolean,
@@ -95,6 +95,18 @@ const userSchema = new mongoose.Schema({
         default:null
     },
     lastCcUpdate:{
+        type:Date,
+        default:null
+    },
+    lastCfHardSync:{
+        type:Date,
+        default:null
+    },
+    lastLcHardSync:{
+        type:Date,
+        default:null
+    },
+    lastCcHardSync:{
         type:Date,
         default:null
     },

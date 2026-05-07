@@ -1,9 +1,10 @@
 import { useState, useCallback, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
-import { RefreshCw, Link as LinkIcon, AlertTriangle, Shield, Share2 } from 'lucide-react';
+import { RefreshCw, Link as LinkIcon, AlertTriangle, Shield, Share2, ExternalLink, Zap } from 'lucide-react';
 
 import { useDashboardData } from '../../hooks/useDashboardData';
+import { mergeLast7Days, mergeHeatmaps, mergeTopics, mergeContests } from '../../utils/dashboardHelpers';
 import ErrorBoundary from '../common/ErrorBoundary';
 
 import StatCards from './StatCards';
@@ -30,52 +31,11 @@ const REFRESH_STATE_KEY_PREFIX = 'dashboard_refresh_state_';
 const ADMIN_COOLDOWN_SECONDS = 10;
 const USER_COOLDOWN_SECONDS = 15 * 60;
 
-// ── Merge day arrays into combined last-7-days ────────────────────────────────
-function mergeLast7Days(cfDays, lcDays, ccDays) {
-  const result = [];
-  const len = Math.max(cfDays?.length || 0, lcDays?.length || 0, ccDays?.length || 0, 7);
-  for (let i = 0; i < len; i++) {
-    const cfDay = cfDays?.[i] || { date: '', solved: false };
-    const lcDay = lcDays?.[i] || { date: '', solved: false };
-    const ccDay = ccDays?.[i] || { date: '', solved: false };
-    result.push({
-      date: cfDay.date || lcDay.date || ccDay.date,
-      solved: cfDay.solved || lcDay.solved || ccDay.solved,
-    });
-  }
-  return result;
-}
 
-// ── Merge heatmap arrays (CF + LC + CC calendar) ─────────────────────────────
-function mergeHeatmaps(cfHeatmap, lcCalendar, ccHeatmap) {
-  const map = {};
-  (cfHeatmap || []).forEach(d => { map[d.date] = (map[d.date] || 0) + d.count; });
-  (lcCalendar || []).forEach(d => { map[d.date] = (map[d.date] || 0) + d.count; });
-  (ccHeatmap || []).forEach(d => { map[d.date] = (map[d.date] || 0) + d.count; });
-  return Object.entries(map).map(([date, count]) => ({ date, count })).sort((a, b) => a.date.localeCompare(b.date));
-}
-
-// ── Merge topic arrays and take top 8 ────────────────────────────────────────
-function mergeTopics(cfTopics, lcTopics) {
-  const map = {};
-  (cfTopics || []).forEach(t => { map[t.name] = (map[t.name] || 0) + t.count; });
-  (lcTopics || []).forEach(t => { map[t.name] = (map[t.name] || 0) + t.count; });
-  return Object.entries(map)
-    .map(([name, count]) => ({ name, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 8);
-}
-
-function mergeContests(cfContests, lcContests, ccContests) {
-  return [...(cfContests || []), ...(lcContests || []), ...(ccContests || [])]
-    .filter(c => c.date)
-    .sort((a, b) => b.date.localeCompare(a.date))
-    .slice(0, 15);
-}
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { cfData, lcData, ccData, userId, userRole, userName, userUsername, linkedAccounts, lcSessionStatus, loading, error, refetch } = useDashboardData();
+  const { cfData, lcData, ccData, userId, userRole, userName, userUsername, linkedAccounts, lcSessionStatus, hardSyncTimestamps, loading, error, refetch } = useDashboardData();
 
   const [refreshing, setRefreshing] = useState(false);
   const [cooldown, setCooldown] = useState(0);
@@ -389,13 +349,23 @@ export default function Dashboard() {
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
             <h1 className="text-lg font-medium text-gray-900 dark:text-white">Dashboard</h1>
-            <p className="text-xs text-gray-400 dark:text-gray-500 font-normal">
-              {[
-                linkedAccounts.codeforces && 'Codeforces',
-                linkedAccounts.leetcode && 'LeetCode',
-                linkedAccounts.codechef && 'CodeChef',
-              ].filter(Boolean).join(' + ') || 'Dashboard'}
-            </p>
+            <div className="flex items-center gap-3">
+              <p className="text-xs text-gray-400 dark:text-gray-500 font-normal">
+                {[
+                  linkedAccounts.codeforces && 'Codeforces',
+                  linkedAccounts.leetcode && 'LeetCode',
+                  linkedAccounts.codechef && 'CodeChef',
+                ].filter(Boolean).join(' + ') || 'Dashboard'}
+              </p>
+              {userUsername && (
+                <Link
+                  to={`/user/${userUsername}`}
+                  className="flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors font-medium"
+                >
+                  View Public Profile <ExternalLink size={10} />
+                </Link>
+              )}
+            </div>
           </div>
 
           {/* Platform Filter Tabs — show when 2+ platforms are linked */}
@@ -445,6 +415,26 @@ export default function Dashboard() {
               <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
               {refreshing ? 'Refreshing...' : cooldown > 0 ? `${formatCooldown(cooldown)}` : 'Refresh'}
             </button>
+            {/* Hard Refresh hint */}
+            {(() => {
+              if (cooldown > 0 || refreshing) return null;
+              const THIRTY_DAYS = userRole === 'admin' ? 30 * 1000 : 30 * 24 * 60 * 60 * 1000;
+              const checks = [
+                linkedAccounts.codeforces && (!hardSyncTimestamps?.cf || (Date.now() - new Date(hardSyncTimestamps.cf).getTime() >= THIRTY_DAYS)),
+                linkedAccounts.leetcode && (!hardSyncTimestamps?.lc || (Date.now() - new Date(hardSyncTimestamps.lc).getTime() >= THIRTY_DAYS)),
+                linkedAccounts.codechef && (!hardSyncTimestamps?.cc || (Date.now() - new Date(hardSyncTimestamps.cc).getTime() >= THIRTY_DAYS)),
+              ];
+              const hasHardRefresh = checks.some(Boolean);
+              if (!hasHardRefresh) return null;
+              return (
+                <button
+                  onClick={() => navigate('/settings')}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-medium rounded-lg bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-500/20 hover:bg-purple-100 dark:hover:bg-purple-500/20 transition-colors"
+                >
+                  <Zap size={10} /> Deep Sync Available
+                </button>
+              );
+            })()}
           </div>
         </div>
 

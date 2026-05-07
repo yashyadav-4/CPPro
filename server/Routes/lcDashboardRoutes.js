@@ -1,7 +1,8 @@
 const express =require('express');
 const router= express.Router();
 
-const {verifyToken} =require('../Middlewares/auth');
+const { optionalAuth } =require('../Middlewares/auth');
+const { checkPublicProfile } = require('../Middlewares/privacyCheck');
 const{
     getLcProfile,
     getLcSkillStats,
@@ -11,13 +12,13 @@ const{
     getLcAggregateDashboard,
 }= require('../Controllers/lcDashboardController');
 
-router.use(verifyToken);
+const guard = [optionalAuth, checkPublicProfile];
 
-router.get('/aggregate/:userId', getLcAggregateDashboard);
-router.get('/profile/:userId',getLcProfile);
-router.get('/skills/:userId', getLcSkillStats);
-router.get('/calendar/:userId',getLcCalendar);
-router.get('/contests/:userId', getLcContestHistory);
-router.get('/submissions/:userId',getLcRecentSubmissions);
+router.get('/aggregate/:userId', ...guard, getLcAggregateDashboard);
+router.get('/profile/:userId', ...guard, getLcProfile);
+router.get('/skills/:userId', ...guard, getLcSkillStats);
+router.get('/calendar/:userId', ...guard, getLcCalendar);
+router.get('/contests/:userId', ...guard, getLcContestHistory);
+router.get('/submissions/:userId', ...guard, getLcRecentSubmissions);
 
 module.exports= router;

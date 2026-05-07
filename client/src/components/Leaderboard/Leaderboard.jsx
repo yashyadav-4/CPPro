@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { Trophy, Medal, Award, AlertTriangle, RefreshCw, ChevronDown, Crown, Eye, EyeOff, Search } from 'lucide-react';
 import PodiumCard from './PodiumCard';
@@ -263,21 +264,40 @@ export default function LeaderBoard() {
                   <tr key={user._id} className="hover:bg-white/[0.03] transition-colors">
                     <td className="px-4 py-3 text-center text-gray-500 font-semibold text-sm">{user.rank}</td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center">
-                        <div className="flex-shrink-0 h-9 w-9">
-                          {user.profilePic ? (
-                            <img className="h-9 w-9 rounded-full object-cover border border-white/[0.1]" src={user.profilePic} alt={user.username} />
-                          ) : (
-                            <div className="h-9 w-9 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-sm border border-emerald-400/30">
-                              {(user.name || user.username || 'A').charAt(0).toUpperCase()}
+                      {user.isPublic || user.realUsername ? (
+                        <Link to={`/user/${user.realUsername || user.username}`} className="flex items-center group">
+                          <div className="flex-shrink-0 h-9 w-9">
+                            {user.profilePic ? (
+                              <img className="h-9 w-9 rounded-full object-cover border border-white/[0.1]" src={user.profilePic} alt={user.username} />
+                            ) : (
+                              <div className="h-9 w-9 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-sm border border-emerald-400/30">
+                                {((user.realName || user.name || user.username || 'A')).charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                          </div>
+                          <div className="ml-3">
+                            <div className="text-sm font-medium text-gray-100 group-hover:text-emerald-400 transition-colors">
+                              {user.realName || user.name || user.username}
+                              {!user.isPublic && user.realUsername && (
+                                <span className="ml-1.5 text-[10px] text-red-400/70 font-normal">(Anonymous)</span>
+                              )}
                             </div>
-                          )}
+                            <div className="text-xs text-gray-500 group-hover:text-emerald-500/70 transition-colors">@{user.realUsername || user.username}</div>
+                          </div>
+                        </Link>
+                      ) : (
+                        <div className="flex items-center">
+                          <div className="flex-shrink-0 h-9 w-9">
+                            <div className="h-9 w-9 rounded-full bg-gray-500/20 text-gray-500 flex items-center justify-center font-bold text-sm border border-gray-500/30">
+                              A
+                            </div>
+                          </div>
+                          <div className="ml-3">
+                            <div className="text-sm font-medium text-gray-500">Anonymous</div>
+                            <div className="text-xs text-gray-600">Private profile</div>
+                          </div>
                         </div>
-                        <div className="ml-3">
-                          <div className="text-sm font-medium text-gray-100">{user.name || user.username}</div>
-                          <div className="text-xs text-gray-500">@{user.username}</div>
-                        </div>
-                      </div>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <span className={`text-sm font-bold ${category === 'cpscore' ? 'text-emerald-400' : 'text-gray-300'}`}>

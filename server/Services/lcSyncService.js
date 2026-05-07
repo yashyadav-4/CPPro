@@ -55,8 +55,13 @@ const getLeetcodeData = async (userId, handle, role = 'user') => {
     // Stamp NOW to prevent duplicate dispatches before async work starts.
     await User.findByIdAndUpdate(userId, { $set: { lastLcUpdate: new Date() } });
 
+    // Retrieve the stored session token (active OR expired status) so the sync
+    // attempt can detect a newly-expired session and mark it accordingly.
+    const { getDecryptedLcSession } = require('./settingsService');
+    const sessionToken = await getDecryptedLcSession(userId, { allowExpired: true });
+
     // Fire-and-forget: enqueue job on NexusLC, then poll until done.
-    syncLeetcodeProfile(userId, handle)
+    syncLeetcodeProfile(userId, handle, sessionToken)
         .then(() => console.log(`[LC-SYNC] >> ${handle} | NexusLC sync complete`))
         .catch(async (err) => {
             console.error(`[LC-SYNC] >> ${handle} | NexusLC sync failed:`, err.message);
@@ -74,14 +79,15 @@ const getLeetcodeData = async (userId, handle, role = 'user') => {
 // NexusLC does ONE combined GraphQL query and writes directly to MongoDB —
 // no data is returned here; CPPro reads from the DB as usual.
 // ══════════════════════════════════════════════════════════════════════════
-const syncLeetcodeProfile = async (userId, handle, sessionToken = null) => {
+const syncLeetcodeProfile = async (userId, handle, sessionToken = null, opts = {}) => {
+    const syncDepth = opts.syncDepth || 'incremental';
     if (!LC_SYNC_API || !LC_SYNC_SECRET) {
         throw new Error('LC_SYNC_API / LC_SYNC_SECRET not configured');
     }
 
     // Build job payload. Session token is passed to NexusLC so it can make
     // authenticated GraphQL calls for full submission history.
-    const payload = { userId: String(userId), lcUsername: handle, force: true };
+    const payload = { userId: String(userId), lcUsername: handle, force: true, syncDepth };
     if (sessionToken) payload.sessionToken = sessionToken;
 
     // 1. Enqueue the job on NexusLC.
@@ -90,7 +96,7 @@ const syncLeetcodeProfile = async (userId, handle, sessionToken = null) => {
         const enqRes = await nexusLC.post('/sync', payload);
         jobId = enqRes.data && enqRes.data.jobId;
         if (!jobId) throw new Error('NexusLC did not return a jobId');
-        console.log(`[LC-SYNC] >> ${handle} | job queued: ${jobId}`);
+        console.log(`[LC-SYNC] >> ${handle} | job queued: ${jobId} (syncDepth=${syncDepth})`);
     } catch (err) {
         const msg = err.response ? JSON.stringify(err.response.data) : err.message;
         throw new Error(`NexusLC enqueue failed: ${msg}`);
@@ -162,7 +168,8 @@ const syncLeetcodeProfile = async (userId, handle, sessionToken = null) => {
                                 upsert: true,
                             },
                         }));
-                        await Submission.bulkWrite(ops, { ordered: false });
+                        const result = await Submission.bulkWrite(ops, { ordered: false });
+                        console.log(`[LC-SYNC] >> ${handle} | persisted ${uniqueSlugs.length} AC slugs to Submissions (inserted=${result.upsertedCount || 0})`);
                     }
 
                     return checkDailyProblemSolves(userId, 'leetcode', acIds);
@@ -178,19 +185,27 @@ const syncLeetcodeProfile = async (userId, handle, sessionToken = null) => {
                 throw new Error('invalid leetcode handle');
             }
 
-            // Session expired — mark it and notify the user.
+            // Session expired — mark it in DB and notify the user (once).
             if (/SESSION_EXPIRED/i.test(reason)) {
                 try {
+                    const freshUser = await User.findById(userId, 'lcSession').lean();
+                    const alreadyMarked = freshUser?.lcSession?.status === 'expired';
+                    // Always stamp expired so the UI reflects current reality.
                     await User.findByIdAndUpdate(userId, { $set: { 'lcSession.status': 'expired' } });
-                    await Notification.create({
-                        userId,
-                        type:      'lc_session_expired',
-                        title:     'LeetCode Session Expired',
-                        message:   'Your LeetCode session has expired. Go to Settings → LeetCode Session to update it.',
-                        actionUrl: '/settings',
-                    });
+                    // Only create the notification the FIRST time expiry is detected,
+                    // not every 15 min when the probing sync re-confirms it.
+                    if (!alreadyMarked) {
+                        await Notification.create({
+                            userId,
+                            type:      'lc_session_expired',
+                            title:     'LeetCode Session Expired',
+                            message:   'Your LeetCode session has expired. Go to Settings → LeetCode Session to update it.',
+                            actionUrl: '/settings',
+                        });
+                        console.warn(`[LC-SYNC] >> session expired for ${userId} — notification sent`);
+                    }
                 } catch (notifErr) {
-                    console.warn('[LC-SYNC] failed to create session-expired notification:', notifErr.message);
+                    console.warn('[LC-SYNC] failed to handle session-expired:', notifErr.message);
                 }
                 throw new Error('LC_SESSION_EXPIRED');
             }

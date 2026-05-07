@@ -102,7 +102,7 @@ async function handleLcManualRefresh(req, res) {
         // Stamp NOW to prevent duplicate dispatches if the user double-clicks.
         await User.findByIdAndUpdate(userId, { $set: { lastLcUpdate: new Date() } });
 
-        const sessionToken = await getDecryptedLcSession(userId);
+        const sessionToken = await getDecryptedLcSession(userId, { allowExpired: true });
 
         // Await the sync so this response only returns once MongoDB has fresh data.
         try {
@@ -222,4 +222,174 @@ async function handleCcHealthCheck(_req, res) {
     }
 }
 
-module.exports = { handleManualRefresh, handleLcManualRefresh, handleLcHealthCheck, handleCfHealthCheck, handleCcManualRefresh, handleCcHealthCheck };
+// ── Hard Sync Handlers ────────────────────────────────────────────────────
+// Requirements:
+// 1. 30-day cooldown on hard sync (admin bypass)
+// 2. Regular 15-min sync cooldown must ALSO be expired (no spam)
+// 3. Fire-and-forget background sync with syncDepth: 'hard'
+
+const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+const ADMIN_HARD_SYNC_COOLDOWN = 30 * 1000; // 30 seconds for testing
+
+async function handleCfHardSync(req, res) {
+    try {
+        const userId = req.user._id;
+        const user = await User.findById(userId);
+
+        if (!user || !user.linkedAccounts || !user.linkedAccounts.codeforces) {
+            return res.status(400).json({ success: false, message: 'no codeforces account linked' });
+        }
+
+        const role = user.role || 'user';
+        const regularCooldown = role === 'admin' ? ADMIN_COOLDOWN : FIFTEEN_MINUTES;
+
+        // Gate 1: regular sync cooldown must be expired
+        const timeSinceUpdate = user.lastCfUpdate ? (Date.now() - new Date(user.lastCfUpdate).getTime()) : Infinity;
+        if (timeSinceUpdate < regularCooldown) {
+            const remainingSeconds = Math.ceil((regularCooldown - timeSinceUpdate) / 1000);
+            return res.status(429).json({ success: false, message: `Regular sync cooldown active. Try again in ${remainingSeconds}s`, remainingSeconds });
+        }
+
+        // Gate 2: Hard sync cooldown
+        if (role === 'admin') {
+            const timeSinceHard = user.lastCfHardSync ? (Date.now() - new Date(user.lastCfHardSync).getTime()) : Infinity;
+            if (timeSinceHard < ADMIN_HARD_SYNC_COOLDOWN) {
+                const nextAvailable = new Date(new Date(user.lastCfHardSync).getTime() + ADMIN_HARD_SYNC_COOLDOWN);
+                return res.status(429).json({ success: false, message: 'Admin hard sync on cooldown', nextAvailableAt: nextAvailable.toISOString() });
+            }
+        } else {
+            const timeSinceHard = user.lastCfHardSync ? (Date.now() - new Date(user.lastCfHardSync).getTime()) : Infinity;
+            if (timeSinceHard < THIRTY_DAYS) {
+                const nextAvailable = new Date(new Date(user.lastCfHardSync).getTime() + THIRTY_DAYS);
+                return res.status(429).json({ success: false, message: 'Hard sync on cooldown', nextAvailableAt: nextAvailable.toISOString() });
+            }
+        }
+
+        // Stamp both timestamps immediately to prevent spam
+        await User.findByIdAndUpdate(userId, { $set: { lastCfHardSync: new Date(), lastCfUpdate: new Date() } });
+
+        const handle = user.linkedAccounts.codeforces;
+        syncService.syncCodeforcesProfile(userId, handle, { syncDepth: 'hard' })
+            .then(() => console.log(`[HARD-SYNC-CF] ${handle} | done`))
+            .catch(async (err) => {
+                console.error(`[HARD-SYNC-CF] ${handle} | failed:`, err.message);
+                await User.findByIdAndUpdate(userId, { $set: { lastCfHardSync: user.lastCfHardSync || null, lastCfUpdate: user.lastCfUpdate || null } });
+            });
+
+        return res.status(200).json({ success: true, status: 'queued', message: 'Deep sync started for Codeforces' });
+    } catch (error) {
+        console.error('[HARD-SYNC-CF] error:', error);
+        return res.status(500).json({ success: false, message: 'internal server error' });
+    }
+}
+
+async function handleLcHardSync(req, res) {
+    try {
+        const userId = req.user._id;
+        const user = await User.findById(userId);
+
+        if (!user || !user.linkedAccounts || !user.linkedAccounts.leetcode) {
+            return res.status(400).json({ success: false, message: 'no leetcode account linked' });
+        }
+
+        const role = user.role || 'user';
+        const regularCooldown = role === 'admin' ? ADMIN_COOLDOWN : FIFTEEN_MINUTES;
+
+        const timeSinceUpdate = user.lastLcUpdate ? (Date.now() - new Date(user.lastLcUpdate).getTime()) : Infinity;
+        if (timeSinceUpdate < regularCooldown) {
+            const remainingSeconds = Math.ceil((regularCooldown - timeSinceUpdate) / 1000);
+            return res.status(429).json({ success: false, message: `Regular sync cooldown active. Try again in ${remainingSeconds}s`, remainingSeconds });
+        }
+
+        if (role === 'admin') {
+            const timeSinceHard = user.lastLcHardSync ? (Date.now() - new Date(user.lastLcHardSync).getTime()) : Infinity;
+            if (timeSinceHard < ADMIN_HARD_SYNC_COOLDOWN) {
+                const nextAvailable = new Date(new Date(user.lastLcHardSync).getTime() + ADMIN_HARD_SYNC_COOLDOWN);
+                return res.status(429).json({ success: false, message: 'Admin hard sync on cooldown', nextAvailableAt: nextAvailable.toISOString() });
+            }
+        } else {
+            const timeSinceHard = user.lastLcHardSync ? (Date.now() - new Date(user.lastLcHardSync).getTime()) : Infinity;
+            if (timeSinceHard < THIRTY_DAYS) {
+                const nextAvailable = new Date(new Date(user.lastLcHardSync).getTime() + THIRTY_DAYS);
+                return res.status(429).json({ success: false, message: 'Hard sync on cooldown', nextAvailableAt: nextAvailable.toISOString() });
+            }
+        }
+
+        await User.findByIdAndUpdate(userId, { $set: { lastLcHardSync: new Date(), lastLcUpdate: new Date() } });
+
+        const handle = user.linkedAccounts.leetcode;
+        const sessionToken = await getDecryptedLcSession(userId, { allowExpired: true });
+        lcSyncService.syncLeetcodeProfile(userId, handle, sessionToken, { syncDepth: 'hard' })
+            .then(() => console.log(`[HARD-SYNC-LC] ${handle} | done`))
+            .catch(async (err) => {
+                console.error(`[HARD-SYNC-LC] ${handle} | failed:`, err.message);
+                await User.findByIdAndUpdate(userId, { $set: { lastLcHardSync: user.lastLcHardSync || null, lastLcUpdate: user.lastLcUpdate || null } });
+            });
+
+        return res.status(200).json({ success: true, status: 'queued', message: 'Deep sync started for LeetCode' });
+    } catch (error) {
+        console.error('[HARD-SYNC-LC] error:', error);
+        return res.status(500).json({ success: false, message: 'internal server error' });
+    }
+}
+
+async function handleCcHardSync(req, res) {
+    try {
+        const userId = req.user._id;
+        const user = await User.findById(userId);
+
+        if (!user || !user.linkedAccounts || !user.linkedAccounts.codechef) {
+            return res.status(400).json({ success: false, message: 'no codechef account linked' });
+        }
+
+        const role = user.role || 'user';
+        const regularCooldown = role === 'admin' ? ADMIN_COOLDOWN : FIFTEEN_MINUTES;
+
+        const timeSinceUpdate = user.lastCcUpdate ? (Date.now() - new Date(user.lastCcUpdate).getTime()) : Infinity;
+        if (timeSinceUpdate < regularCooldown) {
+            const remainingSeconds = Math.ceil((regularCooldown - timeSinceUpdate) / 1000);
+            return res.status(429).json({ success: false, message: `Regular sync cooldown active. Try again in ${remainingSeconds}s`, remainingSeconds });
+        }
+
+        if (role === 'admin') {
+            const timeSinceHard = user.lastCcHardSync ? (Date.now() - new Date(user.lastCcHardSync).getTime()) : Infinity;
+            if (timeSinceHard < ADMIN_HARD_SYNC_COOLDOWN) {
+                const nextAvailable = new Date(new Date(user.lastCcHardSync).getTime() + ADMIN_HARD_SYNC_COOLDOWN);
+                return res.status(429).json({ success: false, message: 'Admin hard sync on cooldown', nextAvailableAt: nextAvailable.toISOString() });
+            }
+        } else {
+            const timeSinceHard = user.lastCcHardSync ? (Date.now() - new Date(user.lastCcHardSync).getTime()) : Infinity;
+            if (timeSinceHard < THIRTY_DAYS) {
+                const nextAvailable = new Date(new Date(user.lastCcHardSync).getTime() + THIRTY_DAYS);
+                return res.status(429).json({ success: false, message: 'Hard sync on cooldown', nextAvailableAt: nextAvailable.toISOString() });
+            }
+        }
+
+        await User.findByIdAndUpdate(userId, { $set: { lastCcHardSync: new Date(), lastCcUpdate: new Date() } });
+
+        const handle = user.linkedAccounts.codechef;
+        ccSyncService.syncCodeChefProfile(userId, handle, { syncDepth: 'hard' })
+            .then(() => console.log(`[HARD-SYNC-CC] ${handle} | done`))
+            .catch(async (err) => {
+                console.error(`[HARD-SYNC-CC] ${handle} | failed:`, err.message);
+                await User.findByIdAndUpdate(userId, { $set: { lastCcHardSync: user.lastCcHardSync || null, lastCcUpdate: user.lastCcUpdate || null } });
+            });
+
+        return res.status(200).json({ success: true, status: 'queued', message: 'Deep sync started for CodeChef' });
+    } catch (error) {
+        console.error('[HARD-SYNC-CC] error:', error);
+        return res.status(500).json({ success: false, message: 'internal server error' });
+    }
+}
+
+module.exports = {
+    handleManualRefresh,
+    handleLcManualRefresh,
+    handleLcHealthCheck,
+    handleCfHealthCheck,
+    handleCcManualRefresh,
+    handleCcHealthCheck,
+    handleCfHardSync,
+    handleLcHardSync,
+    handleCcHardSync,
+};

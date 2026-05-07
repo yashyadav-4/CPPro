@@ -67,6 +67,9 @@ async function handleUserLogin(req, res) {
 
         const token = setUser(user);
 
+        // Track last login
+        User.updateOne({ _id: user._id }, { lastLogin: new Date() }).catch(() => {});
+
         res.cookie('token', token, {
             httpOnly: true,
             path: '/',
@@ -150,6 +153,12 @@ async function handleGoogleAuth(req, res) {
         }
 
         const token = setUser(user);
+
+        // Track last login + mark verified (Google-verified email)
+        User.updateOne(
+            { _id: user._id },
+            { lastLogin: new Date(), isVerified: true }
+        ).catch(() => {});
 
         res.cookie('token', token, {
             httpOnly: true,

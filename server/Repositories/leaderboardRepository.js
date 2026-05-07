@@ -176,7 +176,7 @@ function buildCorePipeline(scope, scopeValue) {
 /**
  * Main leaderboard query — returns top 100 users.
  */
-const getLeaderboardData = async (scope, scopeValue, category) => {
+const getLeaderboardData = async (scope, scopeValue, category, isAdmin = false) => {
     const sortField = SORT_FIELD_MAP[category] || 'cpScore';
     const stages = buildCorePipeline(scope, scopeValue);
 
@@ -190,41 +190,47 @@ const getLeaderboardData = async (scope, scopeValue, category) => {
     stages.push({ $limit: 100 });
 
     // Clean output + anonymity
-    stages.push({
-        $project: {
-            _id: 1,
-            username: {
-                $cond: [
-                    { $ifNull: ["$preferences.public", true] },
-                    "$username",
-                    "Anonymous"
-                ]
-            },
-            name: {
-                $cond: [
-                    { $ifNull: ["$preferences.public", true] },
-                    "$name",
-                    "Anonymous"
-                ]
-            },
-            profilePic: {
-                $cond: [
-                    { $ifNull: ["$preferences.public", true] },
-                    "$profilePic",
-                    ""
-                ]
-            },
-            cpScore: 1,
-            cfRating: 1,
-            cfSolved: 1,
-            lcRating: 1,
-            lcSolved: "$lcTotalSolved",
-            ccRating: 1,
-            ccSolved: 1,
-            totalSolved: 1,
-            isPublic: { $ifNull: ["$preferences.public", true] }
-        }
-    });
+    const projectStage = {
+        _id: 1,
+        username: {
+            $cond: [
+                { $ifNull: ["$preferences.public", true] },
+                "$username",
+                "Anonymous"
+            ]
+        },
+        name: {
+            $cond: [
+                { $ifNull: ["$preferences.public", true] },
+                "$name",
+                "Anonymous"
+            ]
+        },
+        profilePic: {
+            $cond: [
+                { $ifNull: ["$preferences.public", true] },
+                "$profilePic",
+                ""
+            ]
+        },
+        cpScore: 1,
+        cfRating: 1,
+        cfSolved: 1,
+        lcRating: 1,
+        lcSolved: "$lcTotalSolved",
+        ccRating: 1,
+        ccSolved: 1,
+        totalSolved: 1,
+        isPublic: { $ifNull: ["$preferences.public", true] }
+    };
+
+    // Admin gets the real username/name for anonymous users
+    if (isAdmin) {
+        projectStage.realUsername = "$username";
+        projectStage.realName = "$name";
+    }
+
+    stages.push({ $project: projectStage });
 
     return await User.aggregate(stages);
 };

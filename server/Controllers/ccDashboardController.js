@@ -42,15 +42,17 @@ async function getCcAggregateDashboard(req, res) {
                 const t = new Date(s.submittedAt).getTime();
                 return !isNaN(t) && t > 0 && t <= nowMs + 172_800_000;
             });
-            // Dedup by {problemId, hour-bucket, verdict} — catches duplicate DB records where
-            // the same submission was stored with submittedAt values up to 1 hour apart.
-            // Relative-time strings ("5 hours ago") are now rounded to the hour at parse time,
-            // so same-hour syncs hit the unique index. This layer catches cross-hour-boundary
-            // stragglers without needing a delete-all before each sync.
+            // Dedup by {problemId, day-bucket, verdict} — catches duplicate DB records where
+            // the same submission was stored with submittedAt values that differ by hours.
+            // Using day-bucket (IST) instead of hour-bucket ensures the count is stable
+            // across syncs, since CodeChef relative timestamps ("3h ago") resolve to
+            // different hours but always the same calendar day.
             const seen = new Map();
             for (const s of valid) {
-                const hour = Math.floor(new Date(s.submittedAt).getTime() / 3600000);
-                const key = `${s.problemId}\x00${hour}\x00${s.verdict || ''}`;
+                // IST = UTC+5:30 = +19800s. Floor to day boundary.
+                const istMs = new Date(s.submittedAt).getTime() + 19800000;
+                const day = Math.floor(istMs / 86400000);
+                const key = `${s.problemId}\x00${day}\x00${s.verdict || ''}`;
                 if (!seen.has(key)) seen.set(key, s);
             }
             return [...seen.values()];

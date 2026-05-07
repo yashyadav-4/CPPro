@@ -73,7 +73,8 @@ async function getAdminStats(req, res) {
             cfRatingBuckets,
             lcSolvedBuckets,
             recentUsers,
-            languageDist,
+            ccLinkedUsers,
+            ccRatingBuckets,
         ] = await Promise.all([
 
             // ── User counts ─────────────────────────────────────────────────
@@ -197,12 +198,20 @@ async function getAdminStats(req, res) {
                 .limit(10)
                 .select('name username email role isVerified createdAt linkedAccounts lastLogin'),
 
-            // ── Language distribution ─────────────────────────────────────────
-            Submission.aggregate([
-                { $match: { language: { $nin: [null, ''] } } },
-                { $group: { _id: '$language', count: { $sum: 1 } } },
-                { $sort: { count: -1 } },
-                { $limit: 10 }
+            // ── CC linked count ───────────────────────────────────────────────
+            User.countDocuments({ 'linkedAccounts.codechef': { $nin: [null, ''] } }),
+
+            // ── CC rating distribution ────────────────────────────────────────
+            Platform.aggregate([
+                { $match: { platform: 'codechef', currentRating: { $gt: 0 } } },
+                {
+                    $bucket: {
+                        groupBy: '$currentRating',
+                        boundaries: [0, 1000, 1200, 1400, 1600, 1800, 2000, 2200, 2500],
+                        default: 'Other',
+                        output: { count: { $sum: 1 } }
+                    }
+                }
             ]),
         ]);
 
@@ -260,6 +269,10 @@ async function getAdminStats(req, res) {
                 syncedToday: syncedTodayCf + syncedTodayLc,
                 syncedTodayCf,
                 syncedTodayLc,
+                cfLinkedUsers,
+                lcLinkedUsers,
+                ccLinkedUsers,
+                bothLinked,
                 totalSubmissions,
                 acSubmissions,
                 overallAccRate: `${overallAccRate}%`,
@@ -284,7 +297,10 @@ async function getAdminStats(req, res) {
             distributions: {
                 cfRating: cfRatingFormatted,
                 lcSolved: lcSolvedFormatted,
-                languages: languageDist.map(l => ({ label: l._id || 'Unknown', count: l.count })),
+                ccRating: ccRatingBuckets.map(b => {
+                    const ccLabels = { 0: '0–999', 1000: '1★', 1200: '2★', 1400: '3★', 1600: '4★', 1800: '5★', 2000: '6★', 2200: '7★' };
+                    return { label: ccLabels[b._id] || String(b._id), count: b.count };
+                }),
                 topCountries: topCountries.map(c => ({ label: c._id, count: c.count })),
                 topColleges: topColleges.map(c => ({ label: c._id, count: c.count })),
             },
@@ -299,6 +315,7 @@ async function getAdminStats(req, res) {
                 lastLogin: u.lastLogin || null,
                 cfLinked: !!(u.linkedAccounts?.codeforces),
                 lcLinked: !!(u.linkedAccounts?.leetcode),
+                ccLinked: !!(u.linkedAccounts?.codechef),
             })),
             serverMeta: {
                 uptime: `${Math.floor(process.uptime() / 60)} min`,

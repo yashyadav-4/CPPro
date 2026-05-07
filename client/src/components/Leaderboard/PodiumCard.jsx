@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Medal, Award, Crown } from 'lucide-react';
 
 export default function PodiumCard({ user, category, position, getPrimaryValue, getPrimaryLabel }) {
@@ -66,8 +67,22 @@ export default function PodiumCard({ user, category, position, getPrimaryValue, 
         </div>
 
         {/* Name */}
-        <p className="text-gray-900 dark:text-white font-semibold text-sm truncate">{user.name || user.username}</p>
-        <p className="text-gray-400 text-xs truncate">@{user.username}</p>
+        {user.isPublic || user.realUsername ? (
+          <Link to={`/user/${user.realUsername || user.username}`} className="group block">
+            <p className="text-gray-900 dark:text-white font-semibold text-sm truncate group-hover:text-emerald-500 transition-colors">
+              {user.realName || user.name || user.username}
+              {!user.isPublic && user.realUsername && (
+                <span className="ml-1 text-[9px] text-red-400/70 font-normal">(Anon)</span>
+              )}
+            </p>
+            <p className="text-gray-400 text-xs truncate group-hover:text-emerald-500/70 transition-colors">@{user.realUsername || user.username}</p>
+          </Link>
+        ) : (
+          <div>
+            <p className="text-gray-500 font-semibold text-sm">Anonymous</p>
+            <p className="text-gray-600 text-xs">Private profile</p>
+          </div>
+        )}
 
         {/* Score */}
         <div className="mt-3 flex items-center justify-between text-xs text-gray-400">

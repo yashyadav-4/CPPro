@@ -3,7 +3,7 @@ import axios from 'axios';
 import { motion } from 'framer-motion';
 import {
   Settings as SettingsIcon, User, MapPin, GraduationCap, Eye, EyeOff,
-  Save, RefreshCw, CheckCircle, AlertTriangle, Link2, Shield, KeyRound, Trash2, Info
+  Save, RefreshCw, CheckCircle, AlertTriangle, Link2, Shield, KeyRound, Trash2, Info, Zap
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -22,6 +22,7 @@ export default function Settings() {
     country: '', state: '', city: '', college: '', public: true,
   });
   const [linked, setLinked] = useState({ codeforces: '', leetcode: '', codechef: '' });
+  const [userRole, setUserRole] = useState('user');
 
   // CC linking state
   const [ccLinkOpen, setCcLinkOpen] = useState(false);
@@ -41,6 +42,11 @@ export default function Settings() {
   const [lcSessionSaving, setLcSessionSaving] = useState(false);
   const [lcSessionError, setLcSessionError] = useState('');
   const [lcSessionSuccess, setLcSessionSuccess] = useState('');
+
+  // Deep sync state
+  const [hardSyncTimestamps, setHardSyncTimestamps] = useState({ cf: null, lc: null, cc: null });
+  const [deepSyncing, setDeepSyncing] = useState({ cf: false, lc: false, cc: false });
+  const [deepSyncMsg, setDeepSyncMsg] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -63,8 +69,14 @@ export default function Settings() {
             public: u.preferences?.public ?? true,
           });
           setLinked(u.linkedAccounts || { codeforces: '', leetcode: '' });
+          setUserRole(u.role || 'user');
           setEmail(u.email || '');
           setUsername(u.username || '');
+          setHardSyncTimestamps({
+            cf: u.lastCfHardSync || null,
+            lc: u.lastLcHardSync || null,
+            cc: u.lastCcHardSync || null,
+          });
         }
         if (sessionRes.status === 'fulfilled' && sessionRes.value.data.success) {
           setLcSessionStatus(sessionRes.value.data.status || 'not_set');
@@ -319,9 +331,41 @@ export default function Settings() {
                   </div>
                 </div>
                 {linked.codeforces ? (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 dark:bg-green-500/15 text-green-700 dark:text-green-400">
-                    <CheckCircle size={12} /> Verified
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 dark:bg-green-500/15 text-green-700 dark:text-green-400">
+                      <CheckCircle size={12} /> Verified
+                    </span>
+                    {(() => {
+                      const THIRTY_DAYS = userRole === 'admin' ? 30 * 1000 : 30 * 24 * 60 * 60 * 1000;
+                      const lastHard = hardSyncTimestamps.cf ? new Date(hardSyncTimestamps.cf).getTime() : 0;
+                      const available = !lastHard || (Date.now() - lastHard >= THIRTY_DAYS);
+                      const daysLeft = lastHard ? Math.ceil((THIRTY_DAYS - (Date.now() - lastHard)) / (userRole === 'admin' ? 1000 : 86400000)) : 0;
+                      return (
+                        <button
+                          onClick={async () => {
+                            setDeepSyncing(p => ({ ...p, cf: true }));
+                            setDeepSyncMsg('');
+                            try {
+                              await axios.post('/api/sync/refresh-cf-hard', {}, { withCredentials: true });
+                              setDeepSyncMsg('Deep sync started for Codeforces!');
+                              setHardSyncTimestamps(p => ({ ...p, cf: new Date().toISOString() }));
+                            } catch (err) {
+                              setDeepSyncMsg(err.response?.data?.message || 'Deep sync failed');
+                            } finally {
+                              setDeepSyncing(p => ({ ...p, cf: false }));
+                              setTimeout(() => setDeepSyncMsg(''), 5000);
+                            }
+                          }}
+                          disabled={deepSyncing.cf || !available}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-medium bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-500/20 hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          title={available ? 'Fetch up to 3000 submissions' : `Available in ${daysLeft} days`}
+                        >
+                          {deepSyncing.cf ? <RefreshCw size={10} className="animate-spin" /> : <Zap size={10} />}
+                          {deepSyncing.cf ? 'Syncing...' : available ? 'Deep Sync' : `${daysLeft}d`}
+                        </button>
+                      );
+                    })()}
+                  </div>
                 ) : (
                   <Link to="/verify-codeforces"
                     className="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium rounded-lg transition-colors">
@@ -342,9 +386,41 @@ export default function Settings() {
                   </div>
                 </div>
                 {linked.leetcode ? (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 dark:bg-green-500/15 text-green-700 dark:text-green-400">
-                    <CheckCircle size={12} /> Verified
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 dark:bg-green-500/15 text-green-700 dark:text-green-400">
+                      <CheckCircle size={12} /> Verified
+                    </span>
+                    {(() => {
+                      const THIRTY_DAYS = userRole === 'admin' ? 30 * 1000 : 30 * 24 * 60 * 60 * 1000;
+                      const lastHard = hardSyncTimestamps.lc ? new Date(hardSyncTimestamps.lc).getTime() : 0;
+                      const available = !lastHard || (Date.now() - lastHard >= THIRTY_DAYS);
+                      const daysLeft = lastHard ? Math.ceil((THIRTY_DAYS - (Date.now() - lastHard)) / (userRole === 'admin' ? 1000 : 86400000)) : 0;
+                      return (
+                        <button
+                          onClick={async () => {
+                            setDeepSyncing(p => ({ ...p, lc: true }));
+                            setDeepSyncMsg('');
+                            try {
+                              await axios.post('/api/sync/refresh-lc-hard', {}, { withCredentials: true });
+                              setDeepSyncMsg('Deep sync started for LeetCode!');
+                              setHardSyncTimestamps(p => ({ ...p, lc: new Date().toISOString() }));
+                            } catch (err) {
+                              setDeepSyncMsg(err.response?.data?.message || 'Deep sync failed');
+                            } finally {
+                              setDeepSyncing(p => ({ ...p, lc: false }));
+                              setTimeout(() => setDeepSyncMsg(''), 5000);
+                            }
+                          }}
+                          disabled={deepSyncing.lc || !available}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-medium bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20 hover:bg-amber-100 dark:hover:bg-amber-500/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          title={available ? 'Fetch up to 3000 submissions' : `Available in ${daysLeft} days`}
+                        >
+                          {deepSyncing.lc ? <RefreshCw size={10} className="animate-spin" /> : <Zap size={10} />}
+                          {deepSyncing.lc ? 'Syncing...' : available ? 'Deep Sync' : `${daysLeft}d`}
+                        </button>
+                      );
+                    })()}
+                  </div>
                 ) : (
                   <Link to="/verify-codeforces"
                     className="inline-flex items-center gap-1 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-medium rounded-lg transition-colors">
@@ -368,9 +444,41 @@ export default function Settings() {
                     </div>
                   </div>
                   {linked.codechef ? (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 dark:bg-green-500/15 text-green-700 dark:text-green-400">
-                      <CheckCircle size={12} /> Verified
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 dark:bg-green-500/15 text-green-700 dark:text-green-400">
+                        <CheckCircle size={12} /> Verified
+                      </span>
+                      {(() => {
+                        const THIRTY_DAYS = userRole === 'admin' ? 30 * 1000 : 30 * 24 * 60 * 60 * 1000;
+                        const lastHard = hardSyncTimestamps.cc ? new Date(hardSyncTimestamps.cc).getTime() : 0;
+                        const available = !lastHard || (Date.now() - lastHard >= THIRTY_DAYS);
+                        const daysLeft = lastHard ? Math.ceil((THIRTY_DAYS - (Date.now() - lastHard)) / (userRole === 'admin' ? 1000 : 86400000)) : 0;
+                        return (
+                          <button
+                            onClick={async () => {
+                              setDeepSyncing(p => ({ ...p, cc: true }));
+                              setDeepSyncMsg('');
+                              try {
+                                await axios.post('/api/sync/refresh-cc-hard', {}, { withCredentials: true });
+                                setDeepSyncMsg('Deep sync started for CodeChef!');
+                                setHardSyncTimestamps(p => ({ ...p, cc: new Date().toISOString() }));
+                              } catch (err) {
+                                setDeepSyncMsg(err.response?.data?.message || 'Deep sync failed');
+                              } finally {
+                                setDeepSyncing(p => ({ ...p, cc: false }));
+                                setTimeout(() => setDeepSyncMsg(''), 5000);
+                              }
+                            }}
+                            disabled={deepSyncing.cc || !available}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-medium bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            title={available ? 'Fetch full submission history' : `Available in ${daysLeft} days`}
+                          >
+                            {deepSyncing.cc ? <RefreshCw size={10} className="animate-spin" /> : <Zap size={10} />}
+                            {deepSyncing.cc ? 'Syncing...' : available ? 'Deep Sync' : `${daysLeft}d`}
+                          </button>
+                        );
+                      })()}
+                    </div>
                   ) : (
                     <button
                       onClick={() => { setCcLinkOpen(p => !p); setCcLinkError(''); }}
@@ -455,6 +563,12 @@ export default function Settings() {
                   <CheckCircle size={12} /> {ccLinkSuccess}
                 </p>
               )}
+              {deepSyncMsg && (
+                <p className={`flex items-center gap-1.5 text-xs mt-2 ${deepSyncMsg.includes('failed') || deepSyncMsg.includes('cooldown') ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'}`}>
+                  {deepSyncMsg.includes('failed') || deepSyncMsg.includes('cooldown') ? <AlertTriangle size={12} /> : <Zap size={12} />}
+                  {deepSyncMsg}
+                </p>
+              )}
             </div>
           </motion.div>
 
@@ -481,6 +595,17 @@ export default function Settings() {
                 )}
               </div>
 
+              {/* Expired session banner — shown prominently so user can't miss it */}
+              {lcSessionStatus === 'expired' && (
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/25 mb-4">
+                  <AlertTriangle size={15} className="text-red-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-semibold text-red-700 dark:text-red-400">Session expired</p>
+                    <p className="text-xs text-red-600 dark:text-red-300 mt-0.5">Your LeetCode session cookie has expired. Sync is now running in public-only mode (last 20 AC subs). Re-enter your <code className="font-mono">LEETCODE_SESSION</code> cookie below to restore full sync.</p>
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-3 mb-4">
                 {/* Without vs With comparison */}
                 <div className="grid grid-cols-2 gap-2.5">
@@ -496,7 +621,7 @@ export default function Settings() {
                   <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-500/[0.07] border border-amber-200 dark:border-amber-500/20">
                     <p className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-2">With session</p>
                     <ul className="space-y-1.5 text-xs text-amber-700 dark:text-amber-300">
-                      <li className="flex items-start gap-1.5"><span className="shrink-0 mt-0.5">✓</span>Up to 800 submissions synced</li>
+                      <li className="flex items-start gap-1.5"><span className="shrink-0 mt-0.5">✓</span>60 submissions per sync, up to 3000 on deep sync</li>
                       <li className="flex items-start gap-1.5"><span className="shrink-0 mt-0.5">✓</span>All verdict types tracked</li>
                       <li className="flex items-start gap-1.5"><span className="shrink-0 mt-0.5">✓</span>Language per submission</li>
                       <li className="flex items-start gap-1.5"><span className="shrink-0 mt-0.5">✓</span>Full heatmap across all years</li>

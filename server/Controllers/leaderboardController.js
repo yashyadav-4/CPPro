@@ -43,12 +43,14 @@ const getGlobalLeaderboard = async (req, res) => {
         }
 
         const currentUserId = req.user?._id?.toString() || null;
+        const isAdmin = req.user?.role === 'admin';
 
         const result = await leaderboardService.getLeaderboard({
             scope,
             scopeValue,
             category,
             currentUserId,
+            isAdmin,
         });
 
         return res.status(200).json({ success: true, data: result });

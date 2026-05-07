@@ -16,6 +16,7 @@ export function useDashboardData() {
     const [lcSessionStatus, setLcSessionStatus] = useState('not_set');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [hardSyncTimestamps, setHardSyncTimestamps] = useState({ cf: null, lc: null, cc: null });
 
     // Refs so refetch() always has current values without stale closures
     const uidRef = useRef(null);
@@ -78,6 +79,11 @@ export function useDashboardData() {
                 setUserUsername(user.username || '');
                 setLinkedAccounts(linked);
                 setLcSessionStatus(user.lcSession?.status || 'not_set');
+                setHardSyncTimestamps({
+                    cf: user.lastCfHardSync || null,
+                    lc: user.lastLcHardSync || null,
+                    cc: user.lastCcHardSync || null,
+                });
 
                 // Try cache first — show instantly with no backend call
                 let hasCached = false;
@@ -114,5 +120,5 @@ export function useDashboardData() {
         await fetchPlatformData(uid, linked, silent);
     }, [fetchPlatformData]);
 
-    return { cfData, lcData, ccData, userId, userRole, userName, userUsername, linkedAccounts, lcSessionStatus, loading, error, refetch };
+    return { cfData, lcData, ccData, userId, userRole, userName, userUsername, linkedAccounts, lcSessionStatus, hardSyncTimestamps, loading, error, refetch };
 }
