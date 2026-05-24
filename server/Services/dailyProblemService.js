@@ -85,9 +85,9 @@ async function buildAttemptedSet(userId, linkedPlatforms) {
             { userId, platform: { $in: linkedPlatforms }, verdict: 'AC' },
             { problemId: 1, platform: 1, _id: 0 }
         ).lean(),
-        // Block problems shown in last 14 days to prevent repeats regardless of solve status.
+        // Block problems shown in last 60 days to prevent repeats.
         DailyProblem.find(
-            { userId, date: { $gte: getNDaysAgoIST(14) } },
+            { userId, date: { $gte: getNDaysAgoIST(60) } },
             { 'workout.problemId': 1, 'workout.platform': 1,
               'challenger.problemId': 1, 'challenger.platform': 1,
               'bonus.problemId': 1, 'bonus.platform': 1 }

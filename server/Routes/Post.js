@@ -1,17 +1,18 @@
 const express= require('express');
 const router = express.Router();
-const {verifyToken}=require('../Middlewares/auth')
+const {verifyToken, optionalAuth}=require('../Middlewares/auth')
 
 
 const {handleCreatePost , handleDeletePost , handleDownVote , handleUpvotes ,handleGetPosts, handleTogglePin }= require('../Controllers/Post');
 
-router.use(verifyToken); // for all routes
+// Public: anyone (including guests) can browse posts
+router.get('/' , optionalAuth, handleGetPosts);
 
-router.get('/' , handleGetPosts);
-router.post('/',handleCreatePost);
-router.delete('/:id' , handleDeletePost);
-router.patch('/:id/upvote' , handleUpvotes);
-router.patch('/:id/downvote' , handleDownVote);
-router.patch('/:id/pin', handleTogglePin);
+// Protected: only authenticated users can write
+router.post('/', verifyToken, handleCreatePost);
+router.delete('/:id' , verifyToken, handleDeletePost);
+router.patch('/:id/upvote' , verifyToken, handleUpvotes);
+router.patch('/:id/downvote' , verifyToken, handleDownVote);
+router.patch('/:id/pin', verifyToken, handleTogglePin);
 
 module.exports=router;

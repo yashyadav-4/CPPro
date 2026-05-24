@@ -1,13 +1,14 @@
 const express= require('express');
 const router = express.Router();
-const {verifyToken}=require('../Middlewares/auth')
+const {verifyToken, optionalAuth}=require('../Middlewares/auth')
 
 const {handleAddComment , handleDeleteComment , handleGetComments}= require('../Controllers/Comment');
 
-router.use(verifyToken); // for all routes
+// Public: anyone can read comments
+router.get('/:postId' , optionalAuth, handleGetComments);
 
-router.get('/:postId' , handleGetComments);
-router.post('/:postId' , handleAddComment);
-router.delete('/:commentId' , handleDeleteComment);
+// Protected: only authenticated users can write/delete comments
+router.post('/:postId' , verifyToken, handleAddComment);
+router.delete('/:commentId' , verifyToken, handleDeleteComment);
 
 module.exports=router;

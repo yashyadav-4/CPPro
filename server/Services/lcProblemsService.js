@@ -20,7 +20,7 @@ async function getLCProblems(difficulty = 'Medium') {
     if (!LC_SYNC_API) throw new Error('LC_SYNC_API not configured');
 
     const inflight = axios.get(`${LC_SYNC_API}/problems`, {
-        params: { difficulty, limit: 100 },
+        params: { difficulty, limit: 500 },
         headers: { Authorization: `Bearer ${LC_SYNC_SECRET}` },
         timeout: 15_000,
     })

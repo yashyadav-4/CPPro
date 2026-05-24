@@ -57,7 +57,7 @@ export default function CodeTemplate() {
 
     async function handleDelete(id) {
         try {
-            const res = await fetch(`/api/codeTemplate/${id}`, {
+            const res = await fetch(`${API_BASE}/api/codeTemplate/${id}`, {
                 method: "DELETE",
                 credentials: "include",
             })

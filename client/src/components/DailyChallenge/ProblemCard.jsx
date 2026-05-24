@@ -125,13 +125,6 @@ export default function ProblemCard({ type, problem, loading }) {
                 </p>
             )}
 
-            {/* Popularity */}
-            {problem.solvedCount > 0 && (
-                <p className="text-[11px] text-gray-400 dark:text-gray-600 mb-4">
-                    {problem.solvedCount.toLocaleString()} solvers
-                </p>
-            )}
-
             <div className="flex-1" />
 
             {/* CTA */}

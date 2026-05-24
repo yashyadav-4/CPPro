@@ -102,13 +102,15 @@ const syncLeetcodeProfile = async (userId, handle, sessionToken = null, opts = {
         throw new Error(`NexusLC enqueue failed: ${msg}`);
     }
 
-    // 2. Poll /sync/status/:jobId until the job finishes (max ~2 min).
-    const POLL_INTERVAL_MS = 3_000;
-    const MAX_POLLS        = 40;
+    // 2. Poll /sync/status/:jobId until the job finishes (max ~100s).
+    const POLL_INTERVAL_MS = 2_000;
+    const MAX_POLLS        = 50;
     let lastLoggedState    = null;
 
     for (let attempt = 0; attempt < MAX_POLLS; attempt++) {
-        await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
+        // First poll after 1s (incremental syncs often finish very quickly);
+        // subsequent polls every 2s.
+        await new Promise((r) => setTimeout(r, attempt === 0 ? 1_000 : POLL_INTERVAL_MS));
 
         let state, failedReason;
         try {
