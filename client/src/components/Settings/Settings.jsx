@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { motion } from 'framer-motion';
 import {
@@ -6,6 +6,9 @@ import {
   Save, RefreshCw, CheckCircle, AlertTriangle, Link2, Shield, KeyRound, Trash2, Info, Zap
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { Country, State, City } from 'country-state-city';
+import SearchableSelect from './SearchableSelect';
+import CollegeAutocomplete from './CollegeAutocomplete';
 
 const INPUT_CLASS = "w-full bg-white dark:bg-[#0a0a0a] border border-gray-200 dark:border-white/[0.08] text-gray-900 dark:text-white text-sm rounded-lg py-3 px-4 outline-none placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all disabled:opacity-50";
 const LABEL_CLASS = "block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5";
@@ -96,6 +99,44 @@ export default function Settings() {
     setSuccess('');
     setError('');
   };
+
+  const handleCountryChange = (value) => {
+    setForm(prev => ({ ...prev, country: value, state: '', city: '' }));
+    setSuccess('');
+    setError('');
+  };
+
+  const handleStateChange = (value) => {
+    setForm(prev => ({ ...prev, state: value, city: '' }));
+    setSuccess('');
+    setError('');
+  };
+
+  // ── Location cascading data ──
+  const allCountries = useMemo(() => Country.getAllCountries(), []);
+  const countryOptions = useMemo(() => allCountries.map(c => c.name).sort(), [allCountries]);
+
+  const selectedCountryObj = useMemo(
+    () => allCountries.find(c => c.name === form.country),
+    [allCountries, form.country]
+  );
+  const stateList = useMemo(
+    () => selectedCountryObj ? State.getStatesOfCountry(selectedCountryObj.isoCode) : [],
+    [selectedCountryObj]
+  );
+  const stateOptions = useMemo(() => stateList.map(s => s.name).sort(), [stateList]);
+
+  const selectedStateObj = useMemo(
+    () => stateList.find(s => s.name === form.state),
+    [stateList, form.state]
+  );
+  const cityList = useMemo(
+    () => (selectedCountryObj && selectedStateObj)
+      ? City.getCitiesOfState(selectedCountryObj.isoCode, selectedStateObj.isoCode)
+      : [],
+    [selectedCountryObj, selectedStateObj]
+  );
+  const cityOptions = useMemo(() => cityList.map(c => c.name).sort(), [cityList]);
 
   const handleSaveLcSession = async () => {
     setLcSessionError('');
@@ -258,6 +299,9 @@ export default function Settings() {
                 <label className={LABEL_CLASS}>Profile Picture URL</label>
                 <input type="url" value={form.profilePic} onChange={e => handleChange('profilePic', e.target.value)}
                   placeholder="https://example.com/avatar.jpg" className={INPUT_CLASS} />
+                <p className="mt-1.5 text-[11px] text-gray-400 dark:text-gray-500">
+                  Paste any image link — from GitHub, LeetCode, Discord, or any platform
+                </p>
               </div>
               <div>
                 <label className={LABEL_CLASS}>Gender</label>
@@ -285,25 +329,41 @@ export default function Settings() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className={LABEL_CLASS}>Country</label>
-                <input type="text" value={form.country} onChange={e => handleChange('country', e.target.value)}
-                  placeholder="e.g. India" className={INPUT_CLASS} />
+                <SearchableSelect
+                  value={form.country}
+                  options={countryOptions}
+                  onChange={handleCountryChange}
+                  placeholder="Select country"
+                />
               </div>
               <div>
                 <label className={LABEL_CLASS}>State / Province</label>
-                <input type="text" value={form.state} onChange={e => handleChange('state', e.target.value)}
-                  placeholder="e.g. Maharashtra" className={INPUT_CLASS} />
+                <SearchableSelect
+                  value={form.state}
+                  options={stateOptions}
+                  onChange={handleStateChange}
+                  placeholder={form.country ? 'Select state' : 'Select country first'}
+                  disabled={!form.country}
+                />
               </div>
               <div>
                 <label className={LABEL_CLASS}>City</label>
-                <input type="text" value={form.city} onChange={e => handleChange('city', e.target.value)}
-                  placeholder="e.g. Mumbai" className={INPUT_CLASS} />
+                <SearchableSelect
+                  value={form.city}
+                  options={cityOptions}
+                  onChange={(v) => handleChange('city', v)}
+                  placeholder={form.state ? 'Select city' : 'Select state first'}
+                  disabled={!form.state}
+                />
               </div>
               <div>
                 <label className={LABEL_CLASS}>
                   <span className="flex items-center gap-1"><GraduationCap size={14} /> College / University</span>
                 </label>
-                <input type="text" value={form.college} onChange={e => handleChange('college', e.target.value)}
-                  placeholder="e.g. IIT Bombay" className={INPUT_CLASS} />
+                <CollegeAutocomplete
+                  value={form.college}
+                  onChange={(v) => handleChange('college', v)}
+                />
               </div>
             </div>
             <p className="mt-3 text-xs text-gray-400 dark:text-gray-500">

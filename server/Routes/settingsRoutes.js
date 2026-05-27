@@ -14,7 +14,11 @@ const {
     saveLcSession,
     getLcSessionStatus,
     removeLcSession,
+    getCollegeSuggestions,
 } = require('../Controllers/settingsController');
+
+// Public (no auth needed — college names aren't sensitive)
+router.get('/colleges', getCollegeSuggestions);
 
 router.use(verifyToken);
 

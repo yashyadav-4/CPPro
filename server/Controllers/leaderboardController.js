@@ -3,7 +3,7 @@ const leaderboardRepo = require('../Repositories/leaderboardRepository');
 const User = require('../Model/User');
 
 const VALID_SCOPES = ['global', 'country', 'college'];
-const VALID_CATEGORIES = ['cpscore', 'totalQuestions', 'leetcodeRating', 'codeforcesRating'];
+const VALID_CATEGORIES = ['cpscore', 'totalQuestions', 'leetcodeRating', 'codeforcesRating', 'codechefRating'];
 
 const getGlobalLeaderboard = async (req, res) => {
     try {
@@ -70,7 +70,7 @@ const getMyRank = async (req, res) => {
         const userId = req.user?._id?.toString();
         if (!userId) return res.status(401).json({ success: false, message: 'Not authenticated' });
 
-        const CATEGORIES = ['cpscore', 'totalQuestions', 'leetcodeRating', 'codeforcesRating'];
+        const CATEGORIES = ['cpscore', 'totalQuestions', 'leetcodeRating', 'codeforcesRating', 'codechefRating'];
 
         // All 4 rank lookups + 4 leaderboard list fetches (for total user counts) in parallel
         const rankPromises = CATEGORIES.map(cat =>
@@ -129,6 +129,8 @@ const getMyRank = async (req, res) => {
                 lcRatingTotal: totals.leetcodeRating,
                 cfRatingRank: ranks.codeforcesRating,
                 cfRatingTotal: totals.codeforcesRating,
+                ccRatingRank: ranks.codechefRating,
+                ccRatingTotal: totals.codechefRating,
             }
         });
     } catch (error) {

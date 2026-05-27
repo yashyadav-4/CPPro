@@ -1,4 +1,5 @@
 const settingsService = require('../Services/settingsService');
+const User = require('../Model/User');
 
 const getVerificationCode= async(req , res)=>{
     try{
@@ -140,6 +141,25 @@ const removeLcSession = async (req, res) => {
     }
 };
 
+const getCollegeSuggestions = async (req, res) => {
+    try {
+        const q = (req.query.q || '').trim();
+        if (q.length < 2) {
+            return res.json({ success: true, data: [] });
+        }
+        const results = await User.aggregate([
+            { $match: { college: { $regex: q, $options: 'i', $ne: '' } } },
+            { $group: { _id: '$college' } },
+            { $sort: { _id: 1 } },
+            { $limit: 20 },
+            { $project: { _id: 0, name: '$_id' } },
+        ]);
+        return res.json({ success: true, data: results.map(r => r.name) });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: 'Failed to fetch suggestions' });
+    }
+};
+
 module.exports = {
     getVerificationCode,
     verifyCodeforcesAccount,
@@ -153,4 +173,5 @@ module.exports = {
     saveLcSession,
     getLcSessionStatus,
     removeLcSession,
+    getCollegeSuggestions,
 };

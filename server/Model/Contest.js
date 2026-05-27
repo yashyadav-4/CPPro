@@ -2,7 +2,7 @@
 const mongoose = require('mongoose');
 
 const contestSchema = new mongoose.Schema({
-    // Stable unique key: platform + slugified name + startTime
+    // stable unique key: platform + slugified name + startTime
     contestId: {
         type:     String,
         required: true,
@@ -38,7 +38,7 @@ const contestSchema = new mongoose.Schema({
         default: null,
     },
     status: {
-        type: String,      // 'BEFORE' | 'CODING' | 'FINISHED' etc.
+        type: String,      // 'BEFORE' | 'CODING' | 'FINISHED' etc
         default: null,
     },
 }, { timestamps: true });

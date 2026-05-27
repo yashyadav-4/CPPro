@@ -181,7 +181,7 @@ export default function LeaderBoard() {
                     className={`block w-full text-left px-4 py-2.5 text-sm transition-colors ${
                       scope === s.key
                         ? 'bg-emerald-600/20 text-emerald-400 font-medium'
-                        : 'text-gray-400 hover:bg-[#242424] hover:text-gray-900 dark:text-white'
+                        : 'text-gray-400 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/[0.06] hover:text-gray-900 dark:hover:text-white'
                     }`}
                   >
                     {s.label}

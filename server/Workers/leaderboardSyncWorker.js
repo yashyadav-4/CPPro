@@ -3,7 +3,7 @@ const LeaderboardCache = require('../Model/LeaderboardCache');
 const GlobalSyncState  = require('../Model/GlobalSyncState');
 
 const INTERVAL_MS  = 15 * 60 * 1000; // 15 minutes
-const CATEGORIES   = ['cpscore', 'totalQuestions', 'leetcodeRating', 'codeforcesRating'];
+const CATEGORIES   = ['cpscore', 'totalQuestions', 'leetcodeRating', 'codeforcesRating', 'codechefRating'];
 const SYNC_KEY     = 'leaderboard';
 
 async function computeAndCache() {

@@ -62,10 +62,6 @@ const platformSchema= new mongoose.Schema({
         type:Date,
         default:null
     },
-    //CPScore analytics summary fields
-    easySolved:{ type:Number, default:0 },
-    mediumSolved:{ type:Number, default:0 },
-    hardSolved:{ type:Number, default:0 },
     currentStreak:{ type:Number, default:0 },
     contestsParticipated:{ type:Number, default:0 },
     // CodeChef-specific (unused by CF/LC, default 0)
