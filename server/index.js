@@ -24,6 +24,7 @@ const dailyRoutes = require('./Routes/dailyRoutes');
 const userProfileRoutes = require('./Routes/userProfileRoutes');
 const { startContestSyncWorker } = require('./Workers/contestSyncWorker');
 const { startLeaderboardSyncWorker } = require('./Workers/leaderboardSyncWorker');
+const { dailyWarmup } = require('./Middlewares/dailyWarmup');
 
 connectToMongoDb(process.env.MongoUrl)
 .then(() => {
@@ -37,6 +38,8 @@ connectToMongoDb(process.env.MongoUrl)
 const app= express();
 const port= process.env.PORT ? parseInt(process.env.PORT) : 5000;
 
+const compression = require('compression');
+app.use(compression());
 
 app.use(cors({
     origin: process.env.ALLOWED_ORIGIN || 'http://localhost:5173',
@@ -47,6 +50,23 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: false })); // for forms
 app.use(cookieParser());
+
+// Daily warmup — triggers background generation on first request of the day
+// Runs BEFORE routes. It reads the auth cookie to check if user is logged in.
+// Since verifyToken hasn't run yet, we need to inject a lightweight user check.
+const { getUser } = require('./Services/auth');
+app.use((req, res, next) => {
+    // Lightweight: just decode the JWT cookie to get user._id
+    const token = req.cookies?.token;
+    if (token) {
+        const payload = getUser(token);
+        if (payload && payload._id) {
+            req.user = payload; // { _id, email, role }
+            return dailyWarmup(req, res, next);
+        }
+    }
+    next();
+});
 
 
 // public Routes

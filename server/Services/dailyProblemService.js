@@ -4,6 +4,7 @@ const LeetCodeData= require('../Model/LeetCodeData');
 const Submission  = require('../Model/Submissions');
 const DailyProblem= require('../Model/DailyProblem');
 const Notification= require('../Model/Notification');
+const ErrorLog    = require('../Model/ErrorLog');
 
 const { getCFProblems }   = require('./cfProblemsService');
 const { getLCProblems }   = require('./lcProblemsService');
@@ -251,6 +252,7 @@ async function pickBonus(workoutPlatform, challengerPlatform, { cfRating, ccRati
         } else if (platform === 'codechef') {
             problem = await pickCCWorkout(ccRating, attemptedSet).catch(err => {
                 console.warn('[DAILY] CC bonus failed:', err.message);
+                ErrorLog.create({ source: 'DailyProblemService:pickBonus', level: 'error', message: err.message || String(err) }).catch(() => {});
                 return null;
             });
         }
@@ -303,6 +305,7 @@ async function generateDailyProblems(userId) {
     if (!workout && ccLinked) {
         workout = await pickCCWorkout(ccRating, attemptedSet).catch(err => {
             console.warn('[DAILY] CC workout failed:', err.message);
+            ErrorLog.create({ source: 'DailyProblemService:generateDailyProblems', level: 'error', message: err.message || String(err) }).catch(() => {});
             return null;
         });
     }
@@ -318,6 +321,7 @@ async function generateDailyProblems(userId) {
     if (!challenger && ccLinked) {
         challenger = await pickCCChallenger(ccRating, ccWeak, attemptedSet).catch(err => {
             console.warn('[DAILY] CC challenger failed:', err.message);
+            ErrorLog.create({ source: 'DailyProblemService:generateDailyProblems', level: 'error', message: err.message || String(err) }).catch(() => {});
             return null;
         });
     }
@@ -330,6 +334,7 @@ async function generateDailyProblems(userId) {
         bonusCtx
     ).catch(err => {
         console.warn('[DAILY] bonus failed:', err.message);
+        ErrorLog.create({ source: 'DailyProblemService:generateDailyProblems', level: 'error', message: err.message || String(err) }).catch(() => {});
         return null;
     });
 
@@ -340,16 +345,7 @@ async function generateDailyProblems(userId) {
         { upsert: true, new: true }
     );
 
-    // Create "problems ready" notification
-    try {
-        await Notification.create({
-            userId,
-            type: 'daily_problem',
-            title: 'Daily Problems Ready',
-            message: `Your daily problems for ${today} are ready. Keep your streak alive!`,
-            actionUrl: '/daily',
-        });
-    } catch (_) { /* non-critical */ }
+    // NOTE: Notification is now sent by dailyWarmup middleware (combined with topic)
 
     return doc;
 }

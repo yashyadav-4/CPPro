@@ -1,5 +1,6 @@
 const DailyProblem = require('../Model/DailyProblem');
 const User         = require('../Model/User');
+const ErrorLog     = require('../Model/ErrorLog');
 const { generateDailyProblems } = require('../Services/dailyProblemService');
 const { getTodayIST, getNDaysAgoIST } = require('../Utils/dateUtils');
 
@@ -32,6 +33,7 @@ async function getToday(req, res) {
         });
     } catch (err) {
         console.error('[DAILY] getToday error:', err.message);
+        ErrorLog.create({ source: 'Daily:getToday', level: 'error', message: err.message || String(err) }).catch(() => {});
         return res.status(500).json({ success: false, message: err.message });
     }
 }
@@ -59,6 +61,7 @@ async function getStreak(req, res) {
         });
     } catch (err) {
         console.error('[DAILY] getStreak error:', err.message);
+        ErrorLog.create({ source: 'Daily:getStreak', level: 'error', message: err.message || String(err) }).catch(() => {});
         return res.status(500).json({ success: false, message: err.message });
     }
 }
@@ -86,6 +89,7 @@ async function getHistory(req, res) {
         });
     } catch (err) {
         console.error('[DAILY] getHistory error:', err.message);
+        ErrorLog.create({ source: 'Daily:getHistory', level: 'error', message: err.message || String(err) }).catch(() => {});
         return res.status(500).json({ success: false, message: err.message });
     }
 }

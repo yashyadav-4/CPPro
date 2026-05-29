@@ -1,4 +1,5 @@
 // Returns up to `limit` weakest topic slugs for each platform.
+const ErrorLog = require('../Model/ErrorLog');
 
 function getCFWeakTopics(cfPlatform, limit = 3) {
     const map = cfPlatform?.solvedByTopics;

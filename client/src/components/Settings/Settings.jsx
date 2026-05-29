@@ -3,7 +3,7 @@ import axios from 'axios';
 import { motion } from 'framer-motion';
 import {
   Settings as SettingsIcon, User, MapPin, GraduationCap, Eye, EyeOff,
-  Save, RefreshCw, CheckCircle, AlertTriangle, Link2, Shield, KeyRound, Trash2, Info, Zap
+  Save, RefreshCw, CheckCircle, AlertTriangle, Link2, Shield, KeyRound, Trash2, Info, Zap, Code2
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Country, State, City } from 'country-state-city';
@@ -23,6 +23,7 @@ export default function Settings() {
   const [form, setForm] = useState({
     name: '', gender: '', age: '', profilePic: '',
     country: '', state: '', city: '', college: '', public: true,
+    preferredLanguage: 'cpp',
   });
   const [linked, setLinked] = useState({ codeforces: '', leetcode: '', codechef: '' });
   const [userRole, setUserRole] = useState('user');
@@ -70,6 +71,7 @@ export default function Settings() {
             city: u.location?.city || '',
             college: u.college || '',
             public: u.preferences?.public ?? true,
+            preferredLanguage: u.preferences?.preferredLanguage || 'cpp',
           });
           setLinked(u.linkedAccounts || { codeforces: '', leetcode: '' });
           setUserRole(u.role || 'user');
@@ -251,13 +253,35 @@ export default function Settings() {
 
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-          <div className="flex items-center gap-3 mb-1">
-            <div className="w-10 h-10 rounded-lg bg-emerald-50 dark:bg-emerald-500/15 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
-              <SettingsIcon size={22} />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-emerald-50 dark:bg-emerald-500/15 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                <SettingsIcon size={22} />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Settings</h1>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Manage your profile information and preferences</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Settings</h1>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Manage your profile information and preferences</p>
+            <div className="flex items-center gap-3">
+              {success && (
+                <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400 font-medium">
+                  <CheckCircle size={13} /> {success}
+                </motion.p>
+              )}
+              {error && (
+                <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-1.5 text-xs text-red-600 font-medium">
+                  <AlertTriangle size={13} /> {error}
+                </motion.p>
+              )}
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="inline-flex items-center gap-2 px-5 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors shadow-sm"
+              >
+                {saving ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
+                {saving ? 'Saving...' : 'Save Changes'}
+              </button>
             </div>
           </div>
         </motion.div>
@@ -316,6 +340,22 @@ export default function Settings() {
                 <label className={LABEL_CLASS}>Age</label>
                 <input type="number" min="1" max="100" value={form.age} onChange={e => handleChange('age', e.target.value)}
                   placeholder="e.g. 21" className={INPUT_CLASS} />
+              </div>
+              <div>
+                <label className={LABEL_CLASS}>Preferred Language</label>
+                <select
+                  value={form.preferredLanguage}
+                  onChange={e => handleChange('preferredLanguage', e.target.value)}
+                  className={INPUT_CLASS}
+                >
+                  <option value="cpp">C++</option>
+                  <option value="java">Java</option>
+                  <option value="python">Python</option>
+                  <option value="javascript">JavaScript</option>
+                </select>
+                <p className="mt-1.5 text-[11px] text-gray-400 dark:text-gray-500">
+                  Daily topic code will be generated in this language
+                </p>
               </div>
             </div>
           </motion.div>
@@ -791,30 +831,9 @@ export default function Settings() {
             </div>
           </motion.div>
 
-          {/* ── Save Bar ── */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-            className="flex items-center justify-between gap-4 pt-2 pb-8">
-            <div className="flex-1">
-              {success && (
-                <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400 font-medium">
-                  <CheckCircle size={14} /> {success}
-                </motion.p>
-              )}
-              {error && (
-                <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2 text-sm text-red-600 font-medium">
-                  <AlertTriangle size={14} /> {error}
-                </motion.p>
-              )}
-            </div>
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="inline-flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors shadow-sm"
-            >
-              {saving ? <RefreshCw size={16} className="animate-spin" /> : <Save size={16} />}
-              {saving ? 'Saving...' : 'Save Changes'}
-            </button>
-          </motion.div>
+
+
+
 
         </div>
       </div>

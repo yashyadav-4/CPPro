@@ -160,6 +160,24 @@ const getCollegeSuggestions = async (req, res) => {
     }
 };
 
+async function updatePreferences(req, res) {
+    try {
+        const userId = req.user._id;
+        const { preferredLanguage } = req.body;
+        const validLangs = ['cpp', 'java', 'python', 'javascript'];
+        if (preferredLanguage && !validLangs.includes(preferredLanguage)) {
+            return res.status(400).json({ success: false, message: 'Invalid language' });
+        }
+        await User.findByIdAndUpdate(userId, {
+            $set: { 'preferences.preferredLanguage': preferredLanguage || 'cpp' },
+        });
+        return res.json({ success: true, message: 'Preferences updated' });
+    } catch (err) {
+        console.error('[Settings] updatePreferences error:', err.message);
+        return res.status(500).json({ success: false, message: 'Failed to update preferences' });
+    }
+}
+
 module.exports = {
     getVerificationCode,
     verifyCodeforcesAccount,
@@ -174,4 +192,5 @@ module.exports = {
     getLcSessionStatus,
     removeLcSession,
     getCollegeSuggestions,
+    updatePreferences,
 };

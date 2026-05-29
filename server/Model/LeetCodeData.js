@@ -77,6 +77,7 @@ const leetCodeDataSchema = new mongoose.Schema({
         statusDisplay: { type: String },
         lang: { type: String },
     }],
+    acSlugs: [{ type: String }],
     lastSyncedAt: {
         type: Date,
         default: null,

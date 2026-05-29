@@ -217,31 +217,57 @@ function TargetsVisual({t}){
   );
 }
 
-function UpsolveVisual({t}){
+function DailyTopicVisual({t}){
   const ref=useRef(null);const inView=useInView(ref,{once:true});
-  const items=[
-    {name:"Div.2 E — Tree DP",contest:"Round 921",diff:"2100",pl:"CF"},
-    {name:"Weekly 385 — Q4",contest:"Weekly 385",diff:"Hard",pl:"LC"},
-    {name:"Cook-Off — Div1 C",contest:"Dec Cook-Off",diff:"★★★★",pl:"CC"},
-    {name:"Div.2 D — Seg Tree",contest:"Round 918",diff:"1900",pl:"CF"},
+  const sections=[
+    {icon:"🎯",title:"What is 2-SAT?",preview:"Imagine you have a bunch of yes/no decisions, each with constraints...",color:t.accent},
+    {icon:"💡",title:"Why Should You Care?",preview:"This is your secret weapon for constraint satisfaction problems...",color:"#3b82f6"},
+    {icon:"🔍",title:"When to Use It",preview:"Look for: exactly 2 options per variable, implications between...",color:"#a855f7"},
   ];
-  const plS={CF:{bg:t.accentBg,color:t.accent},LC:{bg:"rgba(168,85,247,0.1)",color:"#a855f7"},CC:{bg:"rgba(251,146,60,0.1)",color:"#f97316"}};
   return(
-    <div ref={ref} style={{padding:"0.4rem 0"}}>
-      {items.map((item,i)=>(
-        <motion.div key={i} initial={{opacity:0,x:-12}} animate={inView?{opacity:1,x:0}:{}}
-          transition={{delay:0.1+i*0.12,ease}}
-          style={{display:"flex",alignItems:"center",gap:"0.7rem",padding:"0.6rem 0.75rem",
-            background:t.bg2,border:`1px solid ${t.border}`,borderRadius:6,marginBottom:6}}>
-          <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:"0.5rem",padding:"0.14rem 0.4rem",
-            background:plS[item.pl].bg,color:plS[item.pl].color,borderRadius:3,fontWeight:700}}>{item.pl}</span>
-          <div style={{flex:1}}>
-            <div style={{fontSize:"0.68rem",color:t.heading,fontWeight:600,fontFamily:"'JetBrains Mono',monospace"}}>{item.name}</div>
-            <div style={{fontSize:"0.56rem",color:t.muted,marginTop:1}}>{item.contest}</div>
+    <div ref={ref} style={{padding:"0.2rem 0"}}>
+      {/* Topic header */}
+      <motion.div initial={{opacity:0,y:8}} animate={inView?{opacity:1,y:0}:{}}
+        transition={{delay:0.1,ease}}
+        style={{background:`linear-gradient(135deg, ${t.accentBg}, rgba(168,85,247,0.06))`,
+          border:`1px solid ${t.accentBdr}`,borderRadius:8,padding:"0.75rem 0.85rem",marginBottom:8}}>
+        <div style={{display:"flex",alignItems:"center",gap:"0.5rem",marginBottom:"0.3rem"}}>
+          <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:"0.44rem",letterSpacing:"0.1em",
+            color:t.accent,fontWeight:700,textTransform:"uppercase"}}>AI GENERATED</span>
+          <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:"0.44rem",
+            background:"rgba(168,85,247,0.12)",color:"#a855f7",padding:"0.08rem 0.35rem",borderRadius:3,fontWeight:600}}>YOUR WEAK AREA</span>
+        </div>
+        <div style={{fontSize:"0.78rem",color:t.heading,fontWeight:700,fontFamily:"'JetBrains Mono',monospace"}}>2-SAT Problem Solving</div>
+        <div style={{fontSize:"0.52rem",color:t.muted,fontFamily:"'JetBrains Mono',monospace",marginTop:"0.15rem"}}>Personalized based on your submission history</div>
+      </motion.div>
+
+      {/* Article sections */}
+      {sections.map((s,i)=>(
+        <motion.div key={i} initial={{opacity:0,x:-10}} animate={inView?{opacity:1,x:0}:{}}
+          transition={{delay:0.2+i*0.12,ease}}
+          style={{display:"flex",alignItems:"center",gap:"0.6rem",padding:"0.5rem 0.65rem",
+            background:t.bg2,border:`1px solid ${t.border}`,borderRadius:6,marginBottom:5}}>
+          <span style={{fontSize:"0.7rem"}}>{s.icon}</span>
+          <div style={{flex:1,overflow:"hidden"}}>
+            <div style={{fontSize:"0.62rem",color:s.color,fontWeight:700,fontFamily:"'JetBrains Mono',monospace"}}>{s.title}</div>
+            <div style={{fontSize:"0.5rem",color:t.muted,fontFamily:"'JetBrains Mono',monospace",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.preview}</div>
           </div>
-          <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:"0.58rem",color:"#a855f7",fontWeight:700}}>{item.diff}</span>
         </motion.div>
       ))}
+
+      {/* Bottom indicators */}
+      <motion.div initial={{opacity:0}} animate={inView?{opacity:1}:{}} transition={{delay:0.6}}
+        style={{display:"flex",gap:6,marginTop:4}}>
+        {[{label:"Code Template",icon:"⌨️",bg:"rgba(251,191,36,0.08)",color:"#f59e0b"},
+          {label:"Dry Run",icon:"🔬",bg:"rgba(168,85,247,0.08)",color:"#a855f7"},
+          {label:"Visualization",icon:"📊",bg:"rgba(59,130,246,0.08)",color:"#3b82f6"}].map((b,i)=>(
+          <div key={i} style={{flex:1,textAlign:"center",padding:"0.4rem 0.3rem",
+            background:b.bg,borderRadius:5,border:`1px solid ${t.border}`}}>
+            <div style={{fontSize:"0.65rem"}}>{b.icon}</div>
+            <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:"0.4rem",color:b.color,fontWeight:600,marginTop:2}}>{b.label}</div>
+          </div>
+        ))}
+      </motion.div>
     </div>
   );
 }
@@ -363,6 +389,49 @@ function DailyVisual({t}){
   );
 }
 
+function ContestVisual({t}){
+  const ref=useRef(null);const inView=useInView(ref,{once:true});
+  const contests=[
+    {platform:"CF",name:"Codeforces Round #921",date:"Dec 28",rank:"#1,204",delta:"+82",color:t.accent},
+    {platform:"LC",name:"Weekly Contest 385",date:"Dec 25",rank:"#892",delta:"+34",color:"#a855f7"},
+    {platform:"CC",name:"Starters 115",date:"Dec 22",rank:"#456",delta:"+47",color:"#f97316"},
+  ];
+  const plC={CF:{bg:t.accentBg,color:t.accent},LC:{bg:"rgba(168,85,247,0.1)",color:"#a855f7"},CC:{bg:"rgba(251,146,60,0.1)",color:"#f97316"}};
+  return(
+    <div ref={ref} style={{padding:"0.2rem 0"}}>
+      <motion.div initial={{opacity:0,y:6}} animate={inView?{opacity:1,y:0}:{}}
+        transition={{delay:0.1,ease}}
+        style={{background:t.accentBg,border:`1px solid ${t.accentBdr}`,borderRadius:7,padding:"0.6rem 0.8rem",marginBottom:8,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        <div>
+          <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:"0.44rem",color:t.accent,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>NEXT CONTEST</div>
+          <div style={{fontSize:"0.68rem",color:t.heading,fontWeight:700,fontFamily:"'JetBrains Mono',monospace",marginTop:2}}>CF Round #922</div>
+        </div>
+        <div style={{textAlign:"right"}}>
+          <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:"0.72rem",color:t.accent,fontWeight:800}}>2d 14h</div>
+          <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:"0.44rem",color:t.muted}}>Jan 1, 20:05 IST</div>
+        </div>
+      </motion.div>
+      {contests.map((c,i)=>(
+        <motion.div key={i} initial={{opacity:0,x:-10}} animate={inView?{opacity:1,x:0}:{}}
+          transition={{delay:0.2+i*0.1,ease}}
+          style={{display:"flex",alignItems:"center",gap:"0.6rem",padding:"0.55rem 0.7rem",
+            background:t.bg2,border:`1px solid ${t.border}`,borderRadius:6,marginBottom:5}}>
+          <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:"0.46rem",padding:"0.12rem 0.38rem",
+            background:plC[c.platform].bg,color:plC[c.platform].color,borderRadius:3,fontWeight:700}}>{c.platform}</span>
+          <div style={{flex:1}}>
+            <div style={{fontSize:"0.62rem",color:t.heading,fontWeight:600,fontFamily:"'JetBrains Mono',monospace"}}>{c.name}</div>
+            <div style={{fontSize:"0.48rem",color:t.muted,fontFamily:"'JetBrains Mono',monospace",marginTop:1}}>{c.date}</div>
+          </div>
+          <div style={{textAlign:"right"}}>
+            <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:"0.56rem",color:t.body,fontWeight:600}}>{c.rank}</div>
+            <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:"0.5rem",color:c.color,fontWeight:700}}>{c.delta}</div>
+          </div>
+        </motion.div>
+      ))}
+    </div>
+  );
+}
+
 function CardWindow({t,children}){
   return(
     <div style={{background:t.bgCard,border:`1px solid ${t.border}`,borderRadius:12,padding:"1.4rem",boxShadow:`0 4px 16px ${t.shadow}`}}>
@@ -378,13 +447,14 @@ function CardWindow({t,children}){
 }
 
 const FEATURES=[
-  {tag:"ANALYTICS",title:"Unified Activity Heatmap",badge:"14-day streak 🔥",badgeClr:"#16a34a",visual:"heatmap",desc:"Your Codeforces, LeetCode, and CodeChef submission history merged into a single GitHub-style contribution grid. Spot inactive weeks instantly. No more excuses."},
+  {tag:"ANALYTICS",title:"Unified Heatmap & Dashboard",badge:"14-day streak 🔥",badgeClr:"#16a34a",visual:"heatmap",desc:"Your Codeforces, LeetCode, and CodeChef activity merged into one unified dashboard — GitHub-style heatmap, rating graphs, and platform stats all in a single view. Spot patterns instantly."},
   {tag:"GROWTH",title:"NextTarget Rating Engine",badge:"Next: +50 pts",badgeClr:"#3b82f6",visual:"targets",desc:"Break your goal into 50-point sprints. Three problem tiers — Master First, Current Bracket, and Stretch Goals — updated as you progress."},
   {tag:"DAILY",title:"Daily Problem Engine",badge:"3/3 solved today 🔥",badgeClr:"#f97316",visual:"daily",desc:"Two handpicked problems every day — a Workout at your comfort level and a Challenger targeting your weakest topic. Across Codeforces, LeetCode, and CodeChef. Streaks tracked automatically."},
-  {tag:"PRACTICE",title:"Upsolve Bucket",badge:"8 queued",badgeClr:"#a855f7",visual:"upsolve",desc:"Every contest problem you attempted but couldn't solve across CF, LC, and CC gets automatically queued. Highest-ROI practice habit in CP — fully automated."},
+  {tag:"AI LEARNING",title:"AI Daily Topics",badge:"Personalized",badgeClr:"#a855f7",visual:"topics",desc:"Every day, our AI analyzes your submission history to find your weakest topic, then generates a full tutorial — engaging article, step-by-step dry run, code template in your preferred language, and visual diagram. Learning on autopilot."},
   {tag:"CURRICULUM",title:"3D Learning Tree",badge:"42% mastered",badgeClr:"#f97316",visual:"tree",desc:"An interactive Three.js visualization of your algorithmic mastery. Nodes glow as you solve problems. See the full path to grandmaster."},
   {tag:"RANKINGS",title:"CPScore Leaderboard",badge:"#1,204 Global",badgeClr:"#16a34a",visual:"leaderboard",desc:"A weighted composite score synthesizing CF/LC/CC ratings, difficulty solves, contest count, and streaks. Global, College, and Country views."},
   {tag:"TOOLING",title:"Snippet Manager",badge:"340+ templates",badgeClr:"#64748b",visual:"snippets",desc:"Personal + community C++/Java/Python template library. Public templates ranked by upvotes. Best algorithms always at the top."},
+  {tag:"CONTESTS",title:"Contest Tracker",badge:"Live updates",badgeClr:"#ef4444",visual:"contests",desc:"Never miss a contest again. Upcoming rounds across CF, LC, and CC in one calendar. Past contest history with rank deltas, rating changes, and performance trends — all tracked automatically."},
 ];
 
 function FeatureCard({f,i,t}){
@@ -392,7 +462,7 @@ function FeatureCard({f,i,t}){
   const inView=useInView(ref,{once:true,margin:"-60px"});
   const isEven=i%2===0;
   const[hov,setHov]=useState(false);
-  const visuals={heatmap:<HeatmapPreview t={t}/>,targets:<TargetsVisual t={t}/>,daily:<DailyVisual t={t}/>,upsolve:<UpsolveVisual t={t}/>,tree:<TreeVisual t={t}/>,leaderboard:<LeaderboardVisual t={t}/>,snippets:<SnippetsVisual t={t}/>};
+  const visuals={heatmap:<HeatmapPreview t={t}/>,targets:<TargetsVisual t={t}/>,daily:<DailyVisual t={t}/>,topics:<DailyTopicVisual t={t}/>,tree:<TreeVisual t={t}/>,leaderboard:<LeaderboardVisual t={t}/>,snippets:<SnippetsVisual t={t}/>,contests:<ContestVisual t={t}/>};
   return(
     <motion.div ref={ref} initial={{opacity:0,y:32}} animate={inView?{opacity:1,y:0}:{}}
       transition={{duration:0.6,delay:0.05,ease}} className="feat-row"

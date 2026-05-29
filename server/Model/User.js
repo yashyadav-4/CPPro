@@ -76,7 +76,8 @@ const userSchema = new mongoose.Schema({
         public: {
             type:Boolean,
             default:true,
-        }
+        },
+        preferredLanguage: { type: String, enum: ['cpp', 'java', 'python', 'javascript'], default: 'cpp' },
     },
     verificationCode:{ //changed later: needed for platform verification
         type:String,

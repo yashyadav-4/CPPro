@@ -15,6 +15,7 @@ const {
     getLcSessionStatus,
     removeLcSession,
     getCollegeSuggestions,
+    updatePreferences,
 } = require('../Controllers/settingsController');
 
 // Public (no auth needed — college names aren't sensitive)
@@ -45,5 +46,8 @@ router.patch('/profile', updateProfile);
 router.get('/lc-session/status', getLcSessionStatus);
 router.put('/lc-session', saveLcSession);
 router.delete('/lc-session', removeLcSession);
+
+// preferences
+router.patch('/preferences', updatePreferences);
 
 module.exports = router;

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { verifyAdmin } = require('../Middlewares/adminAuth');
-const { getAdminStats, refreshContests, refreshLeaderboard, refreshStats, sendNotification, refreshDailyProblems } = require('../Controllers/adminController');
+const { getAdminStats, refreshContests, refreshLeaderboard, refreshStats, sendNotification, refreshDailyProblems, refreshDailyTopics, getErrorLogs, clearErrorLogs, getActiveUsers } = require('../Controllers/adminController');
 
 // GET /api/admin/stats?days=7|30
 router.get('/stats', verifyAdmin, getAdminStats);
@@ -18,7 +18,17 @@ router.post('/refresh/stats', verifyAdmin, refreshStats);
 // POST /api/admin/refresh/daily — delete today's daily problems for all users (forces regeneration)
 router.post('/refresh/daily', verifyAdmin, refreshDailyProblems);
 
+// POST /api/admin/refresh/topics — delete today's daily topics for all users
+router.post('/refresh/topics', verifyAdmin, refreshDailyTopics);
+
 // POST /api/admin/notify — send in-platform notification to all users or a specific user
 router.post('/notify', verifyAdmin, sendNotification);
+
+// Error logs — admin terminal
+router.get('/errors', verifyAdmin, getErrorLogs);
+router.delete('/errors', verifyAdmin, clearErrorLogs);
+
+// Active users
+router.get('/active-users', verifyAdmin, getActiveUsers);
 
 module.exports = router;

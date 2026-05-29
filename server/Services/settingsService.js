@@ -280,6 +280,12 @@ const updateUserProfile = async(userId, fields) =>{
     }
     // preferences
     if(fields.public !== undefined) updateSet["preferences.public"] = Boolean(fields.public);
+    if(fields.preferredLanguage !== undefined) {
+        const validLangs = ['cpp', 'java', 'python', 'javascript'];
+        if(validLangs.includes(fields.preferredLanguage)) {
+            updateSet["preferences.preferredLanguage"] = fields.preferredLanguage;
+        }
+    }
 
     if(Object.keys(updateSet).length === 0){
         const err = new Error("No valid fields provided");

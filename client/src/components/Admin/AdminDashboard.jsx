@@ -9,6 +9,7 @@ import {
   TrendingUp, MessageSquare, Shield, Zap, Database,
   Code2, Globe, GraduationCap, Clock, CheckCircle,
   AlertCircle, Target, Bell, Send, ChevronDown, CalendarX,
+  Terminal, Trash2, Brain, Radio,
 } from 'lucide-react';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -293,6 +294,236 @@ function SendNotificationPanel() {
   );
 }
 
+// ── Error Terminal ────────────────────────────────────────────────────────────
+function ErrorTerminal() {
+  const [logs, setLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState(false);
+
+  const fetchLogs = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/errors?limit=100`, { credentials: 'include' });
+      const json = await res.json();
+      if (json.success) setLogs(json.data || []);
+    } catch {}
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { fetchLogs(); }, [fetchLogs]);
+
+  const clearLogs = async () => {
+    try {
+      await fetch(`${API_BASE}/api/admin/errors`, { method: 'DELETE', credentials: 'include' });
+      setLogs([]);
+    } catch {}
+  };
+
+  const fmtTime = (iso) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return d.toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+  };
+
+  const levelColor = { error: 'text-red-400', warn: 'text-amber-400', info: 'text-blue-400' };
+  const levelBg = { error: 'bg-red-500/10', warn: 'bg-amber-500/10', info: 'bg-blue-500/10' };
+
+  return (
+    <div className="bg-[#0d1117] border border-white/[0.06] rounded-xl overflow-hidden">
+      {/* Terminal header bar */}
+      <div className="flex items-center justify-between px-4 py-2.5 bg-white/[0.03] border-b border-white/[0.06]">
+        <div className="flex items-center gap-2">
+          <div className="flex gap-1.5">
+            <div className="w-2.5 h-2.5 rounded-full bg-red-500/60" />
+            <div className="w-2.5 h-2.5 rounded-full bg-amber-500/60" />
+            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/60" />
+          </div>
+          <Terminal size={13} className="text-gray-500 ml-2" />
+          <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">System Error Logs</span>
+          {logs.length > 0 && (
+            <span className="text-[9px] font-mono bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded ml-1">
+              {logs.length}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={clearLogs}
+            className="flex items-center gap-1 text-[10px] text-gray-500 hover:text-red-400 transition-colors"
+            title="Clear all logs"
+          >
+            <Trash2 size={11} /> Clear
+          </button>
+          <button
+            onClick={fetchLogs}
+            disabled={loading}
+            className="flex items-center gap-1 text-[10px] text-gray-500 hover:text-emerald-400 transition-colors"
+          >
+            <RefreshCw size={11} className={loading ? 'animate-spin' : ''} /> Refresh
+          </button>
+          <button
+            onClick={() => setExpanded(p => !p)}
+            className="text-[10px] text-gray-500 hover:text-white transition-colors"
+          >
+            {expanded ? 'Collapse' : 'Expand'}
+          </button>
+        </div>
+      </div>
+
+      {/* Terminal body */}
+      <div className={`overflow-y-auto font-mono text-[11px] leading-relaxed px-4 py-3 space-y-0.5 transition-all ${
+        expanded ? 'max-h-[500px]' : 'max-h-[200px]'
+      }`}>
+        {loading && logs.length === 0 ? (
+          <div className="text-gray-600 py-4 text-center">Loading logs…</div>
+        ) : logs.length === 0 ? (
+          <div className="text-gray-600 py-4 text-center">No errors logged — system is healthy ✓</div>
+        ) : (
+          logs.map((log, i) => (
+            <div key={log._id || i} className="flex gap-2 py-0.5 group hover:bg-white/[0.02] px-1 rounded">
+              <span className="text-gray-600 flex-shrink-0 w-[120px]">{fmtTime(log.createdAt)}</span>
+              <span className={`flex-shrink-0 px-1.5 py-0 rounded text-[10px] font-medium ${levelBg[log.level] || ''} ${levelColor[log.level] || 'text-gray-400'}`}>
+                {(log.level || 'err').toUpperCase()}
+              </span>
+              <span className="text-cyan-400/70 flex-shrink-0">[{log.source}]</span>
+              <span className="text-gray-300 break-all">{log.message}</span>
+            </div>
+          ))
+        )}
+        <div className="text-gray-700 pt-1">$ _</div>
+      </div>
+    </div>
+  );
+}
+// ── Active Users Panel ────────────────────────────────────────────────────────
+function ActiveUsersPanel() {
+  const [users, setUsers] = useState([]);
+  const [isLive, setIsLive] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  const fetchActive = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/active-users`, { credentials: 'include' });
+      const json = await res.json();
+      if (json.success) {
+        setUsers(json.data || []);
+        setIsLive(json.isLive);
+      }
+    } catch {}
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    fetchActive();
+    const interval = setInterval(fetchActive, 30000); // Auto-refresh every 30s
+    return () => clearInterval(interval);
+  }, [fetchActive]);
+
+  return (
+    <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-5">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          {isLive ? (
+            <div className="relative flex items-center justify-center w-4 h-4">
+              <div className="absolute w-3 h-3 bg-emerald-400 rounded-full animate-ping opacity-40" />
+              <div className="w-2 h-2 bg-emerald-400 rounded-full" />
+            </div>
+          ) : (
+            <Radio size={14} className="text-gray-500" />
+          )}
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+            {isLive ? `Active Now (${users.length})` : 'Recently Active'}
+          </p>
+          {isLive && (
+            <span className="text-[9px] font-mono bg-emerald-500/15 text-emerald-400 px-1.5 py-0.5 rounded">
+              LIVE
+            </span>
+          )}
+        </div>
+        <button
+          onClick={fetchActive}
+          className="flex items-center gap-1 text-[10px] text-gray-500 hover:text-emerald-400 transition-colors"
+        >
+          <RefreshCw size={10} /> Refresh
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="space-y-2">
+          {[...Array(3)].map((_, i) => <Sk key={i} className="h-10" />)}
+        </div>
+      ) : users.length === 0 ? (
+        <p className="text-[12px] text-gray-600 text-center py-4">No user activity recorded yet.</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-white/[0.06]">
+                {['', 'User', 'Email', 'Role', 'CF', 'LC', 'CC', 'Last Seen'].map(h => (
+                  <th key={h} className="text-left text-gray-500 font-medium pb-2 pr-4 uppercase tracking-wide text-[10px]">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {users.map(u => {
+                const minutesAgo = Math.floor((Date.now() - new Date(u.lastLogin).getTime()) / 60000);
+                const isOnline = minutesAgo < 15;
+                return (
+                  <tr key={u._id} className="border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors">
+                    <td className="py-2.5 pr-2">
+                      <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-400' : 'bg-gray-600'}`} />
+                    </td>
+                    <td className="py-2.5 pr-4">
+                      <div>
+                        <p className="text-white font-medium">{u.name}</p>
+                        <p className="text-gray-500">@{u.username}</p>
+                      </div>
+                    </td>
+                    <td className="py-2.5 pr-4 text-gray-400">{u.email}</td>
+                    <td className="py-2.5 pr-4">
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${
+                        u.role === 'admin'
+                          ? 'bg-emerald-500/15 text-emerald-400'
+                          : u.role === 'moderator'
+                            ? 'bg-blue-500/15 text-blue-400'
+                            : 'bg-white/5 text-gray-400'
+                      }`}>
+                        {u.role}
+                      </span>
+                    </td>
+                    <td className="py-2.5 pr-4">
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${u.cfLinked ? 'bg-blue-500/15 text-blue-400' : 'text-gray-700'}`}>
+                        {u.cfLinked ? 'CF' : '—'}
+                      </span>
+                    </td>
+                    <td className="py-2.5 pr-4">
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${u.lcLinked ? 'bg-yellow-500/15 text-yellow-400' : 'text-gray-700'}`}>
+                        {u.lcLinked ? 'LC' : '—'}
+                      </span>
+                    </td>
+                    <td className="py-2.5 pr-4">
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${u.ccLinked ? 'bg-emerald-500/15 text-emerald-400' : 'text-gray-700'}`}>
+                        {u.ccLinked ? 'CC' : '—'}
+                      </span>
+                    </td>
+                    <td className="py-2.5 text-gray-500">
+                      {isOnline ? (
+                        <span className="text-emerald-400 font-medium">Online</span>
+                      ) : (
+                        timeAgo(u.lastLogin)
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 export default function AdminDashboard() {
   const [data, setData] = useState(null);
@@ -300,8 +531,8 @@ export default function AdminDashboard() {
   const [error, setError] = useState(null);
   const [days, setDays] = useState(7);
   const [lastRefresh, setLastRefresh] = useState(null);
-  const [forcing, setForcing] = useState({ contests: false, leaderboard: false, stats: false, daily: false, all: false });
-  const [forceMsg, setForceMsg] = useState({ contests: null, leaderboard: null, stats: null, daily: null, all: null });
+  const [forcing, setForcing] = useState({ contests: false, leaderboard: false, stats: false, daily: false, topics: false, all: false });
+  const [forceMsg, setForceMsg] = useState({ contests: null, leaderboard: null, stats: null, daily: null, topics: null, all: null });
 
   const fetchStats = useCallback(async (d) => {
     setLoading(true);
@@ -456,6 +687,7 @@ export default function AdminDashboard() {
               { key: 'leaderboard', label: 'Recompute Leaderboard',   icon: RefreshCw,  desc: 'Rebuilds global leaderboard cache for all 4 categories (bypasses 15m timer)' },
               { key: 'stats',       label: 'Clear Home Stats Cache',  icon: Database,   desc: 'Forces home page to re-query user/problem counts from DB' },
               { key: 'daily',       label: 'Reset Daily Problems',    icon: CalendarX,  desc: 'Deletes today\'s daily problems for ALL users — fresh problems generated on next visit', danger: true },
+              { key: 'topics',      label: 'Reset Daily Topics',       icon: Brain,      desc: 'Deletes today\'s AI-generated topics for ALL users — fresh topics generated on next visit', danger: true },
             ].map(({ key, label, icon: Icon, desc, danger }) => (
               <div key={key} className="flex-1 min-w-[220px] bg-white/[0.03] border border-white/[0.07] rounded-lg p-3">
                 <div className="flex items-center justify-between gap-3 mb-1">
@@ -488,6 +720,9 @@ export default function AdminDashboard() {
 
         {/* ── Send Notification ── */}
         <SendNotificationPanel />
+
+        {/* ── Error Terminal ── */}
+        <ErrorTerminal />
 
         {/* ── Overview stat cards ── */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
@@ -684,6 +919,9 @@ export default function AdminDashboard() {
             )}
           </div>
         </div>
+
+        {/* ── Active Users ── */}
+        <ActiveUsersPanel />
 
         {/* ── Recent Users ── */}
         <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-5">

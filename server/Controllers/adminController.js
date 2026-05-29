@@ -9,7 +9,9 @@ const Comment = require('../Model/Comment');
 const LeetCodeData = require('../Model/LeetCodeData');
 const Notification = require('../Model/Notification');
 const DailyProblem = require('../Model/DailyProblem');
+const DailyTopic = require('../Model/DailyTopic');
 const { getTodayIST } = require('../Utils/dateUtils');
+const ErrorLog = require('../Model/ErrorLog');
 
 /**
  * GET /api/admin/stats?days=7|30
@@ -326,6 +328,7 @@ async function getAdminStats(req, res) {
 
     } catch (err) {
         console.error('Admin stats error:', err);
+        ErrorLog.create({ source: 'Admin:getAdminStats', level: 'error', message: err.message || String(err) }).catch(() => {});
         res.status(500).json({ success: false, message: 'Failed to fetch admin stats' });
     }
 }
@@ -336,6 +339,7 @@ async function refreshContests(req, res) {
         res.json({ success: true, message: `Contest sync complete — ${count} contests updated.` });
     } catch (err) {
         console.error('Admin refreshContests error:', err);
+        ErrorLog.create({ source: 'Admin:refreshContests', level: 'error', message: err.message || String(err) }).catch(() => {});
         res.status(500).json({ success: false, message: 'Contest sync failed: ' + err.message });
     }
 }
@@ -346,6 +350,7 @@ async function refreshLeaderboard(req, res) {
         res.json({ success: true, message: 'Leaderboard cache recomputed — all 4 global categories updated.' });
     } catch (err) {
         console.error('Admin refreshLeaderboard error:', err);
+        ErrorLog.create({ source: 'Admin:refreshLeaderboard', level: 'error', message: err.message || String(err) }).catch(() => {});
         res.status(500).json({ success: false, message: 'Leaderboard recompute failed: ' + err.message });
     }
 }
@@ -356,6 +361,7 @@ async function refreshStats(req, res) {
         res.json({ success: true, message: 'Home stats cache cleared — next visit will re-fetch from DB.' });
     } catch (err) {
         console.error('Admin refreshStats error:', err);
+        ErrorLog.create({ source: 'Admin:refreshStats', level: 'error', message: err.message || String(err) }).catch(() => {});
         res.status(500).json({ success: false, message: 'Failed to clear stats cache.' });
     }
 }
@@ -430,6 +436,7 @@ async function sendNotification(req, res) {
 
     } catch (err) {
         console.error('Admin sendNotification error:', err);
+        ErrorLog.create({ source: 'Admin:sendNotification', level: 'error', message: err.message || String(err) }).catch(() => {});
         res.status(500).json({ success: false, message: 'Failed to send notification.' });
     }
 }
@@ -449,8 +456,105 @@ async function refreshDailyProblems(req, res) {
         });
     } catch (err) {
         console.error('Admin refreshDailyProblems error:', err);
+        ErrorLog.create({ source: 'Admin:refreshDailyProblems', level: 'error', message: err.message || String(err) }).catch(() => {});
         res.status(500).json({ success: false, message: 'Failed to reset daily problems: ' + err.message });
     }
 }
 
-module.exports = { getAdminStats, refreshContests, refreshLeaderboard, refreshStats, sendNotification, refreshDailyProblems };
+async function getErrorLogs(req, res) {
+    try {
+        const limit = Math.min(parseInt(req.query.limit) || 50, 200);
+        const logs = await ErrorLog.find()
+            .sort({ createdAt: -1 })
+            .limit(limit)
+            .lean();
+        return res.json({ success: true, data: logs });
+    } catch (err) {
+        console.error('Admin getErrorLogs error:', err);
+        ErrorLog.create({ source: 'Admin:getErrorLogs', level: 'error', message: err.message || String(err) }).catch(() => {});
+        return res.status(500).json({ success: false, message: 'Failed to fetch error logs' });
+    }
+}
+
+async function clearErrorLogs(req, res) {
+    try {
+        const result = await ErrorLog.deleteMany({});
+        return res.json({ success: true, message: `Cleared ${result.deletedCount} error logs.` });
+    } catch (err) {
+        console.error('Admin clearErrorLogs error:', err);
+        ErrorLog.create({ source: 'Admin:clearErrorLogs', level: 'error', message: err.message || String(err) }).catch(() => {});
+        return res.status(500).json({ success: false, message: 'Failed to clear error logs' });
+    }
+}
+
+/**
+ * POST /api/admin/refresh/topics
+ * Deletes all DailyTopic docs for today (IST). Users get fresh topics on next visit.
+ */
+async function refreshDailyTopics(req, res) {
+    try {
+        const today = getTodayIST();
+        const result = await DailyTopic.deleteMany({ date: today });
+        res.json({
+            success: true,
+            message: `Deleted ${result.deletedCount} daily topic${result.deletedCount !== 1 ? 's' : ''} for ${today}. Users will get fresh topics on next visit.`,
+        });
+    } catch (err) {
+        console.error('Admin refreshDailyTopics error:', err);
+        ErrorLog.create({ source: 'Admin:refreshDailyTopics', level: 'error', message: err.message || String(err) }).catch(() => {});
+        res.status(500).json({ success: false, message: 'Failed to reset daily topics: ' + err.message });
+    }
+}
+
+/**
+ * GET /api/admin/active-users
+ * Returns users active in the last 15 minutes.
+ * Falls back to the 15 most recently active users if no one is online.
+ */
+async function getActiveUsers(req, res) {
+    try {
+        const fifteenMinAgo = new Date(Date.now() - 15 * 60 * 1000);
+
+        // Try currently active (lastLogin within 15 min)
+        let users = await User.find({ lastLogin: { $gte: fifteenMinAgo } })
+            .sort({ lastLogin: -1 })
+            .limit(25)
+            .select('name username email lastLogin linkedAccounts role')
+            .lean();
+
+        let isLive = true;
+
+        // Fallback: most recently active
+        if (users.length === 0) {
+            isLive = false;
+            users = await User.find({ lastLogin: { $ne: null } })
+                .sort({ lastLogin: -1 })
+                .limit(15)
+                .select('name username email lastLogin linkedAccounts role')
+                .lean();
+        }
+
+        return res.json({
+            success: true,
+            isLive,
+            count: users.length,
+            data: users.map(u => ({
+                _id: u._id,
+                name: u.name,
+                username: u.username,
+                email: u.email,
+                role: u.role,
+                lastLogin: u.lastLogin,
+                cfLinked: !!(u.linkedAccounts?.codeforces),
+                lcLinked: !!(u.linkedAccounts?.leetcode),
+                ccLinked: !!(u.linkedAccounts?.codechef),
+            })),
+        });
+    } catch (err) {
+        console.error('Admin getActiveUsers error:', err);
+        ErrorLog.create({ source: 'Admin:getActiveUsers', level: 'error', message: err.message || String(err) }).catch(() => {});
+        return res.status(500).json({ success: false, message: 'Failed to fetch active users' });
+    }
+}
+
+module.exports = { getAdminStats, refreshContests, refreshLeaderboard, refreshStats, sendNotification, refreshDailyProblems, refreshDailyTopics, getErrorLogs, clearErrorLogs, getActiveUsers };
