@@ -87,7 +87,7 @@ export default function RecentSubmissions({ loading, cfSubmissions, lcSubmission
         platform: 'lc',
         title: s.title || s.titleSlug || 'Unknown',
         url: slug ? `https://leetcode.com/problems/${slug}/` : null,
-        difficulty: null,
+        difficulty: s.difficulty || null,
         time: s.timestamp,
       };
     });

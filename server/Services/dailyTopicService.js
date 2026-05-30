@@ -260,7 +260,7 @@ You will receive a specific algorithm/technique name. Return ONLY a raw JSON obj
   "article": "string — engaging markdown tutorial (see requirements below)",
   "dry_run": "string — step-by-step walkthrough/dry-run with a concrete small example in markdown",
   "code_template": "string — clean, well-commented ${langName} implementation ready for contests",
-  "visualization_data": "string — valid Mermaid.js flowchart/graph syntax illustrating the algorithm flow. Use simple labels, no special characters."
+  "visualization_data": "string - valid Mermaid.js flowchart/graph syntax illustrating the algorithm flow. DO NOT wrap in markdown code blocks. Output raw mermaid syntax only. Use simple labels, no special characters."
 }
 
 ARTICLE REQUIREMENTS (for the "article" field):
@@ -321,26 +321,58 @@ The Mermaid diagram should visually illustrate the algorithm's core logic.`;
     const maxAttempts = Math.min(KEYS.length, 5);
     let lastError = null;
 
+    // The model cascade: Try these models in order on the SAME key.
+    // Each model has its own independent rate-limit bucket on Google's free tier.
+    const modelsToTry = [
+        MODEL_NAME, // gemma-4-31b-it
+        'gemini-3.5-flash',
+        'gemini-2.5-flash',
+        'gemini-flash-latest'
+    ];
+
     for (let i = 0; i < maxAttempts; i++) {
         const key = nextKey();
         try {
             const genAI = new GoogleGenerativeAI(key);
-            const model = genAI.getGenerativeModel({
-                model: MODEL_NAME,
-                systemInstruction: buildSystemPrompt(language),
-                generationConfig: {
-                    temperature: 0.7,
-                    maxOutputTokens: 8192,
-                    responseMimeType: 'application/json',
-                },
-            });
-            const result = await model.generateContent(userPrompt);
+            let result = null;
+            let modelFailure = null;
+
+            // Try each model sequentially for this specific key
+            for (const modelId of modelsToTry) {
+                try {
+                    const model = genAI.getGenerativeModel({
+                        model: modelId,
+                        systemInstruction: buildSystemPrompt(language),
+                        generationConfig: { temperature: 0.7, maxOutputTokens: 8192, responseMimeType: 'application/json' },
+                    });
+                    result = await model.generateContent(userPrompt);
+                    break; // Success! Break out of the model cascade loop
+                } catch (err) {
+                    modelFailure = err;
+                    const msg = err.message.toLowerCase();
+                    // If rate-limited (429) or overloaded (500/503), try the next model
+                    if (msg.includes('500') || msg.includes('503') || msg.includes('429') || msg.includes('overloaded') || msg.includes('quota')) {
+                        console.log(`[DailyTopic] ${modelId} failed (${err.message.split('\\n')[0]}). Cascading to next model...`);
+                        continue; 
+                    } else {
+                        // Auth error (400/403) -> The key itself is bad, stop trying models and throw to swap key
+                        throw err; 
+                    }
+                }
+            }
+
+            // If we exhausted all models in the cascade, throw to swap the API key
+            if (!result) {
+                throw new Error(`All fallback models exhausted for this key. Last error: ${modelFailure?.message}`);
+            }
+
             const raw = result.response.text();
             return parseJSON(raw);
         } catch (err) {
             lastError = err;
-            console.error(`[DailyTopic] Key #${(keyIndex - 1 + KEYS.length) % KEYS.length + 1} failed:`, err.message);
-            ErrorLog.create({ source: 'DailyTopic', level: 'error', message: `Gemini key #${(keyIndex - 1 + KEYS.length) % KEYS.length + 1} failed: ${err.message}` }).catch(() => {});
+            const currentKeyIdx = (keyIndex - 1 + KEYS.length) % KEYS.length + 1;
+            console.error(`[DailyTopic] Key #${currentKeyIdx} failed completely:`, err.message);
+            ErrorLog.create({ source: 'DailyTopic', level: 'error', message: `Gemini key #${currentKeyIdx} failed: ${err.message}` }).catch(() => {});
         }
     }
     throw new Error(`All ${maxAttempts} Gemini keys failed. Last: ${lastError?.message}`);

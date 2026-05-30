@@ -447,14 +447,14 @@ function CardWindow({t,children}){
 }
 
 const FEATURES=[
-  {tag:"ANALYTICS",title:"Unified Heatmap & Dashboard",badge:"14-day streak 🔥",badgeClr:"#16a34a",visual:"heatmap",desc:"Your Codeforces, LeetCode, and CodeChef activity merged into one unified dashboard — GitHub-style heatmap, rating graphs, and platform stats all in a single view. Spot patterns instantly."},
-  {tag:"GROWTH",title:"NextTarget Rating Engine",badge:"Next: +50 pts",badgeClr:"#3b82f6",visual:"targets",desc:"Break your goal into 50-point sprints. Three problem tiers — Master First, Current Bracket, and Stretch Goals — updated as you progress."},
-  {tag:"DAILY",title:"Daily Problem Engine",badge:"3/3 solved today 🔥",badgeClr:"#f97316",visual:"daily",desc:"Two handpicked problems every day — a Workout at your comfort level and a Challenger targeting your weakest topic. Across Codeforces, LeetCode, and CodeChef. Streaks tracked automatically."},
-  {tag:"AI LEARNING",title:"AI Daily Topics",badge:"Personalized",badgeClr:"#a855f7",visual:"topics",desc:"Every day, our AI analyzes your submission history to find your weakest topic, then generates a full tutorial — engaging article, step-by-step dry run, code template in your preferred language, and visual diagram. Learning on autopilot."},
-  {tag:"CURRICULUM",title:"3D Learning Tree",badge:"42% mastered",badgeClr:"#f97316",visual:"tree",desc:"An interactive Three.js visualization of your algorithmic mastery. Nodes glow as you solve problems. See the full path to grandmaster."},
-  {tag:"RANKINGS",title:"CPScore Leaderboard",badge:"#1,204 Global",badgeClr:"#16a34a",visual:"leaderboard",desc:"A weighted composite score synthesizing CF/LC/CC ratings, difficulty solves, contest count, and streaks. Global, College, and Country views."},
-  {tag:"TOOLING",title:"Snippet Manager",badge:"340+ templates",badgeClr:"#64748b",visual:"snippets",desc:"Personal + community C++/Java/Python template library. Public templates ranked by upvotes. Best algorithms always at the top."},
-  {tag:"CONTESTS",title:"Contest Tracker",badge:"Live updates",badgeClr:"#ef4444",visual:"contests",desc:"Never miss a contest again. Upcoming rounds across CF, LC, and CC in one calendar. Past contest history with rank deltas, rating changes, and performance trends — all tracked automatically."},
+  {tag:"ANALYTICS",title:"Unified Heatmap & Dashboard",badge:"14-day streak 🔥",badgeClr:"#16a34a",visual:"heatmap",link:"/dashboard",desc:"Your Codeforces, LeetCode, and CodeChef activity merged into one unified dashboard — GitHub-style heatmap, rating graphs, and platform stats all in a single view. Spot patterns instantly."},
+  {tag:"GROWTH",title:"NextTarget Rating Engine",badge:"Next: +50 pts",badgeClr:"#3b82f6",visual:"targets",link:"/level-up",desc:"Break your goal into 50-point sprints. Three problem tiers — Master First, Current Bracket, and Stretch Goals — updated as you progress."},
+  {tag:"DAILY",title:"Daily Problem Engine",badge:"3/3 solved today 🔥",badgeClr:"#f97316",visual:"daily",link:"/daily",desc:"Two handpicked problems every day — a Workout at your comfort level and a Challenger targeting your weakest topic. Across Codeforces, LeetCode, and CodeChef. Streaks tracked automatically."},
+  {tag:"AI LEARNING",title:"AI Daily Topics",badge:"Personalized",badgeClr:"#a855f7",visual:"topics",link:"/daily",desc:"Every day, our AI analyzes your submission history to find your weakest topic, then generates a full tutorial — engaging article, step-by-step dry run, code template in your preferred language, and visual diagram. Learning on autopilot."},
+  {tag:"CURRICULUM",title:"3D Learning Tree",badge:"42% mastered",badgeClr:"#f97316",visual:"tree",link:"/learning",desc:"An interactive Three.js visualization of your algorithmic mastery. Nodes glow as you solve problems. See the full path to grandmaster."},
+  {tag:"RANKINGS",title:"CPScore Leaderboard",badge:"#1,204 Global",badgeClr:"#16a34a",visual:"leaderboard",link:"/leaderboard",desc:"A weighted composite score synthesizing CF/LC/CC ratings, difficulty solves, contest count, and streaks. Global, College, and Country views."},
+  {tag:"TOOLING",title:"Snippet Manager",badge:"340+ templates",badgeClr:"#64748b",visual:"snippets",link:"/codesnippet",desc:"Personal + community C++/Java/Python template library. Public templates ranked by upvotes. Best algorithms always at the top."},
+  {tag:"CONTESTS",title:"Contest Tracker",badge:"Live updates",badgeClr:"#ef4444",visual:"contests",link:"/contest-tracker",desc:"Never miss a contest again. Upcoming rounds across CF, LC, and CC in one calendar. Past contest history with rank deltas, rating changes, and performance trends — all tracked automatically."},
 ];
 
 function FeatureCard({f,i,t}){
@@ -475,7 +475,7 @@ function FeatureCard({f,i,t}){
         <h3 style={{fontFamily:"'DM Sans',sans-serif",fontSize:"clamp(1.35rem,2.2vw,1.85rem)",color:t.heading,fontWeight:800,lineHeight:1.25,marginBottom:"0.9rem",letterSpacing:"-0.02em"}}>{f.title}</h3>
         <p style={{fontSize:"0.88rem",color:t.subtle,lineHeight:1.78,maxWidth:400,fontFamily:"'DM Sans',sans-serif"}}>{f.desc}</p>
         <motion.div whileHover={{x:4}} style={{marginTop:"1.4rem",display:"inline-block"}}>
-          <Link to="/dashboard" style={{fontFamily:"'JetBrains Mono',monospace",fontSize:"0.62rem",color:t.accent,textDecoration:"none",letterSpacing:"0.04em",fontWeight:600}}>Try it now →</Link>
+          <Link to={f.link || "/dashboard"} style={{fontFamily:"'JetBrains Mono',monospace",fontSize:"0.62rem",color:t.accent,textDecoration:"none",letterSpacing:"0.04em",fontWeight:600}}>Try it now →</Link>
         </motion.div>
       </div>
       <motion.div style={{order:isEven?1:0}} onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}

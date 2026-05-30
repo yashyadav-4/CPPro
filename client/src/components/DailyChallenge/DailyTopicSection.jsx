@@ -49,6 +49,7 @@ function ensureMermaid(isDark) {
         theme: isDark ? 'dark' : 'default',
         securityLevel: 'loose',
         fontFamily: "'DM Sans', sans-serif",
+        suppressErrorRendering: true,
     });
 }
 
@@ -63,8 +64,12 @@ function MermaidDiagram({ chart }) {
         let cancelled = false;
         async function render() {
             try {
+                let cleanChart = chart.trim();
+                if (cleanChart.startsWith('```')) {
+                    cleanChart = cleanChart.replace(/^```(?:mermaid)?\s*/i, '').replace(/```\s*$/, '').trim();
+                }
                 ensureMermaid(document.documentElement.classList.contains('dark'));
-                const { svg: rendered } = await mermaid.render(`mermaid_${uniqueId}`, chart);
+                const { svg: rendered } = await mermaid.render(`mermaid_${uniqueId}`, cleanChart);
                 if (!cancelled) setSvg(rendered);
             } catch {
                 if (!cancelled) setError(true);
