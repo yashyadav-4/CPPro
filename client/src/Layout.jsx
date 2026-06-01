@@ -5,6 +5,7 @@ import Header from './components/Header/Header'
 import Footer from "./components/Footer/Footer";
 import LoadingScreen from "./components/common/LoadingScreen";
 import HelpButton from "./components/HelpSupport/HelpButton";
+import { apiFetch } from './api';
 
 function Layout() {
     const location = useLocation();
@@ -14,6 +15,19 @@ function Layout() {
     useEffect(() => {
         window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
     }, [location.pathname]);
+
+    // Heartbeat: keeps user online while tab is open
+    useEffect(() => {
+        if (isAuthPage) return;
+        const ping = () => apiFetch('/api/auth/heartbeat', { method: 'POST' }).catch(() => {});
+        // delay first ping slightly to avoid racing with page load auth checks
+        const timeoutId = setTimeout(ping, 5000);
+        const intervalId = setInterval(ping, 60000);
+        return () => {
+            clearTimeout(timeoutId);
+            clearInterval(intervalId);
+        };
+    }, [isAuthPage]);
 
     const [isLoading, setIsLoading] = useState(() => {
         const lastShown = localStorage.getItem('loader-last-shown');

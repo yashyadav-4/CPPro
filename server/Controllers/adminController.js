@@ -12,6 +12,7 @@ const DailyProblem = require('../Model/DailyProblem');
 const DailyTopic = require('../Model/DailyTopic');
 const { getTodayIST } = require('../Utils/dateUtils');
 const ErrorLog = require('../Model/ErrorLog');
+const DailyActiveUser = require('../Model/DailyActiveUser');
 
 /**
  * GET /api/admin/stats?days=7|30
@@ -70,6 +71,7 @@ async function getAdminStats(req, res) {
             newUsersOverTime,
             syncedOverTime,
             submissionsOverTime,
+            dauOverTime,
             topCountries,
             topColleges,
             cfRatingBuckets,
@@ -150,6 +152,14 @@ async function getAdminStats(req, res) {
                         count: { $sum: 1 }
                     }
                 },
+                { $sort: { _id: 1 } }
+            ]),
+
+            // ── Daily Active Users per day (from DailyActiveUser collection) ───
+            // date field is 'YYYY-MM-DD' string — string $gte works correctly.
+            DailyActiveUser.aggregate([
+                { $match: { date: { $gte: startOfRange.toISOString().slice(0, 10) } } },
+                { $group: { _id: '$date', count: { $sum: 1 } } },
                 { $sort: { _id: 1 } }
             ]),
 
@@ -292,9 +302,10 @@ async function getAdminStats(req, res) {
                 newUsersThisMonth,
             },
             timeSeries: {
-                newUsers: buildTimeSeries(newUsersOverTime, startOfRange, days),
-                synced: buildTimeSeries(syncedOverTime, startOfRange, days),
-                acSubmissions: buildTimeSeries(submissionsOverTime, startOfRange, days),
+                newUsers:          buildTimeSeries(newUsersOverTime,   startOfRange, days),
+                synced:            buildTimeSeries(syncedOverTime,      startOfRange, days),
+                acSubmissions:     buildTimeSeries(submissionsOverTime, startOfRange, days),
+                dailyActiveUsers:  buildTimeSeries(dauOverTime,         startOfRange, days),
             },
             distributions: {
                 cfRating: cfRatingFormatted,
@@ -508,62 +519,76 @@ async function refreshDailyTopics(req, res) {
 
 /**
  * GET /api/admin/active-users
- * Returns users active in the last 15 minutes.
- * Falls back to the 15 most recently active users if no one is online.
+ * Returns:
+ *   - data: users active in last 15 min (isOnlineNow: true), or fallback recently active
+ *   - todayUsers: all users whose lastLogin is >= IST midnight today
+ *
+ * lastLogin is now updated on every authenticated request (throttled to 1/min),
+ * so it accurately reflects when a user was last active — not just when they logged in.
  */
 async function getActiveUsers(req, res) {
     try {
         const fifteenMinAgo = new Date(Date.now() - 15 * 60 * 1000);
 
-        // Use lastSeen (updated on every authenticated request) for accurate online status.
-        // Fall back to lastLogin for users who predate the lastSeen field.
-        let users = await User.find({
-            $or: [
-                { lastSeen:  { $gte: fifteenMinAgo } },
-                { lastLogin: { $gte: fifteenMinAgo } },
-            ]
-        })
-            .sort({ lastSeen: -1, lastLogin: -1 })
+        // Rolling 24-hour window for "Online Today"
+        const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+        // ── Currently online: lastLogin within last 15 min ───────────────────
+        let liveUsers = await User.find({ lastLogin: { $gte: fifteenMinAgo } })
+            .sort({ lastLogin: -1 })
             .limit(25)
-            .select('name username email lastLogin lastSeen linkedAccounts role')
+            .select('name username email lastLogin linkedAccounts role')
             .lean();
 
-        let isLive = users.length > 0;
+        const isLive = liveUsers.length > 0;
 
-        // Fallback: most recently active users (offline view)
+        // ── Fallback: most recently active users if nobody online right now ──
+        let fallbackUsers = [];
         if (!isLive) {
-            users = await User.find({
-                $or: [{ lastSeen: { $ne: null } }, { lastLogin: { $ne: null } }]
-            })
-                .sort({ lastSeen: -1, lastLogin: -1 })
+            fallbackUsers = await User.find({ lastLogin: { $ne: null } })
+                .sort({ lastLogin: -1 })
                 .limit(15)
-                .select('name username email lastLogin lastSeen linkedAccounts role')
+                .select('name username email lastLogin linkedAccounts role')
                 .lean();
         }
+
+        const displayUsers = isLive ? liveUsers : fallbackUsers;
+
+        // ── Online in last 24h ────────────────────────────────────────────────
+        const todayUsers = await User.find({ lastLogin: { $gte: last24h } })
+            .sort({ lastLogin: -1 })
+            .limit(200)
+            .select('name username email lastLogin linkedAccounts role')
+            .lean();
+
+        const mapUser = (u, forceOnline = false) => ({
+            _id:         u._id,
+            name:        u.name,
+            username:    u.username,
+            email:       u.email,
+            role:        u.role,
+            lastLogin:   u.lastLogin,
+            // Server decides isOnlineNow — avoids client-side race conditions
+            isOnlineNow: forceOnline || !!(u.lastLogin && u.lastLogin >= fifteenMinAgo),
+            cfLinked: !!(u.linkedAccounts?.codeforces),
+            lcLinked: !!(u.linkedAccounts?.leetcode),
+            ccLinked: !!(u.linkedAccounts?.codechef),
+        });
 
         return res.json({
             success: true,
             isLive,
-            count: users.length,
-            data: users.map(u => ({
-                _id: u._id,
-                name: u.name,
-                username: u.username,
-                email: u.email,
-                role: u.role,
-                lastLogin: u.lastLogin,
-                // lastSeen takes priority; fall back to lastLogin for legacy users
-                lastSeen: u.lastSeen || u.lastLogin,
-                cfLinked: !!(u.linkedAccounts?.codeforces),
-                lcLinked: !!(u.linkedAccounts?.leetcode),
-                ccLinked: !!(u.linkedAccounts?.codechef),
-            })),
+            count: displayUsers.length,
+            data:       displayUsers.map(u => mapUser(u, isLive)),
+            todayUsers: todayUsers.map(u => mapUser(u, false)),
         });
+
     } catch (err) {
         console.error('Admin getActiveUsers error:', err);
         ErrorLog.create({ source: 'Admin:getActiveUsers', level: 'error', message: err.message || String(err) }).catch(() => {});
         return res.status(500).json({ success: false, message: 'Failed to fetch active users' });
     }
 }
+
 
 module.exports = { getAdminStats, refreshContests, refreshLeaderboard, refreshStats, sendNotification, refreshDailyProblems, refreshDailyTopics, getErrorLogs, clearErrorLogs, getActiveUsers };

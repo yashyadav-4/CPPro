@@ -1,43 +1,40 @@
 const { getUser } = require("../Services/auth");
 const User = require("../Model/User");
 
-// In-memory throttle: track last DB write per userId (once per 60s)
+// In-memory throttle: update lastLogin at most once per minute per user
 const lastSeenWritten = new Map();
-const LAST_SEEN_THROTTLE_MS = 60 * 1000; // 1 minute
+const THROTTLE_MS = 60 * 1000;
 
-function updateLastSeen(userId) {
+function updateLastLogin(userId) {
     const now = Date.now();
     const last = lastSeenWritten.get(String(userId));
-    if (last && now - last < LAST_SEEN_THROTTLE_MS) return; // skip — too soon
+    if (last && now - last < THROTTLE_MS) return; // too soon, skip
     lastSeenWritten.set(String(userId), now);
-    // Fire-and-forget — don't block the request
-    User.findByIdAndUpdate(userId, { lastSeen: new Date(now) }).catch(() => {});
+    // Fire-and-forget — updates lastLogin on every active request
+    User.findByIdAndUpdate(userId, { lastLogin: new Date(now) }).catch(() => {});
 }
 
-function verifyToken(req , res , next){
-    const userToken=req.cookies?.token;
-    if(!userToken) return res.status(401).json({message:"Login First"});
-    const user=getUser(userToken);
-    if(!user) return res.status(401).json({message:"Invalid Token"});
-    req.user=user;
-    // Update lastSeen in the background (throttled)
-    updateLastSeen(user._id);
+function verifyToken(req, res, next) {
+    const userToken = req.cookies?.token;
+    if (!userToken) return res.status(401).json({ message: "Login First" });
+    const user = getUser(userToken);
+    if (!user) return res.status(401).json({ message: "Invalid Token" });
+    req.user = user;
+    // Keep lastLogin fresh on every authenticated request (throttled to 1/min)
+    updateLastLogin(user._id);
     next();
 }
 
-async function optionalAuth(req, res, next){
+async function optionalAuth(req, res, next) {
     const token = req.cookies?.token;
-    if(!token) return next();
+    if (!token) return next();
     const payload = getUser(token);
-    if(!payload) return next();
-    try{
+    if (!payload) return next();
+    try {
         const user = await User.findById(payload._id).select('-password');
-        if(user) req.user = user;
-    }catch(e){ /* treat as guest */ }
+        if (user) req.user = user;
+    } catch (e) { /* treat as guest */ }
     next();
 }
 
-module.exports={
-    verifyToken,
-    optionalAuth,
-}
+module.exports = { verifyToken, optionalAuth };

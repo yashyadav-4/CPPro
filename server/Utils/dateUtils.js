@@ -13,4 +13,17 @@ function getNDaysAgoIST(n) {
     return getISTDate(Date.now() - n * 24 * 60 * 60 * 1000);
 }
 
-module.exports = { getISTDate, getTodayIST, getNDaysAgoIST };
+/**
+ * Returns a UTC Date object representing 00:00:00 IST today.
+ * IST is UTC+5:30, so IST midnight = UTC 18:30 of the previous day.
+ */
+function getISTMidnightUTC() {
+    const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+    const nowIST = Date.now() + IST_OFFSET_MS;
+    // Floor to IST midnight
+    const istMidnightMs = Math.floor(nowIST / 86400000) * 86400000;
+    // Convert back to UTC
+    return new Date(istMidnightMs - IST_OFFSET_MS);
+}
+
+module.exports = { getISTDate, getTodayIST, getNDaysAgoIST, getISTMidnightUTC };

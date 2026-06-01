@@ -396,17 +396,65 @@ function ErrorTerminal() {
   );
 }
 // ── Active Users Panel ────────────────────────────────────────────────────────
+function UserRow({ u }) {
+  return (
+    <tr className="border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors">
+      <td className="py-2.5 pr-2">
+        <div className={`w-2 h-2 rounded-full ${u.isOnlineNow ? 'bg-emerald-400' : 'bg-gray-600'}`} />
+      </td>
+      <td className="py-2.5 pr-4">
+        <div>
+          <p className="text-white font-medium">{u.name}</p>
+          <p className="text-gray-500">@{u.username}</p>
+        </div>
+      </td>
+      <td className="py-2.5 pr-4 text-gray-400">{u.email}</td>
+      <td className="py-2.5 pr-4">
+        <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${
+          u.role === 'admin'       ? 'bg-emerald-500/15 text-emerald-400' :
+          u.role === 'moderator'   ? 'bg-blue-500/15 text-blue-400'       :
+                                     'bg-white/5 text-gray-400'
+        }`}>{u.role}</span>
+      </td>
+      <td className="py-2.5 pr-4">
+        <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${u.cfLinked ? 'bg-blue-500/15 text-blue-400' : 'text-gray-700'}`}>
+          {u.cfLinked ? 'CF' : '—'}
+        </span>
+      </td>
+      <td className="py-2.5 pr-4">
+        <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${u.lcLinked ? 'bg-yellow-500/15 text-yellow-400' : 'text-gray-700'}`}>
+          {u.lcLinked ? 'LC' : '—'}
+        </span>
+      </td>
+      <td className="py-2.5 pr-4">
+        <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${u.ccLinked ? 'bg-emerald-500/15 text-emerald-400' : 'text-gray-700'}`}>
+          {u.ccLinked ? 'CC' : '—'}
+        </span>
+      </td>
+      <td className="py-2.5 text-gray-500">
+        {u.isOnlineNow
+          ? <span className="text-emerald-400 font-medium">Online</span>
+          : timeAgo(u.lastLogin)
+        }
+      </td>
+    </tr>
+  );
+}
+
 function ActiveUsersPanel() {
-  const [users, setUsers] = useState([]);
-  const [isLive, setIsLive] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [users, setUsers]           = useState([]);
+  const [todayUsers, setTodayUsers] = useState([]);
+  const [isLive, setIsLive]         = useState(false);
+  const [loading, setLoading]       = useState(true);
+  const [todayOpen, setTodayOpen]   = useState(false);
 
   const fetchActive = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/admin/active-users`, { credentials: 'include' });
+      const res  = await fetch(`${API_BASE}/api/admin/active-users`, { credentials: 'include' });
       const json = await res.json();
       if (json.success) {
         setUsers(json.data || []);
+        setTodayUsers(json.todayUsers || []);
         setIsLive(json.isLive);
       }
     } catch {}
@@ -415,13 +463,17 @@ function ActiveUsersPanel() {
 
   useEffect(() => {
     fetchActive();
-    const interval = setInterval(fetchActive, 30000); // Auto-refresh every 30s
+    const interval = setInterval(fetchActive, 30000);
     return () => clearInterval(interval);
   }, [fetchActive]);
 
+  const tableHeaders = ['', 'User', 'Email', 'Role', 'CF', 'LC', 'CC', 'Last Seen'];
+
   return (
-    <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-5">
-      <div className="flex items-center justify-between mb-4">
+    <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-5 space-y-4">
+
+      {/* ── Header ── */}
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           {isLive ? (
             <div className="relative flex items-center justify-center w-4 h-4">
@@ -435,9 +487,7 @@ function ActiveUsersPanel() {
             {isLive ? `Active Now (${users.length})` : 'Recently Active'}
           </p>
           {isLive && (
-            <span className="text-[9px] font-mono bg-emerald-500/15 text-emerald-400 px-1.5 py-0.5 rounded">
-              LIVE
-            </span>
+            <span className="text-[9px] font-mono bg-emerald-500/15 text-emerald-400 px-1.5 py-0.5 rounded">LIVE</span>
           )}
         </div>
         <button
@@ -448,10 +498,9 @@ function ActiveUsersPanel() {
         </button>
       </div>
 
+      {/* ── Live / Recent table ── */}
       {loading ? (
-        <div className="space-y-2">
-          {[...Array(3)].map((_, i) => <Sk key={i} className="h-10" />)}
-        </div>
+        <div className="space-y-2">{[...Array(3)].map((_, i) => <Sk key={i} className="h-10" />)}</div>
       ) : users.length === 0 ? (
         <p className="text-[12px] text-gray-600 text-center py-4">No user activity recorded yet.</p>
       ) : (
@@ -459,70 +508,62 @@ function ActiveUsersPanel() {
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b border-white/[0.06]">
-                {['', 'User', 'Email', 'Role', 'CF', 'LC', 'CC', 'Last Seen'].map(h => (
+                {tableHeaders.map(h => (
                   <th key={h} className="text-left text-gray-500 font-medium pb-2 pr-4 uppercase tracking-wide text-[10px]">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {users.map(u => {
-                const minutesAgo = Math.floor((Date.now() - new Date(u.lastSeen || u.lastLogin).getTime()) / 60000);
-                const isOnline = minutesAgo < 15;
-                return (
-                  <tr key={u._id} className="border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors">
-                    <td className="py-2.5 pr-2">
-                      <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-400' : 'bg-gray-600'}`} />
-                    </td>
-                    <td className="py-2.5 pr-4">
-                      <div>
-                        <p className="text-white font-medium">{u.name}</p>
-                        <p className="text-gray-500">@{u.username}</p>
-                      </div>
-                    </td>
-                    <td className="py-2.5 pr-4 text-gray-400">{u.email}</td>
-                    <td className="py-2.5 pr-4">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${
-                        u.role === 'admin'
-                          ? 'bg-emerald-500/15 text-emerald-400'
-                          : u.role === 'moderator'
-                            ? 'bg-blue-500/15 text-blue-400'
-                            : 'bg-white/5 text-gray-400'
-                      }`}>
-                        {u.role}
-                      </span>
-                    </td>
-                    <td className="py-2.5 pr-4">
-                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${u.cfLinked ? 'bg-blue-500/15 text-blue-400' : 'text-gray-700'}`}>
-                        {u.cfLinked ? 'CF' : '—'}
-                      </span>
-                    </td>
-                    <td className="py-2.5 pr-4">
-                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${u.lcLinked ? 'bg-yellow-500/15 text-yellow-400' : 'text-gray-700'}`}>
-                        {u.lcLinked ? 'LC' : '—'}
-                      </span>
-                    </td>
-                    <td className="py-2.5 pr-4">
-                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${u.ccLinked ? 'bg-emerald-500/15 text-emerald-400' : 'text-gray-700'}`}>
-                        {u.ccLinked ? 'CC' : '—'}
-                      </span>
-                    </td>
-                    <td className="py-2.5 text-gray-500">
-                      {isOnline ? (
-                        <span className="text-emerald-400 font-medium">Online</span>
-                      ) : (
-                        timeAgo(u.lastSeen || u.lastLogin)
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
+              {users.map(u => <UserRow key={u._id} u={u} />)}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* ── Online Today — expandable ── */}
+      {!loading && todayUsers.length > 0 && (
+        <div className="border-t border-white/[0.06] pt-3">
+          <button
+            onClick={() => setTodayOpen(o => !o)}
+            className="flex items-center gap-2 w-full text-left group"
+          >
+            <div className="flex items-center gap-2 flex-1">
+              <Clock size={12} className="text-gray-500" />
+              <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest group-hover:text-gray-300 transition-colors">
+                Last 24 Hours ({todayUsers.length})
+              </span>
+              <span className="text-[9px] bg-white/[0.05] text-gray-500 px-1.5 py-0.5 rounded font-mono">
+                rolling window
+              </span>
+            </div>
+            <ChevronDown
+              size={13}
+              className={`text-gray-500 transition-transform duration-200 ${todayOpen ? 'rotate-180' : ''}`}
+            />
+          </button>
+
+          {todayOpen && (
+            <div className="mt-3 overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-white/[0.06]">
+                    {tableHeaders.map(h => (
+                      <th key={h} className="text-left text-gray-500 font-medium pb-2 pr-4 uppercase tracking-wide text-[10px]">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {todayUsers.map(u => <UserRow key={u._id} u={u} />)}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
     </div>
   );
 }
+
 
 // ── Main component ────────────────────────────────────────────────────────────
 export default function AdminDashboard() {
@@ -773,7 +814,7 @@ export default function AdminDashboard() {
 
         {/* ── Time series charts ── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* New Users */}
+          {/* New Signups / Day */}
           <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-5">
             <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">New Signups / Day</p>
             {loading ? <Sk className="h-40" /> : (
@@ -781,13 +822,12 @@ export default function AdminDashboard() {
                 <AreaChart data={ts.newUsers || []} margin={{ top: 0, right: 0, left: -30, bottom: 0 }}>
                   <defs>
                     <linearGradient id="gUsers" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                      <stop offset="5%"  stopColor="#10b981" stopOpacity={0.3} />
                       <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
-                  <XAxis dataKey="date" tick={{ fill: '#6b7280', fontSize: 10 }}
-                    tickFormatter={d => d.slice(5)} />
+                  <XAxis dataKey="date" tick={{ fill: '#6b7280', fontSize: 10 }} tickFormatter={d => d.slice(5)} />
                   <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} allowDecimals={false} />
                   <Tooltip content={<ChartTooltip />} />
                   <Area type="monotone" dataKey="count" name="Signups"
@@ -797,7 +837,7 @@ export default function AdminDashboard() {
             )}
           </div>
 
-          {/* Synced per day */}
+          {/* Syncs / Day */}
           <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-5">
             <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Syncs / Day</p>
             {loading ? <Sk className="h-40" /> : (
@@ -805,13 +845,12 @@ export default function AdminDashboard() {
                 <AreaChart data={ts.synced || []} margin={{ top: 0, right: 0, left: -30, bottom: 0 }}>
                   <defs>
                     <linearGradient id="gSync" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
+                      <stop offset="5%"  stopColor="#8b5cf6" stopOpacity={0.3} />
                       <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
-                  <XAxis dataKey="date" tick={{ fill: '#6b7280', fontSize: 10 }}
-                    tickFormatter={d => d.slice(5)} />
+                  <XAxis dataKey="date" tick={{ fill: '#6b7280', fontSize: 10 }} tickFormatter={d => d.slice(5)} />
                   <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} allowDecimals={false} />
                   <Tooltip content={<ChartTooltip />} />
                   <Area type="monotone" dataKey="count" name="Syncs"
@@ -821,25 +860,27 @@ export default function AdminDashboard() {
             )}
           </div>
 
-          {/* AC submissions per day */}
+          {/* Daily Active Users / Day */}
           <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-5">
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">AC Submissions / Day</p>
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Daily Active Users</p>
+              <span className="text-[9px] font-mono bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded">DAU</span>
+            </div>
             {loading ? <Sk className="h-40" /> : (
               <ResponsiveContainer width="100%" height={150}>
-                <AreaChart data={ts.acSubmissions || []} margin={{ top: 0, right: 0, left: -30, bottom: 0 }}>
+                <AreaChart data={ts.dailyActiveUsers || []} margin={{ top: 0, right: 0, left: -30, bottom: 0 }}>
                   <defs>
-                    <linearGradient id="gAC" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#06b6d4" stopOpacity={0} />
+                    <linearGradient id="gDAU" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%"  stopColor="#f59e0b" stopOpacity={0.35} />
+                      <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
-                  <XAxis dataKey="date" tick={{ fill: '#6b7280', fontSize: 10 }}
-                    tickFormatter={d => d.slice(5)} />
+                  <XAxis dataKey="date" tick={{ fill: '#6b7280', fontSize: 10 }} tickFormatter={d => d.slice(5)} />
                   <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} allowDecimals={false} />
                   <Tooltip content={<ChartTooltip />} />
-                  <Area type="monotone" dataKey="count" name="AC Submissions"
-                    stroke="#06b6d4" fill="url(#gAC)" strokeWidth={2} dot={false} />
+                  <Area type="monotone" dataKey="count" name="Active Users"
+                    stroke="#f59e0b" fill="url(#gDAU)" strokeWidth={2} dot={false} />
                 </AreaChart>
               </ResponsiveContainer>
             )}
