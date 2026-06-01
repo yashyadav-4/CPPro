@@ -11,10 +11,13 @@ async function handleAddComment(req , res){
             authorId:req.user._id,
             parentId: parentId || null,
             content
-        })
+        });
 
         await Post.findByIdAndUpdate(postId ,{$inc: {commentCount:1}});
-        res.status(201).json(newComment);
+
+        // Populate author info so the frontend receives name & pic immediately
+        const populated = await newComment.populate('authorId', 'name profilePic');
+        res.status(201).json(populated);
     }catch(error){
         res.status(500).json({message: error.message});
     }
@@ -49,7 +52,8 @@ async function handleGetComments(req , res){
     try{
         const comments= await Comment.find({postId:req.params.postId})
             .sort({createdAt:1})
-            .lean()
+            .populate('authorId', 'name profilePic')  // include author name & pic
+            .lean();
 
         res.json(comments);
     }catch(error){

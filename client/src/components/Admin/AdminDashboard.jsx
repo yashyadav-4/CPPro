@@ -466,7 +466,7 @@ function ActiveUsersPanel() {
             </thead>
             <tbody>
               {users.map(u => {
-                const minutesAgo = Math.floor((Date.now() - new Date(u.lastLogin).getTime()) / 60000);
+                const minutesAgo = Math.floor((Date.now() - new Date(u.lastSeen || u.lastLogin).getTime()) / 60000);
                 const isOnline = minutesAgo < 15;
                 return (
                   <tr key={u._id} className="border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors">
@@ -510,7 +510,7 @@ function ActiveUsersPanel() {
                       {isOnline ? (
                         <span className="text-emerald-400 font-medium">Online</span>
                       ) : (
-                        timeAgo(u.lastLogin)
+                        timeAgo(u.lastSeen || u.lastLogin)
                       )}
                     </td>
                   </tr>

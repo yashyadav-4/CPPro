@@ -515,22 +515,29 @@ async function getActiveUsers(req, res) {
     try {
         const fifteenMinAgo = new Date(Date.now() - 15 * 60 * 1000);
 
-        // Try currently active (lastLogin within 15 min)
-        let users = await User.find({ lastLogin: { $gte: fifteenMinAgo } })
-            .sort({ lastLogin: -1 })
+        // Use lastSeen (updated on every authenticated request) for accurate online status.
+        // Fall back to lastLogin for users who predate the lastSeen field.
+        let users = await User.find({
+            $or: [
+                { lastSeen:  { $gte: fifteenMinAgo } },
+                { lastLogin: { $gte: fifteenMinAgo } },
+            ]
+        })
+            .sort({ lastSeen: -1, lastLogin: -1 })
             .limit(25)
-            .select('name username email lastLogin linkedAccounts role')
+            .select('name username email lastLogin lastSeen linkedAccounts role')
             .lean();
 
-        let isLive = true;
+        let isLive = users.length > 0;
 
-        // Fallback: most recently active
-        if (users.length === 0) {
-            isLive = false;
-            users = await User.find({ lastLogin: { $ne: null } })
-                .sort({ lastLogin: -1 })
+        // Fallback: most recently active users (offline view)
+        if (!isLive) {
+            users = await User.find({
+                $or: [{ lastSeen: { $ne: null } }, { lastLogin: { $ne: null } }]
+            })
+                .sort({ lastSeen: -1, lastLogin: -1 })
                 .limit(15)
-                .select('name username email lastLogin linkedAccounts role')
+                .select('name username email lastLogin lastSeen linkedAccounts role')
                 .lean();
         }
 
@@ -545,6 +552,8 @@ async function getActiveUsers(req, res) {
                 email: u.email,
                 role: u.role,
                 lastLogin: u.lastLogin,
+                // lastSeen takes priority; fall back to lastLogin for legacy users
+                lastSeen: u.lastSeen || u.lastLogin,
                 cfLinked: !!(u.linkedAccounts?.codeforces),
                 lcLinked: !!(u.linkedAccounts?.leetcode),
                 ccLinked: !!(u.linkedAccounts?.codechef),

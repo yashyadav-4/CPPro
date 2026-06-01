@@ -63,8 +63,7 @@ export default function PostDetailModal({ post, onClose, onVoteToggle, onPinTogg
       const fake = {
         _id: Date.now().toString(),
         content: newComment,
-        authorName: currentUser?.name || "You",
-        authorId: currentUser?._id || "localUser",
+        authorId: { _id: currentUser?._id || "localUser", name: currentUser?.name || "You", profilePic: currentUser?.profilePic || "" },
         createdAt: new Date().toISOString(),
       };
       setComments((c) => [...c, fake]);
@@ -265,13 +264,13 @@ export default function PostDetailModal({ post, onClose, onVoteToggle, onPinTogg
                   >
                     <div className="flex items-start justify-between mb-1.5">
                       <span className="text-xs font-bold text-gray-900 dark:text-gray-100">
-                        {comment.authorName || "User"}
+                        {comment.authorId?.name || comment.authorName || "User"}
                       </span>
                       <div className="flex items-center gap-2">
                         <span className="text-[10px] text-gray-400 dark:text-gray-600">
                           {timeAgo(comment.createdAt)}
                         </span>
-                        {(currentUserId === comment.authorId || currentUser?.role === 'admin') && (
+                        {(currentUserId === (comment.authorId?._id || comment.authorId) || currentUser?.role === 'admin') && (
                           <button
                             className={`hover:text-red-500 dark:hover:text-red-400 transition-all ${
                               currentUser?.role === 'admin' && currentUserId !== comment.authorId
