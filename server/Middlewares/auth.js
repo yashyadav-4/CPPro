@@ -1,16 +1,15 @@
 const { getUser } = require("../Services/auth");
 const User = require("../Model/User");
 
-// In-memory throttle: update lastLogin at most once per minute per user
+// ── lastLogin throttle: at most 1 DB write per minute per user ───────────────
 const lastSeenWritten = new Map();
 const THROTTLE_MS = 60 * 1000;
 
 function updateLastLogin(userId) {
     const now = Date.now();
     const last = lastSeenWritten.get(String(userId));
-    if (last && now - last < THROTTLE_MS) return; // too soon, skip
+    if (last && now - last < THROTTLE_MS) return;
     lastSeenWritten.set(String(userId), now);
-    // Fire-and-forget — updates lastLogin on every active request
     User.findByIdAndUpdate(userId, { lastLogin: new Date(now) }).catch(() => {});
 }
 
@@ -21,6 +20,7 @@ function verifyToken(req, res, next) {
     if (!user) return res.status(401).json({ message: "Invalid Token" });
     req.user = user;
     // Keep lastLogin fresh on every authenticated request (throttled to 1/min)
+    // lastLogin is used for: online detection, Last 24h panel, retention stats
     updateLastLogin(user._id);
     next();
 }
@@ -37,4 +37,4 @@ async function optionalAuth(req, res, next) {
     next();
 }
 
-module.exports = { verifyToken, optionalAuth };
+module.exports = { verifyToken, optionalAuth };

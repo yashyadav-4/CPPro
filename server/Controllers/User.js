@@ -3,8 +3,6 @@ const { setUser, getUser } = require('../Services/auth')
 const bcrypt = require('bcryptjs');
 const { OAuth2Client } = require('google-auth-library');
 const crypto = require('crypto');
-const DailyActiveUser = require('../Model/DailyActiveUser');
-const { getTodayIST } = require('../Utils/dateUtils');
 
 const client = new OAuth2Client(process.env.CLIENT_ID);
 
@@ -21,25 +19,6 @@ function throttledUpdateLastLogin(userId) {
     User.updateOne({ _id: userId }, { lastLogin: new Date(now) }).catch(() => {});
 }
 
-// ── Daily Active User: record at most once per user per day ──────────────────
-// In-memory Set key = "userId:YYYY-MM-DD" (IST).
-// After first write, subsequent calls are pure in-memory — zero DB cost.
-// The unique index on the collection is a safety net for server restarts.
-const dauRecorded = new Set();
-
-function recordDailyActivity(userId) {
-    const date = getTodayIST();           // e.g. "2026-06-01"
-    const key  = `${String(userId)}:${date}`;
-    if (dauRecorded.has(key)) return;     // already recorded today — skip
-    dauRecorded.add(key);
-    // Upsert — safe even if server restarts mid-day (unique index deduplicates)
-    DailyActiveUser.updateOne(
-        { userId, date },
-        { $setOnInsert: { userId, date } },
-        { upsert: true }
-    ).catch(() => {});
-}
-
 
 async function handleVerifyAuth(req, res) {
     try {
@@ -52,9 +31,8 @@ async function handleVerifyAuth(req, res) {
         const user = await User.findById(userPayload._id).select('-password');
         if (!user) return res.json({ authenticated: false });
 
-        // Update lastLogin (throttled, 1/min) + record daily activity (once/day)
+        // Update lastLogin on every page load (throttled to 1 DB write/min)
         throttledUpdateLastLogin(user._id);
-        recordDailyActivity(user._id);
 
         return res.json({ authenticated: true, user });
     } catch (err) {
@@ -62,6 +40,7 @@ async function handleVerifyAuth(req, res) {
         return res.json({ authenticated: false });
     }
 }
+
 
 
 async function handleUserSignup(req, res) {
@@ -218,12 +197,10 @@ async function handleGoogleAuth(req, res) {
  * POST /api/auth/heartbeat
  * Ultra-lightweight ping called every 60s by the browser while the tab is open.
  * The verifyToken middleware already updated lastLogin (throttled to 1/min).
- * We also record daily activity here (once per day, in-memory guard = 0 extra DB hits).
+ * DAU is now derived from User.lastLogin directly — no separate collection needed.
  * Returns 204 No Content — no body to parse on the client.
  */
 function handleHeartbeat(req, res) {
-    // req.user._id is available from verifyToken (JWT payload)
-    recordDailyActivity(req.user._id);
     return res.status(204).send();
 }
 

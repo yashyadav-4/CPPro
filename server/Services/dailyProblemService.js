@@ -10,6 +10,13 @@ const { getCFProblems }   = require('./cfProblemsService');
 const { getLCProblems }   = require('./lcProblemsService');
 const { getCCProblems }   = require('./ccProblemsService');
 const { getCFWeakTopics, getCCWeakTopics, getLCWeakTags } = require('./weaknessService');
+const {
+    fetchPopularProblems,
+    pickPopularLCWorkout,
+    pickPopularLCChallenger,
+    pickPopularCFWorkout,
+    pickPopularCFChallenger,
+} = require('./popularSheetsService');
 const { getTodayIST, getNDaysAgoIST } = require('../Utils/dateUtils');
 
 // ── Utility ──────────────────────────────────────────────────────────────────
@@ -79,31 +86,46 @@ function getCCChallengerBand(rating) {
 
 async function buildAttemptedSet(userId, linkedPlatforms) {
     const [submissions, recentDaily] = await Promise.all([
-        // All AC submissions from our DB — this is the canonical solved-set.
-        // For LC, lcSyncService writes acSlugs as placeholder Submission docs after
-        // every sync, so this query covers all synced solved problems across all platforms.
+        // All AC submissions — permanent block (solved problems never re-appear).
         Submission.find(
             { userId, platform: { $in: linkedPlatforms }, verdict: 'AC' },
             { problemId: 1, platform: 1, _id: 0 }
         ).lean(),
-        // Block problems shown in last 60 days to prevent repeats.
+        // Block workout/challenger shown in last 60 days.
+        // NOTE: bonus is intentionally excluded — bonus can repeat recent problems
+        // and its history must not pollute the workout/challenger block list.
         DailyProblem.find(
             { userId, date: { $gte: getNDaysAgoIST(60) } },
-            { 'workout.problemId': 1, 'workout.platform': 1,
-              'challenger.problemId': 1, 'challenger.platform': 1,
-              'bonus.problemId': 1, 'bonus.platform': 1 }
+            { 'workout.problemId':    1, 'workout.platform':    1,
+              'challenger.problemId': 1, 'challenger.platform': 1 }
         ).lean(),
     ]);
 
-    const set = new Set(submissions.map(s => `${s.platform}::${s.problemId}`));
+    // solvedSet: only permanently-solved problems (used for bonus to avoid re-solving)
+    const solvedSet = new Set(submissions.map(s => `${s.platform}::${s.problemId}`));
 
+    // full: solvedSet + 60-day workout/challenger history (used for workout & challenger)
+    const full = new Set(solvedSet);
     for (const d of recentDaily) {
-        if (d.workout?.problemId)    set.add(`${d.workout.platform}::${d.workout.problemId}`);
-        if (d.challenger?.problemId) set.add(`${d.challenger.platform}::${d.challenger.problemId}`);
-        if (d.bonus?.problemId)      set.add(`${d.bonus.platform}::${d.bonus.problemId}`);
+        if (d.workout?.problemId)    full.add(`${d.workout.platform}::${d.workout.problemId}`);
+        if (d.challenger?.problemId) full.add(`${d.challenger.platform}::${d.challenger.problemId}`);
     }
 
-    return set;
+    return { full, solvedSet };
+}
+
+// ── Platform probability ─────────────────────────────────────────────────────
+// Returns an ordered array of platforms to try for a workout/challenger slot.
+// 65% chance LC is tried first (and wins if it finds a problem), 35% CF.
+// If only one platform is linked it is always tried.
+
+function pickPlatformOrder(lcLinked, cfLinked) {
+    if (lcLinked && cfLinked) {
+        return Math.random() < 0.65 ? ['lc', 'cf'] : ['cf', 'lc'];
+    }
+    if (lcLinked) return ['lc'];
+    if (cfLinked) return ['cf'];
+    return [];
 }
 
 // ── CF problem selection ──────────────────────────────────────────────────────
@@ -245,16 +267,47 @@ async function pickBonus(workoutPlatform, challengerPlatform, { cfRating, ccRati
     for (const platform of candidates) {
         let problem = null;
         if (platform === 'leetcode') {
-            const diff = getLCDifficultyForUser(lcData);
-            problem = await pickLCWorkout(diff, attemptedSet).catch(() => null);
+            // Bonus LC: any difficulty (Easy/Medium/Hard all allowed)
+            // Try each difficulty in order: user's level first, then others
+            const diffs = ['Easy', 'Medium', 'Hard'];
+            const userDiff = getLCDifficultyForUser(lcData);
+            const ordered = [userDiff, ...diffs.filter(d => d !== userDiff)];
+            for (const diff of ordered) {
+                problem = await pickLCWorkout(diff, attemptedSet).catch(() => null);
+                if (problem) break;
+            }
         } else if (platform === 'codeforces') {
-            problem = await pickCFWorkout(cfRating, attemptedSet).catch(() => null);
+            // Bonus CF: cfRating ± 200 range
+            const all = await getCFProblems();
+            const candidates_cf = all.filter(p =>
+                p.difficulty >= cfRating - 200 &&
+                p.difficulty <= cfRating + 200 &&
+                !attemptedSet.has(`codeforces::${p.problemId}`)
+            );
+            if (candidates_cf.length) {
+                const sorted = candidates_cf.sort((a, b) => b.solvedCount - a.solvedCount).slice(0, 30);
+                problem = weightedRandomPick(sorted, p => p.solvedCount);
+            }
         } else if (platform === 'codechef') {
-            problem = await pickCCWorkout(ccRating, attemptedSet).catch(err => {
-                console.warn('[DAILY] CC bonus failed:', err.message);
-                ErrorLog.create({ source: 'DailyProblemService:pickBonus', level: 'error', message: err.message || String(err) }).catch(() => {});
-                return null;
-            });
+            // Bonus CC: ccRating ± 200 range
+            const all = await getCCProblems(ccRating - 200, ccRating + 200);
+            const candidates_cc = all.filter(p =>
+                p.solvedCount >= 100 &&
+                !attemptedSet.has(`codechef::${p.problemId}`)
+            );
+            if (candidates_cc.length) {
+                problem = weightedRandomPick(
+                    candidates_cc.sort((a, b) => b.solvedCount - a.solvedCount).slice(0, 30),
+                    p => p.solvedCount
+                );
+            }
+            if (!problem) {
+                problem = await pickCCWorkout(ccRating, attemptedSet).catch(err => {
+                    console.warn('[DAILY] CC bonus failed:', err.message);
+                    ErrorLog.create({ source: 'DailyProblemService:pickBonus', level: 'error', message: err.message || String(err) }).catch(() => {});
+                    return null;
+                });
+            }
         }
         if (problem) return problem;
     }
@@ -283,7 +336,7 @@ async function generateDailyProblems(userId) {
         lcLinked && 'leetcode',
     ].filter(Boolean);
 
-    const attemptedSet = await buildAttemptedSet(userId, linkedPlatforms);
+    const { full: attemptedSet, solvedSet } = await buildAttemptedSet(userId, linkedPlatforms);
 
     const cfRating = cfPlatform?.currentRating || 1200;
     const ccRating = ccPlatform?.currentRating || 1400;
@@ -291,52 +344,132 @@ async function generateDailyProblems(userId) {
     const lcChDiff = getLCChallengerDifficulty(lcData);
 
     const cfWeak = cfLinked ? getCFWeakTopics(cfPlatform) : [];
-    const ccWeak = ccLinked ? getCCWeakTopics(ccPlatform) : [];
+    // ccWeak intentionally omitted — CC only appears in bonus slot which
+    // does not target weak topics (bonus is a lighter variety slot).
     const lcWeak = lcLinked ? getLCWeakTags(lcData) : [];
 
-    // ── WORKOUT: LC > CF > CC ────────────────────────────────────────────
+    // ── Fetch popular problems ONCE (2 DB aggregations total) ──────────────
+    const popularData = await fetchPopularProblems().catch(() => ({ lc: [], cf: [] }));
+
+    // ── Single-platform mode ──────────────────────────────────────────────────
+    // When exactly ONE platform is linked (LC, CF, CC, or any future platform):
+    //   All 3 slots come from that platform — no CC restriction, no diversity rule.
+    // Multi-platform: 65%/35% LC/CF + CC-only-in-bonus + diversity rules.
+    const singlePlatformMode = linkedPlatforms.length === 1;
+
+    // ── WORKOUT ──────────────────────────────────────────────────────────────
     let workout = null;
-    if (lcLinked) {
-        workout = await pickLCWorkout(lcDiff, attemptedSet).catch(() => null);
-    }
-    if (!workout && cfLinked) {
-        workout = await pickCFWorkout(cfRating, attemptedSet).catch(() => null);
-    }
-    if (!workout && ccLinked) {
-        workout = await pickCCWorkout(ccRating, attemptedSet).catch(err => {
-            console.warn('[DAILY] CC workout failed:', err.message);
-            ErrorLog.create({ source: 'DailyProblemService:generateDailyProblems', level: 'error', message: err.message || String(err) }).catch(() => {});
-            return null;
-        });
+
+    if (singlePlatformMode) {
+        if (lcLinked) {
+            workout = pickPopularLCWorkout(popularData.lc, lcWeak, attemptedSet);
+            if (!workout) workout = await pickLCWorkout(lcDiff, attemptedSet).catch(() => null);
+        } else if (cfLinked) {
+            workout = pickPopularCFWorkout(popularData.cf, cfWeak, attemptedSet, cfRating);
+            if (!workout) workout = await pickCFWorkout(cfRating, attemptedSet).catch(() => null);
+        } else if (ccLinked) {
+            workout = await pickCCWorkout(ccRating, attemptedSet).catch(() => null);
+        }
+        // Future platforms (e.g. AtCoder): add else-if branch here
+    } else {
+        // Multi-platform: 65%/35% LC/CF. CC never in workout.
+        const workoutOrder = pickPlatformOrder(lcLinked, cfLinked);
+        for (const platform of workoutOrder) {
+            if (platform === 'lc') {
+                workout = pickPopularLCWorkout(popularData.lc, lcWeak, attemptedSet);
+                if (!workout) workout = await pickLCWorkout(lcDiff, attemptedSet).catch(() => null);
+            } else {
+                workout = pickPopularCFWorkout(popularData.cf, cfWeak, attemptedSet, cfRating);
+                if (!workout) workout = await pickCFWorkout(cfRating, attemptedSet).catch(() => null);
+            }
+            if (workout) break;
+        }
     }
 
-    // ── CHALLENGER: LC > CF > CC ─────────────────────────────────────────
+    // Exclude workout from challenger pool
+    const challengerAttemptedSet = new Set(attemptedSet);
+    if (workout?.problemId && workout?.platform) {
+        challengerAttemptedSet.add(`${workout.platform}::${workout.problemId}`);
+    }
+
+    // ── CHALLENGER ───────────────────────────────────────────────────────────
     let challenger = null;
-    if (lcLinked && lcWeak.length) {
-        challenger = await pickLCChallenger(lcChDiff, lcWeak, attemptedSet).catch(() => null);
+
+    if (singlePlatformMode) {
+        if (lcLinked) {
+            challenger = pickPopularLCChallenger(popularData.lc, lcWeak, challengerAttemptedSet);
+            if (!challenger) challenger = await pickLCChallenger(lcChDiff, lcWeak, challengerAttemptedSet).catch(() => null);
+        } else if (cfLinked) {
+            challenger = pickPopularCFChallenger(popularData.cf, cfWeak, challengerAttemptedSet, cfRating);
+            if (!challenger) challenger = await pickCFChallenger(cfRating, cfWeak, challengerAttemptedSet).catch(() => null);
+        } else if (ccLinked) {
+            const ccWeak = getCCWeakTopics(ccPlatform);
+            challenger = await pickCCChallenger(ccRating, ccWeak, challengerAttemptedSet).catch(() => null);
+        }
+    } else {
+        const challengerOrder = pickPlatformOrder(lcLinked, cfLinked);
+        for (const platform of challengerOrder) {
+            if (platform === 'lc') {
+                challenger = pickPopularLCChallenger(popularData.lc, lcWeak, challengerAttemptedSet);
+                if (!challenger) challenger = await pickLCChallenger(lcChDiff, lcWeak, challengerAttemptedSet).catch(() => null);
+            } else {
+                challenger = pickPopularCFChallenger(popularData.cf, cfWeak, challengerAttemptedSet, cfRating);
+                if (!challenger) challenger = await pickCFChallenger(cfRating, cfWeak, challengerAttemptedSet).catch(() => null);
+            }
+            if (challenger) break;
+        }
     }
-    if (!challenger && cfLinked) {
-        challenger = await pickCFChallenger(cfRating, cfWeak, attemptedSet).catch(() => null);
-    }
-    if (!challenger && ccLinked) {
-        challenger = await pickCCChallenger(ccRating, ccWeak, attemptedSet).catch(err => {
-            console.warn('[DAILY] CC challenger failed:', err.message);
+
+    // ── BONUS: uses solvedSet only (no 60-day history block) ──────────────────
+    // Bonus can repeat recently-seen problems — only permanently-solved problems
+    // are excluded. Today's workout and challenger are excluded to avoid same-day dupes.
+    // Bonus does NOT use popular sheets — picks from the full algo problem lists.
+    const bonusAttemptedSet = new Set(solvedSet);
+    if (workout?.problemId   && workout?.platform)    bonusAttemptedSet.add(`${workout.platform}::${workout.problemId}`);
+    if (challenger?.problemId && challenger?.platform) bonusAttemptedSet.add(`${challenger.platform}::${challenger.problemId}`);
+
+    let bonus = null;
+
+    if (singlePlatformMode) {
+        // Single platform: bonus also from the same platform, no diversity constraint.
+        if (lcLinked) {
+            const primary = getLCDifficultyForUser(lcData);
+            const ordered = [primary, ...['Easy', 'Medium', 'Hard'].filter(d => d !== primary)];
+            for (const diff of ordered) {
+                bonus = await pickLCWorkout(diff, bonusAttemptedSet).catch(() => null);
+                if (bonus) break;
+            }
+        } else if (cfLinked) {
+            const all = await getCFProblems().catch(() => []);
+            const cands = all.filter(p =>
+                p.difficulty >= cfRating - 200 &&
+                p.difficulty <= cfRating + 200 &&
+                !bonusAttemptedSet.has(`codeforces::${p.problemId}`)
+            );
+            if (cands.length) {
+                bonus = weightedRandomPick(
+                    cands.sort((a, b) => b.solvedCount - a.solvedCount).slice(0, 30),
+                    p => p.solvedCount
+                );
+            }
+        } else if (ccLinked) {
+            bonus = await pickCCWorkout(ccRating, bonusAttemptedSet).catch(() => null);
+        }
+        // Future platforms: add else-if branch here
+    } else {
+        // Multi-platform: diversity rules apply (CC allowed in bonus only).
+        const bonusCtx = { cfRating, ccRating, lcData, cfLinked, lcLinked, ccLinked, attemptedSet: bonusAttemptedSet };
+        bonus = await pickBonus(
+            workout?.platform    || null,
+            challenger?.platform || null,
+            bonusCtx
+        ).catch(err => {
+            console.warn('[DAILY] bonus failed:', err.message);
             ErrorLog.create({ source: 'DailyProblemService:generateDailyProblems', level: 'error', message: err.message || String(err) }).catch(() => {});
             return null;
         });
     }
 
-    // ── BONUS: must come from a platform different from both workout and challenger ──
-    const bonusCtx = { cfRating, ccRating, lcData, cfLinked, lcLinked, ccLinked, attemptedSet };
-    const bonus = await pickBonus(
-        workout?.platform   || null,
-        challenger?.platform || null,
-        bonusCtx
-    ).catch(err => {
-        console.warn('[DAILY] bonus failed:', err.message);
-        ErrorLog.create({ source: 'DailyProblemService:generateDailyProblems', level: 'error', message: err.message || String(err) }).catch(() => {});
-        return null;
-    });
 
     const today = getTodayIST();
     const doc = await DailyProblem.findOneAndUpdate(

@@ -4,6 +4,27 @@ const ErrorLog     = require('../Model/ErrorLog');
 const { generateDailyProblems } = require('../Services/dailyProblemService');
 const { getTodayIST, getNDaysAgoIST } = require('../Utils/dateUtils');
 
+// ── Streak helper ─────────────────────────────────────────────────────────────
+// The DB stores the streak current value only when a solve happens.
+// It is NEVER auto-decremented. So we must recompute the effective current
+// streak at read time: if lastSolved is more than 1 day ago, the streak
+// has broken and should display as 0.
+function effectiveCurrentStreak(dailyStreak) {
+    if (!dailyStreak?.lastSolved) return 0;
+    const last      = new Date(dailyStreak.lastSolved);
+    const today     = getTodayIST();
+    const yesterday = getNDaysAgoIST(1);
+    // getISTDate — pull just the YYYY-MM-DD string in IST
+    const pad   = n => String(n).padStart(2, '0');
+    const toIST = d => {
+        const ist = new Date(d.getTime() + 5.5 * 60 * 60 * 1000);
+        return `${ist.getUTCFullYear()}-${pad(ist.getUTCMonth() + 1)}-${pad(ist.getUTCDate())}`;
+    };
+    const lastStr = toIST(last);
+    if (lastStr === today || lastStr === yesterday) return dailyStreak.current || 0;
+    return 0; // streak broken
+}
+
 async function getToday(req, res) {
     try {
         const userId = req.user._id;
@@ -20,6 +41,7 @@ async function getToday(req, res) {
         }
 
         const user = await User.findById(userId, 'dailyStreak').lean();
+        const ds   = user?.dailyStreak;
 
         return res.status(200).json({
             success: true,
@@ -28,7 +50,10 @@ async function getToday(req, res) {
                 workout:    daily.workout,
                 challenger: daily.challenger,
                 bonus:      daily.bonus || null,
-                streak:     user?.dailyStreak || { current: 0, longest: 0 },
+                streak: {
+                    current: effectiveCurrentStreak(ds),
+                    longest: ds?.longest || 0,
+                },
             },
         });
     } catch (err) {
@@ -40,9 +65,9 @@ async function getToday(req, res) {
 
 async function getStreak(req, res) {
     try {
-        const userId = req.user._id;
-        const user   = await User.findById(userId, 'dailyStreak').lean();
-        const today  = getTodayIST();
+        const userId   = req.user._id;
+        const user     = await User.findById(userId, 'dailyStreak').lean();
+        const today    = getTodayIST();
         const todayDoc = await DailyProblem.findOne({ userId, date: today }, 'workout.isSolved challenger.isSolved bonus').lean();
 
         const workoutSolved    = todayDoc?.workout?.isSolved    || false;
@@ -50,11 +75,14 @@ async function getStreak(req, res) {
         const bonusSolved      = todayDoc?.bonus?.isSolved      || false;
         const todaySolved      = (workoutSolved ? 1 : 0) + (challengerSolved ? 1 : 0) + (bonusSolved ? 1 : 0);
         const todayTotal       = todayDoc?.bonus ? 3 : 2;
+        const ds               = user?.dailyStreak;
 
         return res.status(200).json({
             success: true,
             data: {
-                ...user?.dailyStreak,
+                current:     effectiveCurrentStreak(ds),
+                longest:     ds?.longest || 0,
+                lastSolved:  ds?.lastSolved || null,
                 todaySolved,
                 todayTotal,
             },

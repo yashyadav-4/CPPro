@@ -1,22 +1,64 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
-import { History, RefreshCw, LinkIcon, Brain, Swords } from 'lucide-react';
+import { Clock, RefreshCw, LinkIcon, Brain, Swords, ChevronDown, ChevronUp } from 'lucide-react';
 import { API_BASE } from '../../api';
 import ProblemCard from './ProblemCard';
 import DailyStreak from './DailyStreak';
 import DailyTopicSection from './DailyTopicSection';
 
+// ── Countdown to midnight IST ─────────────────────────────────────────────────
+function useCountdownIST() {
+    const [label, setLabel] = useState('');
+    useEffect(() => {
+        function tick() {
+            const now    = new Date();
+            const istNow = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+            const midnight = new Date(istNow);
+            midnight.setHours(24, 0, 0, 0);
+            const diff = midnight - istNow;
+            const h = Math.floor(diff / 3_600_000);
+            const m = Math.floor((diff % 3_600_000) / 60_000);
+            const s = Math.floor((diff % 60_000) / 1_000);
+            const pad = n => String(n).padStart(2, '0');
+            setLabel(`${pad(h)}:${pad(m)}:${pad(s)}`);
+        }
+        tick();
+        const id = setInterval(tick, 1000);
+        return () => clearInterval(id);
+    }, []);
+    return label;
+}
+
+// ── Solved progress dots ──────────────────────────────────────────────────────
+function ProgressDots({ solved, total, colors }) {
+    return (
+        <div className="flex items-center gap-1.5">
+            {Array.from({ length: total }).map((_, i) => (
+                <span key={i}
+                    className="w-2 h-2 rounded-full transition-all duration-300"
+                    style={{
+                        background: i < solved ? (colors[i] || '#22c55e') : 'rgba(255,255,255,0.1)',
+                        boxShadow:  i < solved ? `0 0 6px ${colors[i]}80` : 'none',
+                    }}
+                />
+            ))}
+        </div>
+    );
+}
+
 export default function DailyChallenge() {
-    const [tab, setTab] = useState('problems');
-    const [data, setData] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const [tab, setTab]               = useState('problems');
+    const [data, setData]             = useState(null);
+    const [loading, setLoading]       = useState(true);
+    const [error, setError]           = useState(null);
     const [historyOpen, setHistoryOpen] = useState(false);
-    const [history, setHistory] = useState([]);
-    const [histPage, setHistPage] = useState(1);
-    const [histTotal, setHistTotal] = useState(0);
+    const [history, setHistory]       = useState([]);
+    const [histPage, setHistPage]     = useState(1);
+    const [histTotal, setHistTotal]   = useState(0);
     const [histLoading, setHistLoading] = useState(false);
+    const countdown = useCountdownIST();
+
     useEffect(() => { fetchToday(); }, []);
 
     async function fetchToday() {
@@ -56,86 +98,108 @@ export default function DailyChallenge() {
         if (next && history.length === 0) loadHistory(1);
     }
 
-    const today = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
+    const today = new Date().toLocaleDateString('en-IN', {
+        weekday: 'long', day: 'numeric', month: 'long',
+    });
 
-    if (error) {
-        return (
-            <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3">
-                <p className="text-red-400 text-sm">{error}</p>
-                <button onClick={fetchToday} className="text-sm text-emerald-500 hover:underline flex items-center gap-1">
-                    <RefreshCw size={13} /> Retry
-                </button>
-            </div>
-        );
-    }
+    const todaySolved = (data?.workout?.isSolved    ? 1 : 0)
+                      + (data?.challenger?.isSolved  ? 1 : 0)
+                      + (data?.bonus?.isSolved       ? 1 : 0);
+    const todayTotal  = data?.bonus ? 3 : 2;
+    const showContent = !loading && data && !data.noAccount;
 
+    // ── No account linked ─────────────────────────────────────────────────────
     if (!loading && data?.noAccount) {
         return (
             <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4 px-4 text-center">
-                <LinkIcon size={36} className="text-gray-300 dark:text-gray-700" />
-                <p className="text-gray-500 dark:text-gray-400 text-sm max-w-sm">
+                <LinkIcon size={36} className="text-gray-700" />
+                <p className="text-gray-500 text-sm max-w-sm">
                     Link at least one platform (Codeforces, LeetCode, or CodeChef) to get your daily problems.
                 </p>
                 <Link to="/settings"
-                    className="text-sm font-semibold text-emerald-500 border border-emerald-500/30 px-4 py-2 rounded-lg hover:bg-emerald-500/10 transition-colors">
+                    className="text-sm font-semibold text-emerald-500 border border-emerald-500/30
+                        px-4 py-2 rounded-lg hover:bg-emerald-500/10 transition-colors">
                     Go to Settings
                 </Link>
             </div>
         );
     }
 
-    const hasBonus = !loading && data && !data.noAccount;
-    const todaySolved = (data?.workout?.isSolved ? 1 : 0) + (data?.challenger?.isSolved ? 1 : 0) + (data?.bonus?.isSolved ? 1 : 0);
-    const todayTotal = data?.bonus ? 3 : 2;
-    const showContent = !loading && data && !data.noAccount;
+    // ── Error ─────────────────────────────────────────────────────────────────
+    if (error) {
+        return (
+            <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3">
+                <p className="text-red-400 text-sm">{error}</p>
+                <button onClick={fetchToday}
+                    className="text-sm text-emerald-500 hover:underline flex items-center gap-1">
+                    <RefreshCw size={13} /> Retry
+                </button>
+            </div>
+        );
+    }
 
+    // ── Main ─────────────────────────────────────────────────────────────────
     return (
         <div className="max-w-7xl mx-auto px-6 py-8">
-            {/* Header */}
-            <div className="text-center mb-6">
-                <h1 className="text-2xl font-extrabold text-[var(--color-text-main)] inline-block">
-                    Daily Challenge
-                </h1>
-                <div className="flex items-center justify-center gap-3 mt-1.5">
-                    <p className="text-[12px] text-[var(--color-text-muted)]">{today}</p>
-                    {tab === 'problems' && (
-                        <button onClick={toggleHistory}
-                            className="flex items-center gap-1 text-[11px] text-[var(--color-text-muted)]
-                                hover:text-[var(--color-accent)] transition-colors">
-                            <History size={12} />
-                            History
-                        </button>
-                    )}
+
+            {/* ── Mission header ── */}
+            <div className="flex items-start justify-between mb-2">
+                <div>
+                    <h1 className="text-xl font-bold text-white tracking-tight">Today's Missions</h1>
+                    <p className="text-[12px] text-gray-600 mt-0.5">{today}</p>
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px] text-gray-600 mt-1">
+                    <Clock size={11} />
+                    <span className="tabular-nums font-medium">{countdown}</span>
+                    <span className="text-gray-700">until reset</span>
                 </div>
             </div>
 
-            {/* Tab bar — compact, centered */}
-            <div className="flex justify-center mb-6">
-                <div className="inline-flex bg-white/[0.03] dark:bg-white/[0.03]
-                    rounded-2xl p-1 gap-1">
+            {/* ── Tab bar ── */}
+            <div className="flex items-center justify-between mb-6 mt-5">
+                <div className="inline-flex bg-white/[0.04] rounded-xl p-1 gap-1">
                     {[
                         { key: 'problems', label: 'Problems', icon: Swords },
-                        { key: 'topic',    label: 'Topic',    icon: Brain },
+                        { key: 'topic',    label: 'Topic',    icon: Brain  },
                     ].map(({ key, label, icon: Icon }) => (
                         <button
                             key={key}
                             onClick={() => setTab(key)}
-                            className={`flex items-center gap-2 px-5 py-2 rounded-xl text-[12px]
+                            className={`flex items-center gap-2 px-5 py-2 rounded-lg text-[12px]
                                 font-semibold transition-all duration-200 ${
                                 tab === key
-                                    ? 'bg-[var(--color-accent-bg)] text-[var(--color-accent)] shadow-sm'
-                                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-accent)] hover:bg-[var(--color-accent-bg)]'
+                                    ? 'bg-[var(--color-accent-bg)] text-[var(--color-accent)]'
+                                    : 'text-gray-500 hover:text-gray-300'
                             }`}
                         >
-                            <Icon size={14} />
+                            <Icon size={13} />
                             {label}
                         </button>
                     ))}
                 </div>
+
+                {/* Progress dots — only in problems tab */}
+                {tab === 'problems' && (
+                    <div className="flex items-center gap-2">
+                        {!loading && showContent && (
+                            <>
+                                <ProgressDots
+                                    solved={todaySolved}
+                                    total={todayTotal}
+                                    colors={['#22c55e', '#f59e0b', '#8b5cf6']}
+                                />
+                                <span className="text-[11px] text-gray-600 tabular-nums">
+                                    {todaySolved}/{todayTotal} solved
+                                </span>
+                            </>
+                        )}
+                    </div>
+                )}
             </div>
 
-            {/* Problems tab */}
+            {/* ── Problems tab ── */}
             <div className={tab === 'problems' ? '' : 'hidden'}>
+
                 {/* Streak bar */}
                 <div className="mb-5">
                     <DailyStreak
@@ -147,62 +211,83 @@ export default function DailyChallenge() {
                     />
                 </div>
 
-                {/* Problem cards — workout + challenger always side by side */}
+                {/* Workout + Challenger — side by side */}
                 <div className="flex flex-col sm:flex-row gap-4 mb-4">
-                    <ProblemCard type="workout" problem={data?.workout} loading={loading} />
+                    <ProblemCard type="workout"    problem={data?.workout}    loading={loading} />
                     <ProblemCard type="challenger" problem={data?.challenger} loading={loading} />
                 </div>
 
-                {/* Bonus card — full width below, only shown when assigned or loading */}
-                {(loading || hasBonus) && (
+                {/* Bonus — full width */}
+                {(loading || (showContent && data?.bonus !== undefined)) && (
                     <div className="mb-6">
                         <ProblemCard type="bonus" problem={data?.bonus} loading={loading} />
                     </div>
                 )}
 
+                {/* History toggle */}
+                <button
+                    onClick={toggleHistory}
+                    className="flex items-center gap-1.5 text-[11px] text-gray-600 hover:text-gray-400
+                        transition-colors mx-auto mb-2"
+                >
+                    {historyOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                    {historyOpen ? 'Hide' : 'Show'} past problems
+                </button>
+
                 {/* History panel */}
                 {historyOpen && (
-                    <div className="mt-8 bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-5">
-                        <h2 className="text-[13px] font-semibold text-gray-700 dark:text-gray-300 mb-4">Past Daily Problems</h2>
+                    <div className="mt-2 bg-[#111111] border border-white/[0.07] rounded-xl p-5">
+                        <h2 className="text-[12px] font-semibold text-gray-400 uppercase tracking-widest mb-4">
+                            Past Daily Problems
+                        </h2>
                         {histLoading ? (
                             <div className="space-y-3">
                                 {[...Array(5)].map((_, i) => (
-                                    <div key={i} className="h-12 bg-gray-100 dark:bg-white/5 rounded-lg animate-pulse" />
+                                    <div key={i} className="h-10 bg-white/[0.04] rounded-lg animate-pulse" />
                                 ))}
                             </div>
                         ) : history.length === 0 ? (
-                            <p className="text-[12px] text-gray-400 dark:text-gray-600">No history yet.</p>
+                            <p className="text-[12px] text-gray-600">No history yet.</p>
                         ) : (
                             <>
-                                <div className="space-y-2">
+                                <div className="space-y-0">
                                     {history.map(d => (
-                                        <div key={d._id} className="flex items-center justify-between py-2.5 border-b border-gray-50 dark:border-white/[0.04] last:border-0">
+                                        <div key={d._id}
+                                            className="flex items-center justify-between py-2.5
+                                                border-b border-white/[0.04] last:border-0">
                                             <div>
-                                                <p className="text-[12px] font-medium text-gray-700 dark:text-gray-300">{d.date}</p>
-                                                <p className="text-[11px] text-gray-400 dark:text-gray-600">
-                                                    {d.workout?.title ? `W: ${d.workout.title}` : 'No workout'} ·{' '}
-                                                    {d.challenger?.title ? `C: ${d.challenger.title}` : 'No challenger'}
-                                                    {d.bonus?.title ? ` · B: ${d.bonus.title}` : ''}
+                                                <p className="text-[12px] font-medium text-gray-400">{d.date}</p>
+                                                <p className="text-[11px] text-gray-600 mt-0.5">
+                                                    {d.workout?.title    ? `W: ${d.workout.title}`    : '—'} ·{' '}
+                                                    {d.challenger?.title ? `C: ${d.challenger.title}` : '—'}
+                                                    {d.bonus?.title      ? ` · B: ${d.bonus.title}`  : ''}
                                                 </p>
                                             </div>
                                             <div className="flex gap-1.5">
-                                                <span className={`w-2 h-2 rounded-full ${d.workout?.isSolved ? 'bg-emerald-400' : 'bg-gray-200 dark:bg-white/10'}`} title="Workout" />
-                                                <span className={`w-2 h-2 rounded-full ${d.challenger?.isSolved ? 'bg-amber-400' : 'bg-gray-200 dark:bg-white/10'}`} title="Challenger" />
-                                                {d.bonus && <span className={`w-2 h-2 rounded-full ${d.bonus.isSolved ? 'bg-violet-400' : 'bg-gray-200 dark:bg-white/10'}`} title="Bonus" />}
+                                                <span className={`w-2 h-2 rounded-full ${d.workout?.isSolved    ? 'bg-emerald-500' : 'bg-white/10'}`} title="Workout" />
+                                                <span className={`w-2 h-2 rounded-full ${d.challenger?.isSolved ? 'bg-amber-500'   : 'bg-white/10'}`} title="Challenger" />
+                                                {d.bonus && <span className={`w-2 h-2 rounded-full ${d.bonus.isSolved ? 'bg-violet-500' : 'bg-white/10'}`} title="Bonus" />}
                                             </div>
                                         </div>
                                     ))}
                                 </div>
+
                                 {/* Pagination */}
                                 {histTotal > 10 && (
-                                    <div className="flex justify-center gap-4 mt-4">
-                                        <button onClick={() => loadHistory(histPage - 1)} disabled={histPage === 1}
-                                            className="text-[12px] text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 disabled:opacity-30">
+                                    <div className="flex justify-center gap-6 mt-4">
+                                        <button
+                                            onClick={() => loadHistory(histPage - 1)}
+                                            disabled={histPage === 1}
+                                            className="text-[12px] text-gray-600 hover:text-gray-300 disabled:opacity-30">
                                             ← Prev
                                         </button>
-                                        <span className="text-[12px] text-gray-400">Page {histPage} / {Math.ceil(histTotal / 10)}</span>
-                                        <button onClick={() => loadHistory(histPage + 1)} disabled={histPage >= Math.ceil(histTotal / 10)}
-                                            className="text-[12px] text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 disabled:opacity-30">
+                                        <span className="text-[12px] text-gray-600">
+                                            {histPage} / {Math.ceil(histTotal / 10)}
+                                        </span>
+                                        <button
+                                            onClick={() => loadHistory(histPage + 1)}
+                                            disabled={histPage >= Math.ceil(histTotal / 10)}
+                                            className="text-[12px] text-gray-600 hover:text-gray-300 disabled:opacity-30">
                                             Next →
                                         </button>
                                     </div>
@@ -213,7 +298,7 @@ export default function DailyChallenge() {
                 )}
             </div>
 
-            {/* Topic tab — always mounted so it starts fetching immediately */}
+            {/* ── Topic tab ── */}
             <div className={tab === 'topic' ? '' : 'hidden'}>
                 {showContent && <DailyTopicSection />}
             </div>

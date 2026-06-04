@@ -1,46 +1,61 @@
-const axios = require('axios');
+/**
+ * ccProblemsService.js
+ *
+ * Previously fetched problems from a private CodeChef sync microservice.
+ * Now queries the synced CCProblem catalog in MongoDB directly.
+ *
+ * Return shape is identical to the old API shape so all callers are unaffected:
+ *   { problemId, title, url, difficulty, tags, solvedCount, platform }
+ *
+ * The `tags` parameter is retained for API compatibility but CC problems are
+ * not tag-filtered at the service level — callers filter on the returned array.
+ */
 
-const CC_SYNC_API    = (process.env.CC_SYNC_API || '').replace(/\/$/, '');
-const CC_SYNC_SECRET = process.env.CC_SYNC_SECRET || '';
+const CCProblem = require('../Model/CCProblem');
 
-const CACHE_TTL = 12 * 60 * 60 * 1000; // 12 hours
+// ── In-memory cache ──────────────────────────────────────────────────────────
+// Keyed by "diffMin:diffMax" band so different rating ranges stay independent.
+const _cache    = {};
+const _inFlight = {};
+const TTL = 30 * 60 * 1000; // 30 minutes
 
-// Cache keyed by "min:max"
-const cache = {};
+function isFresh(key) {
+    return _cache[key] && (Date.now() - _cache[key].ts < TTL);
+}
 
 async function getCCProblems(diffMin, diffMax, tags = []) {
     const key = `${diffMin}:${diffMax}`;
-    const bucket = cache[key];
-    if (bucket && Date.now() - bucket.timestamp < CACHE_TTL) {
-        return bucket.data;
-    }
-    // Coalesce concurrent callers onto one in-flight fetch per band
-    if (bucket?.inflight) return bucket.inflight;
 
-    if (!CC_SYNC_API) throw new Error('CC_SYNC_API not configured');
+    if (isFresh(key)) return _cache[key].data;
 
-    const params = { diffMin, diffMax };
-    if (tags.length) params.tags = tags.join(',');
+    // Deduplicate concurrent callers for the same band
+    if (_inFlight[key]) return _inFlight[key];
 
-    const inflight = axios.get(`${CC_SYNC_API}/problems`, {
-        params,
-        headers: { Authorization: `Bearer ${CC_SYNC_SECRET}` },
-        timeout: 15_000,
-    })
-        .then(res => {
-            if (res.data?.error === 'CLOUDFLARE_BLOCK') throw new Error('CLOUDFLARE_BLOCK');
-            const problems = res.data?.problems || [];
-            cache[key] = { data: problems, timestamp: Date.now(), inflight: null };
-            console.log(`[CC-PROBLEMS] Cached ${problems.length} problems for band ${key}`);
-            return problems;
-        })
-        .catch(err => {
-            if (cache[key]) cache[key].inflight = null;
-            throw err;
-        });
+    _inFlight[key] = (async () => {
+        try {
+            const docs = await CCProblem.find(
+                { difficulty: { $gte: diffMin, $lte: diffMax } },
+                { problemId: 1, title: 1, url: 1, difficulty: 1, tags: 1, solvedCount: 1, _id: 0 }
+            ).lean();
 
-    cache[key] = { ...(cache[key] || {}), inflight };
-    return inflight;
+            const result = docs.map(p => ({
+                problemId:  p.problemId,
+                title:      p.title,
+                url:        p.url,
+                difficulty: p.difficulty,
+                tags:       p.tags || [],
+                solvedCount: p.solvedCount || 0,
+                platform:   'codechef',
+            }));
+
+            _cache[key] = { data: result, ts: Date.now() };
+            return result;
+        } finally {
+            delete _inFlight[key];
+        }
+    })();
+
+    return _inFlight[key];
 }
 
 module.exports = { getCCProblems };

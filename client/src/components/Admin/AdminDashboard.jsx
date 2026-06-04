@@ -9,7 +9,7 @@ import {
   TrendingUp, MessageSquare, Shield, Zap, Database,
   Code2, Globe, GraduationCap, Clock, CheckCircle,
   AlertCircle, Target, Bell, Send, ChevronDown, CalendarX,
-  Terminal, Trash2, Brain, Radio,
+  Terminal, Trash2, Brain, Radio, BookOpen, Loader2,
 } from 'lucide-react';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -564,6 +564,215 @@ function ActiveUsersPanel() {
   );
 }
 
+// ── Problem Catalog Sync Panel ────────────────────────────────────────────────
+const PLATFORM_META = [
+  {
+    key: 'cf',
+    label: 'Codeforces',
+    endpoint: 'cf-problems',
+    color: '#3b82f6',
+    desc: 'All rated CF problems (~9,000+). Fast — calls CF public API directly.',
+  },
+  {
+    key: 'lc',
+    label: 'LeetCode',
+    endpoint: 'lc-problems',
+    color: '#f59e0b',
+    desc: 'All free algorithm problems (~2,700+). Excludes SQL/Shell. Paginates via NexusLC (1–2 min).',
+  },
+  {
+    key: 'cc',
+    label: 'CodeChef',
+    endpoint: 'cc-problems',
+    color: '#10b981',
+    desc: 'All CC problems across 8 difficulty bands. May partially fail on Cloudflare blocks (1–3 min).',
+  },
+];
+
+function StatusBadge({ status }) {
+  const cfg = {
+    idle:    { text: 'Idle',    cls: 'bg-white/5 text-gray-500' },
+    running: { text: 'Running', cls: 'bg-amber-500/15 text-amber-400 animate-pulse' },
+    done:    { text: 'Done',    cls: 'bg-emerald-500/15 text-emerald-400' },
+    error:   { text: 'Error',   cls: 'bg-red-500/15 text-red-400' },
+  }[status] || { text: status, cls: 'bg-white/5 text-gray-500' };
+  return (
+    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide ${cfg.cls}`}>
+      {cfg.text}
+    </span>
+  );
+}
+
+function ProblemCatalogPanel() {
+  const [syncStatus, setSyncStatus] = useState(null);
+  const [syncing, setSyncing]       = useState({ cf: false, lc: false, cc: false });
+  const [messages, setMessages]     = useState({ cf: null, lc: null, cc: null });
+  const [polling, setPolling]       = useState(false);
+
+  const fetchStatus = useCallback(async () => {
+    try {
+      const res  = await fetch(`${API_BASE}/api/admin/sync/catalog-status`, { credentials: 'include' });
+      const json = await res.json();
+      if (json.success) setSyncStatus(json);
+    } catch {}
+  }, []);
+
+  // Initial fetch on mount
+  useEffect(() => { fetchStatus(); }, [fetchStatus]);
+
+  // Auto-poll every 3s while any sync is running
+  useEffect(() => {
+    if (!syncStatus) return;
+    const anyRunning = ['cf', 'lc', 'cc'].some(k => syncStatus[k]?.status === 'running');
+    if (!anyRunning) { setPolling(false); return; }
+    setPolling(true);
+    const timer = setInterval(fetchStatus, 3000);
+    return () => clearInterval(timer);
+  }, [syncStatus, fetchStatus]);
+
+  const triggerSync = async (platform) => {
+    const meta = PLATFORM_META.find(p => p.key === platform);
+    setSyncing(prev => ({ ...prev, [platform]: true }));
+    setMessages(prev => ({ ...prev, [platform]: null }));
+    try {
+      const res  = await fetch(`${API_BASE}/api/admin/sync/${meta.endpoint}`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      const json = await res.json();
+      setMessages(prev => ({ ...prev, [platform]: { ok: json.success, text: json.message } }));
+      // Start polling immediately after trigger
+      setTimeout(fetchStatus, 500);
+    } catch {
+      setMessages(prev => ({ ...prev, [platform]: { ok: false, text: 'Network error — could not start sync.' } }));
+    } finally {
+      setSyncing(prev => ({ ...prev, [platform]: false }));
+    }
+  };
+
+  return (
+    <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <BookOpen size={14} className="text-violet-400" />
+          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Problem Catalog Sync</p>
+          {polling && (
+            <span className="flex items-center gap-1 text-[10px] text-amber-400">
+              <Loader2 size={10} className="animate-spin" /> polling…
+            </span>
+          )}
+        </div>
+        <button
+          onClick={fetchStatus}
+          className="flex items-center gap-1 text-[10px] text-gray-500 hover:text-violet-400 transition-colors"
+        >
+          <RefreshCw size={10} /> Refresh Status
+        </button>
+      </div>
+
+      {/* Platform cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {PLATFORM_META.map(({ key, label, color, desc }) => {
+          const st     = syncStatus?.[key] || {};
+          const status = st.status || 'idle';
+          const isRunning = status === 'running';
+          const isDone    = status === 'done';
+          const isError   = status === 'error';
+
+          return (
+            <div
+              key={key}
+              className="bg-white/[0.03] border border-white/[0.07] rounded-xl p-4 flex flex-col gap-3 relative overflow-hidden"
+            >
+              {/* Glow */}
+              <div className="absolute top-0 right-0 w-16 h-16 blur-[30px] opacity-10 pointer-events-none" style={{ background: color }} />
+
+              {/* Top row */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full" style={{ background: color }} />
+                  <span className="text-sm font-bold text-white">{label}</span>
+                </div>
+                <StatusBadge status={status} />
+              </div>
+
+              {/* Description */}
+              <p className="text-[11px] text-gray-500 leading-relaxed">{desc}</p>
+
+              {/* Stats row */}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="bg-white/[0.03] rounded-lg px-2.5 py-2">
+                  <p className="text-[9px] text-gray-600 uppercase tracking-wide mb-0.5">In Catalog</p>
+                  <p className="text-base font-bold text-white font-mono">
+                    {syncStatus ? fmt(st.catalogCount ?? 0) : '—'}
+                  </p>
+                </div>
+                <div className="bg-white/[0.03] rounded-lg px-2.5 py-2">
+                  <p className="text-[9px] text-gray-600 uppercase tracking-wide mb-0.5">Last Synced</p>
+                  <p className="text-[11px] font-medium text-gray-400">
+                    {st.lastSyncedAt ? timeAgo(st.lastSyncedAt) : 'Never'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Last sync result */}
+              {isDone && (
+                <p className="text-[11px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1.5 rounded-lg">
+                  ✓ {fmt(st.total)} problems — {fmt(st.inserted)} new, {fmt(st.updated)} updated
+                  {st.cloudflareHits > 0 && ` · ${st.cloudflareHits} CF blocks`}
+                </p>
+              )}
+              {isError && (
+                <p className="text-[11px] text-red-400 bg-red-500/10 border border-red-500/20 px-2.5 py-1.5 rounded-lg break-all">
+                  ✕ {st.error || 'Unknown error'}
+                </p>
+              )}
+              {isRunning && (
+                <p className="text-[11px] text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1.5 rounded-lg flex items-center gap-1.5">
+                  <Loader2 size={11} className="animate-spin" />
+                  Syncing… started {timeAgo(st.startedAt)}
+                </p>
+              )}
+
+              {/* Local message (trigger feedback) */}
+              {messages[key] && !isRunning && (
+                <p className={`text-[11px] px-2.5 py-1.5 rounded-lg ${
+                  messages[key].ok ? 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/20' : 'text-red-400 bg-red-500/10 border border-red-500/20'
+                }`}>
+                  {messages[key].text}
+                </p>
+              )}
+
+              {/* Sync button */}
+              <button
+                onClick={() => triggerSync(key)}
+                disabled={syncing[key] || isRunning}
+                className="mt-auto flex items-center justify-center gap-2 px-4 py-2 rounded-lg border text-xs font-semibold transition-all disabled:opacity-50"
+                style={{
+                  background: `${color}18`,
+                  borderColor: `${color}44`,
+                  color,
+                }}
+              >
+                {(syncing[key] || isRunning)
+                  ? <><Loader2 size={12} className="animate-spin" /> Syncing…</>
+                  : <><RefreshCw size={12} /> Sync {label} Problems</>
+                }
+              </button>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Footer note */}
+      <p className="text-[10px] text-gray-600 mt-3">
+        Syncs run in the background — page stays responsive. Status auto-updates every 3s while running. Run once a week.
+      </p>
+    </div>
+  );
+}
+
 
 // ── Main component ────────────────────────────────────────────────────────────
 export default function AdminDashboard() {
@@ -572,8 +781,8 @@ export default function AdminDashboard() {
   const [error, setError] = useState(null);
   const [days, setDays] = useState(7);
   const [lastRefresh, setLastRefresh] = useState(null);
-  const [forcing, setForcing] = useState({ contests: false, leaderboard: false, stats: false, daily: false, topics: false, all: false });
-  const [forceMsg, setForceMsg] = useState({ contests: null, leaderboard: null, stats: null, daily: null, topics: null, all: null });
+  const [forcing, setForcing] = useState({ contests: false, leaderboard: false, stats: false, daily: false, 'daily-me': false, topics: false, 'daily-topic-me': false, all: false });
+  const [forceMsg, setForceMsg] = useState({ contests: null, leaderboard: null, stats: null, daily: null, 'daily-me': null, topics: null, 'daily-topic-me': null, all: null });
 
   const fetchStats = useCallback(async (d) => {
     setLoading(true);
@@ -754,6 +963,35 @@ export default function AdminDashboard() {
                     {forceMsg[key].text}
                   </p>
                 )}
+                {/* ── Reset for me only — shown on Daily Problems and Daily Topics cards ── */}
+                {(key === 'daily' || key === 'topics') && (() => {
+                  const meKey = key === 'daily' ? 'daily-me' : 'daily-topic-me';
+                  return (
+                    <div className="mt-2 pt-2 border-t border-white/[0.06]">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-[10px] text-gray-600">
+                          Test mode — only resets <span className="text-amber-500/80">your</span> {key === 'daily' ? 'problems' : 'topic'}
+                        </p>
+                        <button
+                          id={key === 'daily' ? 'btn-reset-daily-me' : 'btn-reset-topic-me'}
+                          onClick={() => forceRefresh(meKey)}
+                          disabled={forcing[meKey]}
+                          className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/25 text-amber-400 text-[11px] font-medium rounded-lg transition-all disabled:opacity-50 flex-shrink-0"
+                        >
+                          <CalendarX size={10} className={forcing[meKey] ? 'animate-spin' : ''} />
+                          {forcing[meKey] ? 'Resetting…' : 'Reset for me'}
+                        </button>
+                      </div>
+                      {forceMsg[meKey] && (
+                        <p className={`text-[11px] mt-1.5 px-2 py-1 rounded ${
+                          forceMsg[meKey].ok ? 'text-amber-400 bg-amber-500/10' : 'text-red-400 bg-red-500/10'
+                        }`}>
+                          {forceMsg[meKey].text}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             ))}
           </div>
@@ -761,6 +999,9 @@ export default function AdminDashboard() {
 
         {/* ── Send Notification ── */}
         <SendNotificationPanel />
+
+        {/* ── Problem Catalog Sync ── */}
+        <ProblemCatalogPanel />
 
         {/* ── Error Terminal ── */}
         <ErrorTerminal />

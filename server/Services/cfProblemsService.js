@@ -1,51 +1,59 @@
-const axios = require('axios');
+/**
+ * cfProblemsService.js
+ *
+ * Previously fetched problems from the live Codeforces public API
+ * (https://codeforces.com/api/problemset.problems).
+ * Now queries the synced CFProblem catalog in MongoDB directly.
+ *
+ * Return shape is identical to the old API shape so all callers are unaffected:
+ *   { problemId, contestId, index, title, url, difficulty, tags, solvedCount, platform }
+ */
 
-const CF_PROBLEMSET_URL = 'https://codeforces.com/api/problemset.problems';
-const CACHE_TTL = 6 * 60 * 60 * 1000; // 6 hours
+const CFProblem = require('../Model/CFProblem');
 
-let cache = { data: null, timestamp: 0, inflight: null };
+// ── In-memory cache ──────────────────────────────────────────────────────────
+// Single global cache — the full problemset is fetched at once.
+let _cache    = null;
+let _cacheTs  = 0;
+let _inFlight = null;
+const TTL = 30 * 60 * 1000; // 30 minutes
 
 async function getCFProblems() {
-    if (cache.data && Date.now() - cache.timestamp < CACHE_TTL) {
-        return cache.data;
-    }
-    // Coalesce concurrent callers onto one in-flight fetch
-    if (cache.inflight) return cache.inflight;
+    if (_cache && (Date.now() - _cacheTs < TTL)) return _cache;
 
-    cache.inflight = axios.get(CF_PROBLEMSET_URL, { timeout: 15_000 })
-        .then(res => {
-            if (res.data?.status !== 'OK') throw new Error('CF API returned non-OK status');
+    // Deduplicate concurrent callers
+    if (_inFlight) return _inFlight;
 
-            const { problems, problemStatistics } = res.data.result;
-            const statMap = new Map();
-            for (const s of problemStatistics) {
-                statMap.set(`${s.contestId}${s.index}`, s.solvedCount || 0);
-            }
+    _inFlight = (async () => {
+        try {
+            const docs = await CFProblem.find(
+                // Only problems that have a rated difficulty
+                { difficulty: { $gt: 0 } },
+                { problemId: 1, contestId: 1, index: 1, title: 1, url: 1,
+                  difficulty: 1, tags: 1, solvedCount: 1, _id: 0 }
+            ).lean();
 
-            const enriched = problems
-                .filter(p => p.rating)
-                .map(p => ({
-                    problemId:   `${p.contestId}${p.index}`,
-                    contestId:   p.contestId,
-                    index:       p.index,
-                    title:       p.name,
-                    url:         `https://codeforces.com/problemset/problem/${p.contestId}/${p.index}`,
-                    difficulty:  p.rating,
-                    tags:        p.tags || [],
-                    solvedCount: statMap.get(`${p.contestId}${p.index}`) || 0,
-                    platform:    'codeforces',
-                }));
+            const result = docs.map(p => ({
+                problemId:  p.problemId,
+                contestId:  p.contestId,
+                index:      p.index,
+                title:      p.title,
+                url:        p.url,
+                difficulty: p.difficulty,
+                tags:       p.tags || [],
+                solvedCount: p.solvedCount || 0,
+                platform:   'codeforces',
+            }));
 
-            cache = { data: enriched, timestamp: Date.now(), inflight: null };
-            console.log(`[CF-PROBLEMS] Cached ${enriched.length} problems`);
-            return enriched;
-        })
-        .catch(err => {
-            cache.inflight = null;
-            throw err;
-        });
+            _cache   = result;
+            _cacheTs = Date.now();
+            return result;
+        } finally {
+            _inFlight = null;
+        }
+    })();
 
-    return cache.inflight;
+    return _inFlight;
 }
 
 module.exports = { getCFProblems };

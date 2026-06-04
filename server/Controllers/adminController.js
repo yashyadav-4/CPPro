@@ -10,9 +10,23 @@ const LeetCodeData = require('../Model/LeetCodeData');
 const Notification = require('../Model/Notification');
 const DailyProblem = require('../Model/DailyProblem');
 const DailyTopic = require('../Model/DailyTopic');
+const CFProblem = require('../Model/CFProblem');
+const LCProblem = require('../Model/LCProblem');
+const CCProblem = require('../Model/CCProblem');
+const GlobalSyncState = require('../Model/GlobalSyncState');
 const { getTodayIST } = require('../Utils/dateUtils');
 const ErrorLog = require('../Model/ErrorLog');
 const DailyActiveUser = require('../Model/DailyActiveUser');
+const axios = require('axios');
+
+// ── In-memory catalog sync state ─────────────────────────────────────────────
+// Tracks the status of each platform's problem catalog sync.
+// Resets on server restart — admin just re-triggers if needed.
+const catalogSyncState = {
+    cf: { status: 'idle', startedAt: null, finishedAt: null, total: 0, inserted: 0, updated: 0, error: null },
+    lc: { status: 'idle', startedAt: null, finishedAt: null, total: 0, inserted: 0, updated: 0, error: null },
+    cc: { status: 'idle', startedAt: null, finishedAt: null, total: 0, inserted: 0, cloudflareHits: 0, error: null },
+};
 
 /**
  * GET /api/admin/stats?days=7|30
@@ -155,12 +169,14 @@ async function getAdminStats(req, res) {
                 { $sort: { _id: 1 } }
             ]),
 
-            // ── Daily Active Users per day (from DailyActiveUser collection) ───
-            // date field is 'YYYY-MM-DD' string — string $gte works correctly.
-            DailyActiveUser.aggregate([
+            // ── Daily Active Users ─────────────────────────────────────────────
+            // Source: DailyTopic (userId + date, unique index).
+            // Created on each user's FIRST visit of the day by dailyWarmup.
+            // Has full historical data since the platform launched.
+            DailyTopic.aggregate([
                 { $match: { date: { $gte: startOfRange.toISOString().slice(0, 10) } } },
                 { $group: { _id: '$date', count: { $sum: 1 } } },
-                { $sort: { _id: 1 } }
+                { $sort: { _id: 1 } },
             ]),
 
             // ── Top countries ────────────────────────────────────────────────
@@ -472,6 +488,29 @@ async function refreshDailyProblems(req, res) {
     }
 }
 
+/**
+ * POST /api/admin/refresh/daily-me
+ * Deletes today's DailyProblem doc ONLY for the currently logged-in admin.
+ * Leaves all other users' problems untouched — use this for isolated feature testing.
+ */
+async function refreshMyDailyProblems(req, res) {
+    try {
+        const today  = getTodayIST();
+        const userId = req.user._id;
+        const result = await DailyProblem.deleteOne({ userId, date: today });
+        res.json({
+            success: true,
+            message: result.deletedCount
+                ? `Your daily problems for ${today} have been reset. Refresh /daily to get new ones.`
+                : `No daily problems found for you on ${today} — nothing to reset.`,
+        });
+    } catch (err) {
+        console.error('Admin refreshMyDailyProblems error:', err);
+        ErrorLog.create({ source: 'Admin:refreshMyDailyProblems', level: 'error', message: err.message || String(err) }).catch(() => {});
+        res.status(500).json({ success: false, message: 'Failed to reset your daily problems: ' + err.message });
+    }
+}
+
 async function getErrorLogs(req, res) {
     try {
         const limit = Math.min(parseInt(req.query.limit) || 50, 200);
@@ -514,6 +553,30 @@ async function refreshDailyTopics(req, res) {
         console.error('Admin refreshDailyTopics error:', err);
         ErrorLog.create({ source: 'Admin:refreshDailyTopics', level: 'error', message: err.message || String(err) }).catch(() => {});
         res.status(500).json({ success: false, message: 'Failed to reset daily topics: ' + err.message });
+    }
+}
+
+/**
+ * POST /api/admin/refresh/daily-topic-me
+ * Deletes today's DailyTopic doc ONLY for the currently logged-in admin.
+ * Leaves all other users' topics untouched — use this to test the topic engine
+ * without disrupting the rest of the user base.
+ */
+async function refreshMyDailyTopic(req, res) {
+    try {
+        const today  = getTodayIST();
+        const userId = req.user._id;
+        const result = await DailyTopic.deleteOne({ userId, date: today });
+        res.json({
+            success: true,
+            message: result.deletedCount
+                ? `Your daily topic for ${today} has been reset. Switch to the Topic tab to generate a new one.`
+                : `No daily topic found for you on ${today} — nothing to reset.`,
+        });
+    } catch (err) {
+        console.error('Admin refreshMyDailyTopic error:', err);
+        ErrorLog.create({ source: 'Admin:refreshMyDailyTopic', level: 'error', message: err.message || String(err) }).catch(() => {});
+        res.status(500).json({ success: false, message: 'Failed to reset your daily topic: ' + err.message });
     }
 }
 
@@ -591,4 +654,344 @@ async function getActiveUsers(req, res) {
 }
 
 
-module.exports = { getAdminStats, refreshContests, refreshLeaderboard, refreshStats, sendNotification, refreshDailyProblems, refreshDailyTopics, getErrorLogs, clearErrorLogs, getActiveUsers };
+// ── Problem Catalog Sync ──────────────────────────────────────────────────────
+
+/**
+ * Helper: bulk-upsert an array of problems into a Mongoose model.
+ * Returns { inserted, updated } counts derived from bulkWrite result.
+ * Dedup key: `problemId` (unique index on all 3 models).
+ */
+async function bulkUpsertProblems(Model, problems) {
+    if (!problems.length) return { inserted: 0, updated: 0 };
+    const now = new Date();
+    const ops = problems.map(p => ({
+        updateOne: {
+            filter: { problemId: p.problemId },
+            update: { $set: { ...p, lastSyncedAt: now } },
+            upsert: true,
+        },
+    }));
+    // Process in batches of 500 to avoid hitting MongoDB driver limits
+    const BATCH = 500;
+    let inserted = 0;
+    let updated  = 0;
+    for (let i = 0; i < ops.length; i += BATCH) {
+        const result = await Model.bulkWrite(ops.slice(i, i + BATCH), { ordered: false });
+        inserted += result.upsertedCount  || 0;
+        updated  += result.modifiedCount  || 0;
+    }
+    return { inserted, updated };
+}
+
+/**
+ * POST /api/admin/sync/cf-problems
+ * Kicks off a background sync of the full Codeforces problem catalog.
+ * Returns immediately with { status: 'started' }.
+ * Poll GET /api/admin/sync/catalog-status for progress.
+ */
+async function syncCFProblems(req, res) {
+    if (catalogSyncState.cf.status === 'running') {
+        return res.json({ success: true, status: 'already_running', message: 'CF problem sync is already in progress.' });
+    }
+
+    // Respond immediately — background work starts below
+    res.json({ success: true, status: 'started', message: 'CF problem sync started in background. Poll /api/admin/sync/catalog-status for progress.' });
+
+    // ── Background sync ───────────────────────────────────────────────────────
+    catalogSyncState.cf = { status: 'running', startedAt: new Date(), finishedAt: null, total: 0, inserted: 0, updated: 0, error: null };
+
+    setImmediate(async () => {
+        try {
+            console.log('[ADMIN] CF problem catalog sync started');
+
+            const response = await axios.get('https://codeforces.com/api/problemset.problems', { timeout: 20_000 });
+            if (response.data?.status !== 'OK') throw new Error('CF API returned non-OK status');
+
+            const { problems, problemStatistics } = response.data.result;
+
+            // Build solvedCount lookup
+            const statMap = new Map();
+            for (const s of problemStatistics) {
+                statMap.set(`${s.contestId}${s.index}`, s.solvedCount || 0);
+            }
+
+            // Shape + filter: only store rated problems
+            const shaped = problems
+                .filter(p => p.rating)
+                .map(p => ({
+                    problemId:   `${p.contestId}${p.index}`,
+                    contestId:   p.contestId,
+                    index:       p.index,
+                    title:       p.name,
+                    url:         `https://codeforces.com/problemset/problem/${p.contestId}/${p.index}`,
+                    difficulty:  p.rating,
+                    tags:        p.tags || [],
+                    solvedCount: statMap.get(`${p.contestId}${p.index}`) || 0,
+                }));
+
+            const { inserted, updated } = await bulkUpsertProblems(CFProblem, shaped);
+
+            // Persist last sync time to GlobalSyncState
+            await GlobalSyncState.findOneAndUpdate(
+                { syncKey: 'cf_problems' },
+                { syncKey: 'cf_problems', lastSyncedAt: new Date() },
+                { upsert: true, new: true }
+            );
+
+            catalogSyncState.cf = {
+                status: 'done',
+                startedAt: catalogSyncState.cf.startedAt,
+                finishedAt: new Date(),
+                total: shaped.length,
+                inserted,
+                updated,
+                error: null,
+            };
+            console.log(`[ADMIN] CF catalog sync done — ${shaped.length} problems (${inserted} new, ${updated} updated)`);
+
+        } catch (err) {
+            const errMsg = err.response?.data?.error || err.response?.data?.message || err.message || err.code || String(err);
+            console.error('[ADMIN] CF catalog sync failed:', errMsg);
+            ErrorLog.create({ source: 'Admin:syncCFProblems', level: 'error', message: errMsg }).catch(() => {});
+            catalogSyncState.cf = {
+                ...catalogSyncState.cf,
+                status: 'error',
+                finishedAt: new Date(),
+                error: errMsg,
+            };
+        }
+    });
+}
+
+// LC GraphQL — used only by syncLCProblems.
+// The problem list is a public endpoint: no proxy, no CSRF, no auth needed.
+const LC_GQL_ENDPOINT = 'https://leetcode.com/graphql';
+const LC_PAGE_SIZE = 100; // LC's documented max per request
+const LC_PROBLEM_LIST_QUERY = `
+query problemList($categorySlug: String, $limit: Int, $skip: Int, $filters: QuestionListFilterInput) {
+  questionList(categorySlug: $categorySlug, limit: $limit, skip: $skip, filters: $filters) {
+    total: totalNum
+    questions: data {
+      title titleSlug difficulty isPaidOnly acRate
+      topicTags { name slug }
+    }
+  }
+}
+`;
+
+async function fetchLCPage(skip) {
+    const res = await axios.post(
+        LC_GQL_ENDPOINT,
+        { query: LC_PROBLEM_LIST_QUERY, variables: { categorySlug: 'algorithms', limit: LC_PAGE_SIZE, skip, filters: {} } },
+        {
+            timeout: 30_000,
+            headers: {
+                'Content-Type': 'application/json',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+                Referer: 'https://leetcode.com',
+                Origin:  'https://leetcode.com',
+                Accept:  'application/json',
+            },
+        }
+    );
+    if (!res.data?.data?.questionList) throw new Error(`Unexpected LC response at skip=${skip}`);
+    return res.data.data.questionList;
+}
+
+/**
+ * POST /api/admin/sync/lc-problems
+ * Paginates LC GraphQL directly from CPPro — no NexusLC needed.
+ * Problem list is public data (no proxy, no CSRF, no auth required).
+ * Returns immediately with { status: 'started' }.
+ * Poll GET /api/admin/sync/catalog-status for progress.
+ */
+async function syncLCProblems(req, res) {
+    if (catalogSyncState.lc.status === 'running') {
+        return res.json({ success: true, status: 'already_running', message: 'LC problem sync is already in progress.' });
+    }
+
+    res.json({ success: true, status: 'started', message: 'LC problem sync started in background. Poll /api/admin/sync/catalog-status for progress.' });
+    catalogSyncState.lc = { status: 'running', startedAt: new Date(), finishedAt: null, total: 0, inserted: 0, updated: 0, error: null };
+
+    setImmediate(async () => {
+        try {
+            console.log('[ADMIN] LC catalog sync started (direct to leetcode.com/graphql)');
+
+            // Page 1 — get total count
+            const firstPage    = await fetchLCPage(0);
+            const total        = firstPage.total ?? 0;
+            const allQuestions = [...(firstPage.questions || [])];
+            const pageCount    = Math.ceil(total / LC_PAGE_SIZE);
+            console.log(`[ADMIN] LC total=${total}, fetching ${pageCount} pages`);
+
+            // Remaining pages
+            for (let page = 1; page < pageCount; page++) {
+                try {
+                    const pageData = await fetchLCPage(page * LC_PAGE_SIZE);
+                    allQuestions.push(...(pageData.questions || []));
+                    console.log(`[ADMIN] LC page ${page + 1}/${pageCount} — running total: ${allQuestions.length}`);
+                } catch (pageErr) {
+                    console.warn(`[ADMIN] LC page ${page + 1} failed: ${pageErr.message}`);
+                }
+            }
+
+            // Shape + filter out paid-only
+            const problems = allQuestions
+                .filter(q => !q.isPaidOnly)
+                .map(q => ({
+                    problemId:  q.titleSlug,
+                    title:      q.title,
+                    url:        `https://leetcode.com/problems/${q.titleSlug}/`,
+                    difficulty: q.difficulty,
+                    tags:       (q.topicTags || []).map(t => t.slug),
+                    acRate:     typeof q.acRate === 'number' ? parseFloat(q.acRate.toFixed(2)) : 0,
+                    isPaidOnly: false,
+                }));
+
+            if (!problems.length) throw new Error('LC returned 0 free algorithm problems');
+
+            const { inserted, updated } = await bulkUpsertProblems(LCProblem, problems);
+
+            await GlobalSyncState.findOneAndUpdate(
+                { syncKey: 'lc_problems' },
+                { syncKey: 'lc_problems', lastSyncedAt: new Date() },
+                { upsert: true, new: true }
+            );
+
+            catalogSyncState.lc = {
+                status: 'done',
+                startedAt: catalogSyncState.lc.startedAt,
+                finishedAt: new Date(),
+                total: problems.length,
+                inserted,
+                updated,
+                error: null,
+            };
+            console.log(`[ADMIN] LC catalog sync done — ${problems.length} problems (${inserted} new, ${updated} updated)`);
+
+        } catch (err) {
+            const errMsg = err.response?.data?.errors?.[0]?.message || err.response?.data?.error || err.message || err.code || String(err);
+            console.error('[ADMIN] LC catalog sync failed:', errMsg);
+            ErrorLog.create({ source: 'Admin:syncLCProblems', level: 'error', message: errMsg }).catch(() => {});
+            catalogSyncState.lc = { ...catalogSyncState.lc, status: 'error', finishedAt: new Date(), error: errMsg };
+        }
+    });
+}
+
+/**
+ * POST /api/admin/sync/cc-problems
+ * Kicks off a background sync of the full CodeChef problem catalog via CC API Server.
+ * Returns immediately with { status: 'started' }.
+ * Poll GET /api/admin/sync/catalog-status for progress.
+ */
+async function syncCCProblems(req, res) {
+    if (catalogSyncState.cc.status === 'running') {
+        return res.json({ success: true, status: 'already_running', message: 'CC problem sync is already in progress.' });
+    }
+
+    const CC_SYNC_API    = (process.env.CC_SYNC_API || '').replace(/\/$/, '');
+    const CC_SYNC_SECRET = process.env.CC_SYNC_SECRET || '';
+    if (!CC_SYNC_API) {
+        return res.status(503).json({ success: false, message: 'CC_SYNC_API not configured in environment.' });
+    }
+
+    res.json({ success: true, status: 'started', message: 'CC problem sync started in background. Poll /api/admin/sync/catalog-status for progress.' });
+
+    catalogSyncState.cc = { status: 'running', startedAt: new Date(), finishedAt: null, total: 0, inserted: 0, cloudflareHits: 0, error: null };
+
+    setImmediate(async () => {
+        try {
+            console.log('[ADMIN] CC problem catalog sync started');
+
+            // CC API server /all-problems paginates all CC problems without difficulty band splitting.
+            // Proxy health check (~30s) + sequential pages with 200ms delay — allow 15 min.
+            const response = await axios.get(`${CC_SYNC_API}/all-problems`, {
+                headers: { Authorization: `Bearer ${CC_SYNC_SECRET}` },
+                timeout: 900_000, // 15 min
+            });
+
+            const problems      = response.data?.problems      || [];
+            const cloudflareHits = response.data?.cloudflareHits ?? 0;
+
+            if (!problems.length) throw new Error('CC API Server returned 0 problems — check CC server logs');
+
+            const { inserted, updated } = await bulkUpsertProblems(CCProblem, problems);
+
+            await GlobalSyncState.findOneAndUpdate(
+                { syncKey: 'cc_problems' },
+                { syncKey: 'cc_problems', lastSyncedAt: new Date() },
+                { upsert: true, new: true }
+            );
+
+            catalogSyncState.cc = {
+                status: 'done',
+                startedAt: catalogSyncState.cc.startedAt,
+                finishedAt: new Date(),
+                total: problems.length,
+                inserted,
+                cloudflareHits,
+                error: null,
+            };
+            console.log(`[ADMIN] CC catalog sync done — ${problems.length} problems (${inserted} new, ${cloudflareHits} CF blocks)`);
+
+        } catch (err) {
+            const errMsg = err.response?.data?.error || err.response?.data?.message || err.message || err.code || String(err);
+            console.error('[ADMIN] CC catalog sync failed:', errMsg);
+            ErrorLog.create({ source: 'Admin:syncCCProblems', level: 'error', message: errMsg }).catch(() => {});
+            catalogSyncState.cc = {
+                ...catalogSyncState.cc,
+                status: 'error',
+                finishedAt: new Date(),
+                error: errMsg,
+            };
+        }
+    });
+}
+
+/**
+ * GET /api/admin/sync/catalog-status
+ * Returns the current in-memory sync state for all three platforms,
+ * plus the last-synced timestamps from GlobalSyncState (persisted across restarts).
+ */
+async function getCatalogSyncStatus(req, res) {
+    try {
+        // Fetch persisted last-sync timestamps from DB
+        const [cfState, lcState, ccState] = await Promise.all([
+            GlobalSyncState.findOne({ syncKey: 'cf_problems' }).lean(),
+            GlobalSyncState.findOne({ syncKey: 'lc_problems' }).lean(),
+            GlobalSyncState.findOne({ syncKey: 'cc_problems' }).lean(),
+        ]);
+
+        // Also fetch current document counts so admin can see catalog size
+        const [cfCount, lcCount, ccCount] = await Promise.all([
+            CFProblem.estimatedDocumentCount(),
+            LCProblem.estimatedDocumentCount(),
+            CCProblem.estimatedDocumentCount(),
+        ]);
+
+        return res.json({
+            success: true,
+            cf: {
+                ...catalogSyncState.cf,
+                lastSyncedAt: cfState?.lastSyncedAt || null,
+                catalogCount: cfCount,
+            },
+            lc: {
+                ...catalogSyncState.lc,
+                lastSyncedAt: lcState?.lastSyncedAt || null,
+                catalogCount: lcCount,
+            },
+            cc: {
+                ...catalogSyncState.cc,
+                lastSyncedAt: ccState?.lastSyncedAt || null,
+                catalogCount: ccCount,
+            },
+        });
+    } catch (err) {
+        console.error('[ADMIN] getCatalogSyncStatus error:', err.message);
+        ErrorLog.create({ source: 'Admin:getCatalogSyncStatus', level: 'error', message: err.message || String(err) }).catch(() => {});
+        return res.status(500).json({ success: false, message: 'Failed to fetch catalog sync status.' });
+    }
+}
+
+module.exports = { getAdminStats, refreshContests, refreshLeaderboard, refreshStats, sendNotification, refreshDailyProblems, refreshMyDailyProblems, refreshDailyTopics, refreshMyDailyTopic, getErrorLogs, clearErrorLogs, getActiveUsers, syncCFProblems, syncLCProblems, syncCCProblems, getCatalogSyncStatus };

@@ -17,9 +17,10 @@ const dailyTopicSchema = new mongoose.Schema({
     language: { type: String, default: 'cpp' },
     content: {
         article:            { type: String, default: '' },
-        dry_run:            { type: String, default: '' },   // Step-by-step walkthrough
+        dry_run:            { type: String, default: '' },
         code_template:      { type: String, default: '' },
         visualization_data: { type: String, default: '' },
+        term_glossary:      { type: mongoose.Schema.Types.Mixed, default: {} },
     },
     generatedAt: {
         type: Date,
