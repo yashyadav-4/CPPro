@@ -28,7 +28,7 @@ async function computeAndCache() {
 
 async function runOnce() {
     try {
-        const state = await GlobalSyncState.findOne({ syncKey: SYNC_KEY });
+        const state = await GlobalSyncState.findOne({ syncKey: SYNC_KEY }).lean();
         if (state?.lastSyncedAt) {
             const elapsed = Date.now() - state.lastSyncedAt.getTime();
             if (elapsed < INTERVAL_MS) {

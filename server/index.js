@@ -41,6 +41,11 @@ const port= process.env.PORT ? parseInt(process.env.PORT) : 5000;
 const compression = require('compression');
 app.use(compression());
 
+const helmet = require('helmet');
+// Security headers — helmet sets X-Content-Type-Options, X-Frame-Options,
+// Referrer-Policy, etc. CSP is off to avoid breaking external fonts/scripts.
+app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
+
 app.use(cors({
     origin: process.env.ALLOWED_ORIGIN || 'http://localhost:5173',
     credentials: true,

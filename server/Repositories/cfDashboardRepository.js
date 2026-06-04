@@ -93,7 +93,7 @@ const getRatingHistory=async(userId , platform)=>{
     const platformData= await Platform.findOne({
         userId:userId,
         platform:platform
-    }).select('ratedHistory currentRating maxRating platformUsername contribution');
+    }).select('ratedHistory currentRating maxRating platformUsername contribution').lean();
 
     return platformData;
 }

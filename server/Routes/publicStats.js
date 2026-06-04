@@ -44,7 +44,9 @@ router.get('/public/summary', async (req, res) => {
         const topUsers = await User.find({ profilePic: { $ne: "" } })
             .sort({ createdAt: -1 })
             .limit(5)
-            .select('profilePic');
+            .select('profilePic')
+            .lean();
+
 
         const calculatedData = {
             activeUsers: totalUsers,
