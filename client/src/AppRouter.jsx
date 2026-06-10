@@ -21,6 +21,7 @@ const ContestTracker = lazy(() => import('./components/ContestTracker/ContestTra
 const AdminDashboard = lazy(() => import('./components/Admin/AdminDashboard.jsx'));
 const HelpSupport = lazy(() => import('./components/HelpSupport/HelpSupport.jsx'));
 const PublicProfile = lazy(() => import('./components/PublicProfile/PublicProfile.jsx'));
+const NotFound = lazy(() => import('./components/NotFound/NotFound.jsx'));
 
 const PageLoader = () => (
   <div className="min-h-screen bg-white dark:bg-[#0a0a0a] flex items-center justify-center">
@@ -55,6 +56,7 @@ const router = createBrowserRouter([
       { path: 'admin', element: withSuspense(<AdminRoute><AdminDashboard /></AdminRoute>) },
       { path: 'login', element: withSuspense(<Login />) },
       { path: 'signup', element: withSuspense(<Signup />) },
+      { path: '*', element: withSuspense(<NotFound />) },
     ],
   },
 ]);

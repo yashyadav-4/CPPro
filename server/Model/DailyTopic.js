@@ -21,6 +21,16 @@ const dailyTopicSchema = new mongoose.Schema({
         code_template:      { type: String, default: '' },
         visualization_data: { type: String, default: '' },
         term_glossary:      { type: mongoose.Schema.Types.Mixed, default: {} },
+        study_resources: {
+            reference_site: {
+                title: { type: String, default: '' },
+                url:   { type: String, default: '' },
+            },
+            youtube_video: {
+                title: { type: String, default: '' },
+                url:   { type: String, default: '' },
+            },
+        },
     },
     generatedAt: {
         type: Date,

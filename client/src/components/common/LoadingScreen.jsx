@@ -109,7 +109,7 @@ export default function LoadingScreen({ onComplete }) {
             textTransform: 'uppercase'
           }}
         >
-          UNLOCKING GROWTH
+          by Yash
         </motion.div>
       </div>
 

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import {
   X, ArrowUp, ArrowDown, MessageCircle, Send,
-  User, Trash2, ShieldCheck, Pin,
+  User, Trash2, ShieldCheck, Pin, Edit2, Save,
 } from "lucide-react";
 import axios from "axios";
 import DeleteConfirmModal from "../common/DeleteConfirmModal";
@@ -23,13 +23,18 @@ const timeAgo = (date) => {
   return "Just now";
 };
 
-export default function PostDetailModal({ post, onClose, onVoteToggle, onPinToggle, currentUser }) {
+export default function PostDetailModal({ post, onClose, onVoteToggle, onPinToggle, onEditPost, currentUser }) {
   const [comments, setComments]           = useState([]);
   const [newComment, setNewComment]       = useState("");
   const [loadingComments, setLoadingComments] = useState(true);
   const [isSubmitting, setIsSubmitting]   = useState(false);
   const [error, setError]                 = useState(null);
   const [commentToDelete, setCommentToDelete] = useState(null);
+
+  const [isEditing, setIsEditing]         = useState(false);
+  const [editTitle, setEditTitle]         = useState(post?.title || "");
+  const [editContent, setEditContent]     = useState(post?.content || "");
+  const [isSavingEdit, setIsSavingEdit]   = useState(false);
 
   useEffect(() => {
     if (post) fetchComments();
@@ -88,6 +93,14 @@ export default function PostDetailModal({ post, onClose, onVoteToggle, onPinTogg
     }
   };
 
+  const handleSaveEdit = async () => {
+    if (!editTitle.trim() || !editContent.trim()) return;
+    setIsSavingEdit(true);
+    await onEditPost(post._id, { title: editTitle, content: editContent });
+    setIsSavingEdit(false);
+    setIsEditing(false);
+  };
+
   if (!post) return null;
 
   const currentUserId = currentUser?._id || "localUser";
@@ -135,6 +148,15 @@ export default function PostDetailModal({ post, onClose, onVoteToggle, onPinTogg
                 <Pin size={11} className="fill-current" /> Pinned
               </span>
             )}
+            {(currentUserId === post.authorId || currentUser?.role === "admin") && !isEditing && (
+              <button
+                onClick={() => setIsEditing(true)}
+                className="text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 p-2 rounded-full transition-colors"
+                title="Edit Post"
+              >
+                <Edit2 size={16} />
+              </button>
+            )}
             <button
               onClick={onClose}
               className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 p-2 rounded-full transition-colors"
@@ -148,31 +170,68 @@ export default function PostDetailModal({ post, onClose, onVoteToggle, onPinTogg
         <div className="flex flex-col md:flex-row overflow-hidden flex-1">
           {/* Post content */}
           <div className="w-full md:w-3/5 p-6 border-b md:border-b-0 md:border-r border-gray-100 dark:border-white/[0.07] overflow-y-auto">
-            <h2 className="text-xl font-extrabold text-gray-900 dark:text-white mb-4 leading-tight">
-              {post.title}
-            </h2>
-
-            {/* Badges */}
-            <div className="flex flex-wrap gap-1.5 mb-5">
-              {typeKey && (
-                <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border capitalize ${TYPE_COLORS[typeKey] || "bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 border-transparent"}`}>
-                  {typeKey}
-                </span>
-              )}
-              {post.tags?.map((t) => (
-                <span
-                  key={t}
-                  className="text-[10px] font-medium px-2.5 py-1 rounded-full bg-gray-100 dark:bg-white/[0.06] text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-white/[0.06]"
-                >
-                  #{t}
-                </span>
-              ))}
-            </div>
-
             {/* Content */}
-            <div className="text-gray-700 dark:text-gray-300 leading-relaxed text-sm whitespace-pre-wrap">
-              {post.content}
-            </div>
+            {isEditing ? (
+              <div className="flex flex-col gap-3 mb-6">
+                <input
+                  type="text"
+                  className="w-full px-4 py-2 bg-white dark:bg-[#111111] border border-gray-200 dark:border-white/[0.08] rounded-xl text-lg font-bold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  placeholder="Post Title"
+                />
+                <textarea
+                  className="w-full px-4 py-3 bg-white dark:bg-[#111111] border border-gray-200 dark:border-white/[0.08] rounded-xl text-sm text-gray-700 dark:text-gray-300 min-h-[150px] focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value)}
+                  placeholder="Post Content"
+                />
+                <div className="flex justify-end gap-2 mt-2">
+                  <button
+                    onClick={() => {
+                      setIsEditing(false);
+                      setEditTitle(post.title);
+                      setEditContent(post.content);
+                    }}
+                    className="px-4 py-1.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveEdit}
+                    disabled={isSavingEdit || !editTitle.trim() || !editContent.trim()}
+                    className="px-4 py-1.5 rounded-lg text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors flex items-center gap-1.5"
+                  >
+                    <Save size={14} />
+                    {isSavingEdit ? "Saving..." : "Save"}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <h2 className="text-xl font-extrabold text-gray-900 dark:text-white mb-4 leading-tight">
+                  {post.title}
+                </h2>
+                <div className="flex flex-wrap gap-1.5 mb-5">
+                  {typeKey && (
+                    <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border capitalize ${TYPE_COLORS[typeKey] || "bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 border-transparent"}`}>
+                      {typeKey}
+                    </span>
+                  )}
+                  {post.tags?.map((t) => (
+                    <span
+                      key={t}
+                      className="text-[10px] font-medium px-2.5 py-1 rounded-full bg-gray-100 dark:bg-white/[0.06] text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-white/[0.06]"
+                    >
+                      #{t}
+                    </span>
+                  ))}
+                </div>
+                <div className="text-gray-700 dark:text-gray-300 leading-relaxed text-sm whitespace-pre-wrap">
+                  {post.content}
+                </div>
+              </>
+            )}
 
             {/* Vote + pin controls */}
             <div className="flex items-center gap-3 mt-8 pt-5 border-t border-gray-100 dark:border-white/[0.07]">

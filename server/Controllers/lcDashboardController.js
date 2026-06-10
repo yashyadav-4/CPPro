@@ -1,6 +1,7 @@
 const LeetCodeData = require('../Model/LeetCodeData');
 const Platform = require('../Model/Platform');
 const Submission = require('../Model/Submissions');
+const LCProblem = require('../Model/LCProblem');
 const mongoose = require('mongoose');
 
 // Helper to strictly format dates as YYYY-MM-DD in IST
@@ -114,7 +115,25 @@ async function getLcRecentSubmissions(req, res) {
         if (!lcData) {
             return res.status(200).json({ success: true, data: null });
         }
-        res.status(200).json({ success: true, data: lcData.recentSubmissions });
+
+        const recentSubsRaw = lcData.recentSubmissions || [];
+        const titleSlugs = [...new Set(recentSubsRaw.map(s => s.titleSlug).filter(Boolean))];
+        const lcProbs = await LCProblem.find(
+            { problemId: { $in: titleSlugs } },
+            { problemId: 1, difficulty: 1 }
+        ).lean();
+        const diffMap = new Map(lcProbs.map(p => [p.problemId, p.difficulty]));
+
+        const recentSubmissionsWithDiff = recentSubsRaw.map(s => ({
+            title: s.title,
+            titleSlug: s.titleSlug,
+            timestamp: s.timestamp,
+            statusDisplay: s.statusDisplay,
+            lang: s.lang,
+            difficulty: diffMap.get(s.titleSlug) || null,
+        }));
+
+        res.status(200).json({ success: true, data: recentSubmissionsWithDiff });
     } catch (error) {
         console.error('error in getLcRecentSubmissions:', error);
         return res.status(500).json({ success: false, message: error.message });
@@ -365,6 +384,23 @@ async function getLcAggregateDashboard(req, res) {
             { icon: '🧠', label: '100 Hard Problems', platform: 'leetcode', earned: lcHard >= 100, progress: Math.min(lcHard / 100, 1) },
         ];
 
+        const recentSubsRaw = lcData.recentSubmissions || [];
+        const titleSlugs = [...new Set(recentSubsRaw.map(s => s.titleSlug).filter(Boolean))];
+        const lcProbs = await LCProblem.find(
+            { problemId: { $in: titleSlugs } },
+            { problemId: 1, difficulty: 1 }
+        ).lean();
+        const diffMap = new Map(lcProbs.map(p => [p.problemId, p.difficulty]));
+
+        const recentSubmissionsWithDiff = recentSubsRaw.map(s => ({
+            title: s.title,
+            titleSlug: s.titleSlug,
+            timestamp: s.timestamp,
+            statusDisplay: s.statusDisplay,
+            lang: s.lang,
+            difficulty: diffMap.get(s.titleSlug) || null,
+        }));
+
         res.status(200).json({
             success: true,
             data: {
@@ -403,8 +439,8 @@ async function getLcAggregateDashboard(req, res) {
                 lcTotalSubmissions: totalSubmissionsNum?.submissions || 0,  // ALL submissions (every attempt)
                 lcAcSubmissions: acSubmissions?.submissions || 0,            // AC submissions only
                 lastSyncedAt: lcData.lastSyncedAt || null,
-                // Recent AC submissions (title, titleSlug, timestamp)
-                recentSubmissions: lcData.recentSubmissions || [],
+                // Recent AC submissions (title, titleSlug, timestamp) with difficulty mapped
+                recentSubmissions: recentSubmissionsWithDiff,
                 // Tiered skill stats for LC Skill Breakdown component
                 lcSkillFundamental: (skillStats.fundamental || [])
                     .map(t => ({ name: t.tagName, count: t.problemsSolved }))

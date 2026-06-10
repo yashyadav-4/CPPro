@@ -124,9 +124,72 @@ async function fetchLC() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// CodeChef — starters-api (public JSON endpoint)
-// Returns upcoming + recent rated contests.
+// AtCoder — via CLIST.by public API (resource=atcoder.jp)
+// Falls back gracefully if the CLIST_API_KEY env var is missing.
 // ─────────────────────────────────────────────────────────────────────────────
+async function fetchAC() {
+    const apiKey = process.env.CLIST_API_KEY;
+    if (!apiKey) {
+        console.warn('[contestSync] CLIST_API_KEY not set — skipping AtCoder sync.');
+        return [];
+    }
+
+    const now    = Date.now();
+    const BACK    = 180 * 24 * 3600 * 1000;
+    const FORWARD = 30 * 24 * 3600 * 1000;
+
+    const from = new Date(now - BACK).toISOString();
+    const to   = new Date(now + FORWARD).toISOString();
+
+    const url = `https://clist.by/api/v4/contest/?resource=atcoder.jp&start__gte=${from}&start__lte=${to}&order_by=start&limit=100&format=json`;
+
+    const { data } = await http.get(url, {
+        headers: { Authorization: `ApiKey ${apiKey}` }
+    });
+
+    if (!data || !Array.isArray(data.objects)) throw new Error('CLIST API unexpected response for AtCoder');
+
+    const raw = data.objects.map(c => {
+        const startTime = new Date(c.start);
+        const endTime   = new Date(c.end);
+        const durSec    = Math.max(0, (endTime - startTime) / 1000);
+        return {
+            contestId: makeId('atcoder', c.event, startTime),
+            platform:  'atcoder',
+            name:      c.event,
+            startTime,
+            endTime,
+            duration:  Math.round(durSec / 60),
+            url:       c.href || `https://atcoder.jp/contests/${c.id}`,
+            status:    'BEFORE',
+        };
+    });
+
+    // Deduplicate AtCoder division contests:
+    // AtCoder splits events into Div.1 / Div.2 / Div.3 etc. with the same start time.
+    // Strip the division suffix to get a base key, then keep only the first (Div.1 / highest tier).
+    const DIV_SUFFIX = /[\s\-–]*(div(ision)?\.?\s*\d+|grand\s*final|final)$/i;
+    const seen = new Map(); // key -> first contest
+
+    for (const c of raw) {
+        const baseKey = c.name.replace(DIV_SUFFIX, '').trim().toLowerCase()
+            + '::' + c.startTime.getTime();
+        if (!seen.has(baseKey)) {
+            seen.set(baseKey, c);
+        } else {
+            // Prefer the entry whose name ends with Div.1 or has no division suffix (main round)
+            const existing = seen.get(baseKey);
+            const isMainRound = !DIV_SUFFIX.test(c.name);
+            const isDiv1 = /div(ision)?\.?\s*1/i.test(c.name);
+            const existingIsMain = !DIV_SUFFIX.test(existing.name);
+            if (!existingIsMain && (isMainRound || isDiv1)) {
+                seen.set(baseKey, c);
+            }
+        }
+    }
+
+    return Array.from(seen.values());
+}
 async function fetchCC() {
     // CodeChef's public contest list endpoint
     const { data } = await http.get('https://www.codechef.com/api/list/contests/all?sort_by=START&sorting_order=asc&offset=0&mode=all');
@@ -171,19 +234,21 @@ async function syncContests() {
     console.log('[contestSync] Starting sync…');
 
     // 1. Fetch from all APIs in parallel (partial failure is OK)
-    const [cfRes, lcRes, ccRes] = await Promise.allSettled([fetchCF(), fetchLC(), fetchCC()]);
+    const [cfRes, lcRes, ccRes, acRes] = await Promise.allSettled([fetchCF(), fetchLC(), fetchCC(), fetchAC()]);
 
     if (cfRes.status === 'rejected') console.error('[contestSync] CF failed:', cfRes.reason?.message);
     if (lcRes.status === 'rejected') console.error('[contestSync] LC failed:', lcRes.reason?.message);
     if (ccRes.status === 'rejected') console.error('[contestSync] CC failed:', ccRes.reason?.message);
+    if (acRes.status === 'rejected') console.error('[contestSync] AC failed:', acRes.reason?.message);
 
     const contests = [
         ...(cfRes.status === 'fulfilled' ? cfRes.value : []),
         ...(lcRes.status === 'fulfilled' ? lcRes.value : []),
         ...(ccRes.status === 'fulfilled' ? ccRes.value : []),
+        ...(acRes.status === 'fulfilled' ? acRes.value : []),
     ];
 
-    console.log(`[contestSync] Fetched ${contests.length} contests (CF + LC + CC)`);
+    console.log(`[contestSync] Fetched ${contests.length} contests (CF + LC + CC + AC)`);
 
     // 2. Upsert all contests — update fields if the contest already exists
     if (contests.length > 0) {

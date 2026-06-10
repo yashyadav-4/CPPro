@@ -1,5 +1,6 @@
 const Platform = require('../Model/Platform');
 const Submission = require('../Model/Submissions');
+const CCProblem = require('../Model/CCProblem');
 const mongoose = require('mongoose');
 
 function getISTDate(dateInput) {
@@ -30,7 +31,7 @@ async function getCcAggregateDashboard(req, res) {
         const [ccPlatform, rawCcSubmissions] = await Promise.all([
             Platform.findOne({ userId, platform: 'codechef' }).lean(),
             Submission.find({ userId: userObjectId, platform: 'codechef' })
-                .select('submittedAt verdict problemId problemTitle language contestId')
+                .select('submittedAt verdict problemId problemTitle language contestId difficulty')
                 .lean(),
         ]);
 
@@ -202,21 +203,33 @@ async function getCcAggregateDashboard(req, res) {
         // slightly different wall-clock times, producing different submittedAt
         // values that bypass the unique index. Show only the most recent AC per problem.
         const seenProblems = new Set();
-        const recentCcAcSubmissions = [...acSubmissions]
+        const recentCcAcSubmissionsRaw = [...acSubmissions]
             .sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt))
             .filter(s => {
                 if (seenProblems.has(s.problemId)) return false;
                 seenProblems.add(s.problemId);
                 return true;
             })
-            .slice(0, 15)
-            .map(s => ({
+            .slice(0, 15);
+
+        const ccProblemIds = recentCcAcSubmissionsRaw.map(s => s.problemId).filter(Boolean);
+        const ccProbs = await CCProblem.find(
+            { problemId: { $in: ccProblemIds } },
+            { problemId: 1, difficulty: 1 }
+        ).lean();
+        const diffMap = new Map(ccProbs.map(p => [p.problemId, p.difficulty]));
+
+        const recentCcAcSubmissions = recentCcAcSubmissionsRaw.map(s => {
+            const catalogDiff = diffMap.get(s.problemId);
+            return {
                 title: s.problemTitle || s.problemId || 'Unknown',
                 problemId: s.problemId,
                 url: s.problemId ? `https://www.codechef.com/problems/${s.problemId}` : null,
                 submittedAt: s.submittedAt,
                 verdict: 'AC',
-            }));
+                difficulty: catalogDiff && catalogDiff !== 0 ? String(catalogDiff) : (s.difficulty && s.difficulty !== '0' ? s.difficulty : null),
+            };
+        });
 
         return res.status(200).json({
             success: true,

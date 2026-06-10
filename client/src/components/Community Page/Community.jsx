@@ -269,6 +269,19 @@ export default function Community() {
     }
   };
 
+  const handleEditPost = async (postId, updatedData) => {
+    try {
+      const res = await axios.patch(`/api/posts/${postId}`, updatedData, { withCredentials: true });
+      setAllPosts(cur => cur.map(p => p._id === postId ? { ...p, ...res.data } : p));
+      setPosts(cur => cur.map(p => p._id === postId ? { ...p, ...res.data } : p));
+      if (selectedPost?._id === postId) {
+        setSelectedPost({ ...selectedPost, ...res.data });
+      }
+    } catch (error) {
+      setFetchError("Could not update post.");
+    }
+  };
+
   const confirmDeletePost = async () => {
     if (!postToDelete) return;
     try {
@@ -719,6 +732,7 @@ export default function Community() {
           onClose={() => setSelectedPost(null)}
           onVoteToggle={handleVote}
           onPinToggle={handleTogglePin}
+          onEditPost={handleEditPost}
           currentUser={currentUser}
         />
       )}

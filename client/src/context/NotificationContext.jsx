@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { API_BASE } from '../api';
+import { apiFetch } from '../api';
 
 const NotificationContext = createContext(null);
 
@@ -11,7 +11,7 @@ export function NotificationProvider({ children }) {
 
     const fetchNotifications = useCallback(async () => {
         try {
-            const res = await fetch(`${API_BASE}/api/notifications`, { credentials: 'include' });
+            const res = await apiFetch('/api/notifications');
             if (!res.ok) return;
             const data = await res.json();
             if (data.success) {
@@ -31,17 +31,20 @@ export function NotificationProvider({ children }) {
 
     const markRead = useCallback(async (id) => {
         try {
-            await fetch(`/api/notifications/${id}/read`, { method: 'PATCH', credentials: 'include' });
+            const wasUnread = notifications.some(n => n._id === id && !n.read);
+            const res = await apiFetch(`/api/notifications/${id}/read`, { method: 'PATCH' });
+            if (!res.ok) return;
             setNotifications(prev =>
                 prev.map(n => n._id === id ? { ...n, read: true } : n)
             );
-            setUnreadCount(prev => Math.max(0, prev - 1));
+            if (wasUnread) setUnreadCount(prev => Math.max(0, prev - 1));
         } catch { /* ignore */ }
-    }, []);
+    }, [notifications]);
 
     const markAllRead = useCallback(async () => {
         try {
-            await fetch(`${API_BASE}/api/notifications/read-all`, { method: 'PATCH', credentials: 'include' });
+            const res = await apiFetch('/api/notifications/read-all', { method: 'PATCH' });
+            if (!res.ok) return;
             setNotifications(prev => prev.map(n => ({ ...n, read: true })));
             setUnreadCount(0);
         } catch { /* ignore */ }
@@ -49,7 +52,8 @@ export function NotificationProvider({ children }) {
 
     const clearRead = useCallback(async () => {
         try {
-            await fetch(`${API_BASE}/api/notifications/clear-read`, { method: 'DELETE', credentials: 'include' });
+            const res = await apiFetch('/api/notifications/clear-read', { method: 'DELETE' });
+            if (!res.ok) return;
             setNotifications(prev => prev.filter(n => !n.read));
         } catch { /* ignore */ }
     }, []);

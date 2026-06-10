@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     Sparkles, Loader2, Code2,
     GitBranch, Copy, Check, ChevronRight, Play, BookOpen,
+    ExternalLink,
 } from 'lucide-react';
 import axios from 'axios';
 import { API_BASE } from '../../api';
@@ -11,6 +12,8 @@ import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import mermaid from 'mermaid';
+
+const MotionDiv = motion.div;
 
 // ── Strip LaTeX $...$ ────────────────────────────────────────────────────────
 function cleanLatex(text) {
@@ -135,7 +138,7 @@ function TermTooltip({ term, definition }) {
 
             <AnimatePresence>
                 {visible && (
-                    <motion.div
+                    <MotionDiv
                         initial={{ opacity: 0, y: pos === 'top' ? 4 : -4, scale: 0.97 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.97 }}
@@ -154,7 +157,7 @@ function TermTooltip({ term, definition }) {
                             bg-[#1a1a1a] border-white/[0.1]
                             ${pos === 'top' ? 'bottom-[-5px] border-r border-b' : 'top-[-5px] border-l border-t'}
                         `} />
-                    </motion.div>
+                    </MotionDiv>
                 )}
             </AnimatePresence>
         </span>
@@ -183,6 +186,111 @@ function GlossaryPanel({ glossary }) {
 }
 
 // ── Markdown color palette ────────────────────────────────────────────────────
+function safeHttpUrl(value) {
+    if (typeof value !== 'string' || !value.trim()) return '';
+    try {
+        const url = new URL(value.trim());
+        if (url.protocol !== 'https:') return '';
+        return url.toString();
+    } catch {
+        return '';
+    }
+}
+
+function buildFallbackResources(topic) {
+    const name = topic || 'competitive programming topic';
+    return {
+        reference_site: {
+            title: `${name} written reference`,
+            url: `https://www.geeksforgeeks.org/?s=${encodeURIComponent(name)}`,
+        },
+        youtube_video: {
+            title: `${name} YouTube lesson`,
+            url: `https://www.youtube.com/results?search_query=${encodeURIComponent(`${name} competitive programming algorithm tutorial`)}`,
+        },
+    };
+}
+
+function normalizeResources(resources, topic) {
+    const fallback = buildFallbackResources(topic);
+    const reference = resources?.reference_site || {};
+    const video = resources?.youtube_video || {};
+
+    return {
+        reference_site: {
+            title: reference.title || fallback.reference_site.title,
+            url: safeHttpUrl(reference.url) || fallback.reference_site.url,
+        },
+        youtube_video: {
+            title: video.title || fallback.youtube_video.title,
+            url: safeHttpUrl(video.url) || fallback.youtube_video.url,
+        },
+    };
+}
+
+function StudyResourcesPanel({ resources, topic }) {
+    const normalized = normalizeResources(resources, topic);
+    const items = [
+        {
+            key: 'reference',
+            label: 'Written Reference',
+            title: normalized.reference_site.title,
+            url: normalized.reference_site.url,
+            icon: <BookOpen size={15} />,
+            accent: 'text-sky-400',
+            bg: 'bg-sky-500/[0.08]',
+            border: 'border-sky-500/20',
+        },
+        {
+            key: 'youtube',
+            label: 'YouTube Lesson',
+            title: normalized.youtube_video.title,
+            url: normalized.youtube_video.url,
+            icon: <Play size={15} />,
+            accent: 'text-red-400',
+            bg: 'bg-red-500/[0.08]',
+            border: 'border-red-500/20',
+        },
+    ].filter(item => item.url);
+
+    if (items.length === 0) return null;
+
+    return (
+        <div className="mb-6 rounded-xl border border-white/[0.07] bg-white/[0.02] p-4">
+            <div className="flex items-center gap-2 mb-3">
+                <ExternalLink size={12} className="text-emerald-400" />
+                <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-emerald-400/70">
+                    Study Resources
+                </p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {items.map(({ key, label, title, url, icon, accent, bg, border }) => (
+                    <a
+                        key={key}
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`group flex items-start gap-3 rounded-lg border ${border} ${bg} px-4 py-3 transition-colors hover:bg-white/[0.05]`}
+                    >
+                        <span className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-black/10 ${accent}`}>
+                            {icon}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                            <span className={`block text-[10px] font-bold uppercase tracking-[0.14em] ${accent}`}>
+                                {label}
+                            </span>
+                            <span className="mt-1 block text-[13px] font-semibold leading-snug text-[var(--color-text-main)] group-hover:underline">
+                                {title}
+                            </span>
+                        </span>
+                        <ExternalLink size={13} className="mt-1 shrink-0 text-gray-500 group-hover:text-gray-300" />
+                    </a>
+                ))}
+            </div>
+        </div>
+    );
+}
+
 const H2_COLORS = [
     { text: 'text-emerald-400', border: 'border-emerald-500/40', bg: 'bg-emerald-500/[0.06]' },
     { text: 'text-sky-400',     border: 'border-sky-500/40',     bg: 'bg-sky-500/[0.06]' },
@@ -263,7 +371,7 @@ function DryRunSection({ content }) {
             </button>
             <AnimatePresence>
                 {open && (
-                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}
+                    <MotionDiv initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.3, ease: 'easeInOut' }}
                         className="overflow-hidden">
                         <div className="px-6 py-5 bg-[var(--color-bg)]">
@@ -273,7 +381,7 @@ function DryRunSection({ content }) {
                                 </ReactMarkdown>
                             </article>
                         </div>
-                    </motion.div>
+                    </MotionDiv>
                 )}
             </AnimatePresence>
         </div>
@@ -305,13 +413,26 @@ export default function DailyTopicSection() {
         setLoading(true);
         setError(null);
         try {
-            const res = await axios.get(`${API_BASE}/api/daily/topic`, { withCredentials: true });
+            const res = await axios.get(`${API_BASE}/api/daily/topic`, { 
+                withCredentials: true,
+                timeout: 120000 // give the backend 2 minutes
+            });
             if (res.data.success) setData(res.data.data);
             else setError('Could not load topic');
+            setLoading(false);
         } catch (err) {
+            // If the proxy times out (504) or there's a network/timeout error,
+            // the LLM is likely still generating on the backend in the background.
+            // Just retry silently!
+            if (!err.response || err.response.status === 504 || err.response.status === 503 || err.code === 'ECONNABORTED') {
+                setTimeout(() => {
+                    fetchedRef.current = false;
+                    prefetch();
+                }, 5000);
+                return; // Skip setting loading to false
+            }
             setError(err.response?.data?.message || 'Failed to generate topic');
             fetchedRef.current = false;
-        } finally {
             setLoading(false);
         }
     }
@@ -371,7 +492,7 @@ export default function DailyTopicSection() {
     const lang = LANG_MAP[data.language] || LANG_MAP.cpp;
 
     return (
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+        <MotionDiv initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
 
             {/* Topic header */}
             <div className="relative overflow-hidden rounded-xl p-6 mb-5
@@ -389,6 +510,8 @@ export default function DailyTopicSection() {
                     <h1 className="text-2xl font-extrabold text-[var(--color-text-main)] leading-tight">{data.topic}</h1>
                 </div>
             </div>
+
+            <StudyResourcesPanel resources={c.study_resources} topic={data.topic} />
 
             {/* Glossary panel — hover over terms to see definitions */}
             <GlossaryPanel glossary={glossary} />
@@ -444,6 +567,6 @@ export default function DailyTopicSection() {
                     </article>
                 </div>
             )}
-        </motion.div>
+        </MotionDiv>
     );
 }

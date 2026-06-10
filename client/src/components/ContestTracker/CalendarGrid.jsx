@@ -28,7 +28,15 @@ const PLATFORM_META = {
     pillAttempted: 'bg-emerald-500 dark:bg-emerald-600 border-emerald-600 text-white shadow-sm shadow-emerald-500/20',
     label: 'CC',
   },
+  atcoder: {
+    dot:   'bg-violet-500',
+    pill:  'bg-violet-500/10 dark:bg-violet-500/15 border border-violet-500/20 text-violet-600 dark:text-violet-400',
+    dotAttempted: 'bg-white',
+    pillAttempted: 'bg-violet-600 dark:bg-violet-500 border-violet-600 text-white shadow-sm shadow-violet-500/20',
+    label: 'AC',
+  },
 };
+
 
 const Skeleton = ({ className = '' }) => (
   <div className={`animate-pulse bg-gray-100 dark:bg-white/5 rounded ${className}`} />
@@ -161,7 +169,7 @@ export default function CalendarGrid({ contests = [], year, month, onPrev, onNex
             <div
               key={key}
               className={`
-                relative rounded-lg p-1 flex flex-col gap-0.5 transition-all duration-200 cursor-default min-h-[100px]
+                relative rounded-lg p-1 flex flex-col gap-0.5 transition-all duration-200 cursor-default min-h-[125px]
                 ${today_
                   ? 'bg-emerald-50 dark:bg-emerald-500/[0.08] border border-emerald-200 dark:border-emerald-500/30'
                   : dayItems.length > 0
@@ -179,8 +187,8 @@ export default function CalendarGrid({ contests = [], year, month, onPrev, onNex
                 {day}
               </span>
 
-              {/* Contest pills — show up to 4, then overflow indicator */}
-              {dayItems.slice(0, 4).map((c, i) => {
+              {/* Contest pills — show up to 5, then overflow indicator */}
+              {dayItems.slice(0, 5).map((c, i) => {
                 const meta = PLATFORM_META[c.platform] || PLATFORM_META.codeforces;
                 return (
                   <a
@@ -207,9 +215,9 @@ export default function CalendarGrid({ contests = [], year, month, onPrev, onNex
                 );
               })}
 
-              {dayItems.length > 4 && (
+              {dayItems.length > 5 && (
                 <span className="text-[9px] text-gray-400 dark:text-gray-600 font-medium pl-0.5 mt-auto">
-                  +{dayItems.length - 4} more
+                  +{dayItems.length - 5} more
                 </span>
               )}
             </div>

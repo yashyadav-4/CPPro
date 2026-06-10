@@ -1,4 +1,5 @@
 const Notification = require('../Model/Notification');
+const mongoose = require('mongoose');
 
 async function getNotifications(req, res) {
     try {
@@ -17,7 +18,16 @@ async function markRead(req, res) {
     try {
         const userId = req.user._id;
         const { id } = req.params;
-        await Notification.updateOne({ _id: id, userId }, { $set: { read: true } });
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ success: false, message: 'Invalid notification id.' });
+        }
+
+        const result = await Notification.updateOne({ _id: id, userId }, { $set: { read: true } });
+        if (result.matchedCount === 0) {
+            return res.status(404).json({ success: false, message: 'Notification not found.' });
+        }
+
         return res.json({ success: true });
     } catch (err) {
         return res.status(500).json({ success: false, message: err.message });

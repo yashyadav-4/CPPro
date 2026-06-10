@@ -19,6 +19,11 @@ const PLATFORM_META = {
     badge:  'bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400',
     abbr:   'CC',
   },
+  atcoder: {
+    dot:    'bg-violet-500',
+    badge:  'bg-violet-500/10 dark:bg-violet-500/15 border border-violet-500/20 text-violet-600 dark:text-violet-400',
+    abbr:   'AC',
+  },
 };
 
 const MONTH_ABBR = ['JAN','FEB','MAR','APR','MAY','JUN',

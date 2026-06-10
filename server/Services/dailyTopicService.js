@@ -7,6 +7,7 @@ const LeetCodeData = require('../Model/LeetCodeData');
 const User       = require('../Model/User');
 const ErrorLog   = require('../Model/ErrorLog');
 const { getTodayIST, getNDaysAgoIST } = require('../Utils/dateUtils');
+const ytSearch = require('yt-search');
 
 // ── Round-robin key pool ────────────────────────────────────────────
 const KEYS = (process.env.GEMINI_API_KEYS || '')
@@ -264,7 +265,17 @@ You will receive a specific algorithm/technique name. Return ONLY a raw JSON obj
   "article": "string — engaging markdown tutorial (see requirements below)",
   "dry_run": "string — step-by-step walkthrough/dry-run with a concrete small example in markdown",
   "code_template": "string — clean, well-commented ${langName} implementation ready for contests",
-  "visualization_data": "string - valid Mermaid.js flowchart/graph syntax illustrating the algorithm flow. DO NOT wrap in markdown code blocks. Output raw mermaid syntax only. Use simple labels, no special characters."
+  "visualization_data": "string - valid Mermaid.js flowchart/graph syntax illustrating the algorithm flow. DO NOT wrap in markdown code blocks. Output raw mermaid syntax only. Use simple labels, no special characters.",
+  "study_resources": {
+    "reference_site": {
+      "title": "string - title of a high-quality written resource (e.g. 'CP-Algorithms: Floyd-Warshall')",
+      "exact_url": "string - full https direct URL to this exact article"
+    },
+    "youtube_video": {
+      "title": "string - title of a beginner-friendly YouTube lesson (e.g. 'Floyd-Warshall - WilliamFiset')",
+      "search_query": "string - YouTube search query to find this exact video (e.g. 'Floyd-Warshall WilliamFiset')"
+    }
+  }
 }
 
 TERM_GLOSSARY REQUIREMENTS (for the "term_glossary" field):
@@ -279,11 +290,13 @@ ARTICLE REQUIREMENTS (for the "article" field):
 - Structure with these sections:
 
   ## What is [Topic]?
-  MUST write at LEAST 4 substantial paragraphs:
-  PARAGRAPH 1 (real-world analogy): Start with a vivid, relatable real-world story or analogy (postal worker, GPS navigation, building roads, etc.). Make it concrete and specific, not abstract. At least 60 words.
-  PARAGRAPH 2 (formal definition): Now translate to CS terms. Define formally but still accessibly. Explain the core data structure/concept being operated on. At least 50 words.
-  PARAGRAPH 3 (how it works): Explain the core mechanism — what does the algorithm DO, step by step at a conceptual level? Give a tiny inline example with 3-4 nodes/values to illustrate. At least 60 words.
-  PARAGRAPH 4 (what makes it special): Compare to naive approaches. Why is this technique better? What problem does it elegantly solve that brute force can't? At least 40 words.
+  MUST write at LEAST 6 substantial paragraphs. This is the most important section for human understanding.
+  PARAGRAPH 1 (real-world analogy): Start with a vivid, relatable real-world story or analogy (postal worker, GPS navigation, building roads, etc.). Make it concrete and specific, not abstract. At least 70 words.
+  PARAGRAPH 2 (problem in plain English): Before using CS terms, explain the exact kind of question this topic answers. Say what the input looks like, what the output means, and why a beginner should care. At least 60 words.
+  PARAGRAPH 3 (formal definition): Now translate to CS terms. Define formally but still accessibly. Explain the core data structure/concept being operated on and define each essential word the first time you use it. At least 70 words.
+  PARAGRAPH 4 (mental model): Explain the core mechanism like a checklist the reader can run in their head. Describe what changes after each step and what stays true. At least 70 words.
+  PARAGRAPH 5 (tiny example): Give a tiny inline example with 3-4 nodes/values. Walk through one or two moves slowly, using simple names like A, B, C or a, b, c. At least 70 words.
+  PARAGRAPH 6 (why it is special): Compare to naive approaches. Why is this technique better? What problem does it elegantly solve that brute force cannot scale to? Explain the key insight in one memorable sentence. At least 60 words.
 
   ## Why Should You Care?
   Why this is a contest superpower. Reference problem types, contest scenarios. At the end of this section, give ONE concrete example: "For instance, if a problem asks to find the minimum number of X such that Y, think of this algorithm."
@@ -301,7 +314,13 @@ ARTICLE REQUIREMENTS (for the "article" field):
 - Use > blockquotes for pro tips.
 - NEVER use LaTeX or dollar signs ($). Write complexity as O(N log N).
 - Use simple variable names: a, b, c (NOT x_0, x_1). For nodes use A, B, C or 1, 2, 3.
-- Target 800-1000 words total for the article.
+- Target 1000-1300 words total for the article.
+
+STUDY_RESOURCES REQUIREMENTS (for the "study_resources" field):
+- Always include exactly one reference_site and exactly one youtube_video.
+- reference_site must be a real, high-signal written tutorial or reference for the exact topic. Prefer cp-algorithms.com, usaco.guide, visualgo.net, geeksforgeeks.org, leetcode.com. Provide the EXACT working URL.
+- youtube_video must be an ENGLISH YouTube lesson. Prefer English-speaking channels like WilliamFiset, NeetCode, Tushar Roy, Errichto. Provide a YouTube search query that will return it as the top result (append 'English' if needed).
+- Do not put these links in the article body; only put them in study_resources.
 
 DRY RUN REQUIREMENTS (for the "dry_run" field):
 - Pick a SMALL concrete example (e.g., a graph with 4-5 nodes, an array of 5-6 elements).
@@ -331,22 +350,35 @@ async function callGemma(topic, language) {
 
 Write a fun, engaging tutorial and a detailed dry-run with a small concrete example.
 The ${langName} template should be clean, contest-ready code with comments.
-The Mermaid diagram should visually illustrate the algorithm's core logic.`;
+The Mermaid diagram should visually illustrate the algorithm's core logic.
+Also include one written reference site and one YouTube study video in study_resources.`;
 
     const maxAttempts = Math.min(KEYS.length, 5);
     let lastError = null;
 
     // The model cascade: Try these models in order on the SAME key.
     // Each model has its own independent rate-limit bucket on Google's free tier.
+    // NOTE: gemini-1.5 and gemini-2.0 were shut down on June 1, 2026.
+    // gemini-3.5-flash is the current recommended model, and gemini-3.1-flash-lite is the lightweight alternative.
+    // gemini-2.5-flash was removed as it deprecates on June 17, 2026.
     const modelsToTry = [
         MODEL_NAME, // gemma-4-31b-it
         'gemini-3.5-flash',
-        'gemini-2.5-flash',
-        'gemini-flash-latest'
+        'gemini-3.1-flash-lite',
+        'gemini-3.1-pro-preview',
+        'gemini-pro-latest',
+        'gemini-flash-latest',
     ];
 
     for (let i = 0; i < maxAttempts; i++) {
         const key = nextKey();
+
+        // Add a small delay between key retries (not on the first attempt)
+        // to avoid hammering the same overloaded infrastructure immediately
+        if (i > 0) {
+            await new Promise(resolve => setTimeout(resolve, 1500));
+        }
+
         try {
             const genAI = new GoogleGenerativeAI(key);
             let result = null;
@@ -361,7 +393,20 @@ The Mermaid diagram should visually illustrate the algorithm's core logic.`;
                         generationConfig: { temperature: 0.7, maxOutputTokens: 8192, responseMimeType: 'application/json' },
                     });
                     result = await model.generateContent(userPrompt);
-                    break; // Success! Break out of the model cascade loop
+
+                    // Validate we got parseable JSON before declaring success
+                    const rawText = result.response.text();
+                    try {
+                        const parsed = parseJSON(rawText);
+                        // Success! Return the parsed result directly
+                        return parsed;
+                    } catch (parseErr) {
+                        // Model responded but output was malformed JSON — try next model
+                        console.log(`[DailyTopic] ${modelId} returned unparseable JSON, trying next model...`);
+                        modelFailure = parseErr;
+                        result = null;
+                        continue;
+                    }
                 } catch (err) {
                     modelFailure = err;
                     const msg = err.message.toLowerCase();
@@ -386,7 +431,7 @@ The Mermaid diagram should visually illustrate the algorithm's core logic.`;
         } catch (err) {
             lastError = err;
             const currentKeyIdx = (keyIndex - 1 + KEYS.length) % KEYS.length + 1;
-            console.error(`[DailyTopic] Key #${currentKeyIdx} failed completely:`, err.message);
+            console.error(`[DailyTopic] Gemini key #${currentKeyIdx} failed:`, err.message);
             ErrorLog.create({ source: 'DailyTopic', level: 'error', message: `Gemini key #${currentKeyIdx} failed: ${err.message}` }).catch(() => {});
         }
     }
@@ -480,6 +525,129 @@ function repairJSON(str) {
     result = result.replace(/,\s*([\]}])/g, '$1');
 
     return result;
+}
+
+function buildSearchUrl(base, query) {
+    return `${base}${encodeURIComponent(query)}`;
+}
+
+function safeHttpsUrl(value) {
+    if (typeof value !== 'string' || !value.trim()) return '';
+    try {
+        const url = new URL(value.trim());
+        if (url.protocol !== 'https:') return '';
+        return url.toString();
+    } catch {
+        return '';
+    }
+}
+
+function isYoutubeUrl(url) {
+    try {
+        const parsed = new URL(url);
+        const host = parsed.hostname.toLowerCase().replace(/^www\./, '');
+        if (host === 'youtu.be') return parsed.pathname.length > 1;
+        if (host !== 'youtube.com' && host !== 'm.youtube.com') return false;
+        return (parsed.pathname === '/watch' && parsed.searchParams.has('v'))
+            || parsed.pathname.startsWith('/embed/');
+    } catch {
+        return false;
+    }
+}
+
+function cleanResourceTitle(value, fallback) {
+    if (typeof value !== 'string') return fallback;
+    const cleaned = value.replace(/\s+/g, ' ').trim();
+    return cleaned ? cleaned.slice(0, 140) : fallback;
+}
+
+function asResource(value) {
+    if (!value) return {};
+    if (typeof value === 'string') return { url: value };
+    if (typeof value === 'object') return value;
+    return {};
+}
+
+function fallbackStudyResources(topic) {
+    const topicQuery = `${topic} competitive programming algorithm tutorial`;
+    return {
+        reference_site: {
+            title: `${topic} written reference`,
+            url: buildSearchUrl('https://www.geeksforgeeks.org/?s=', topic),
+        },
+        youtube_video: {
+            title: `${topic} YouTube lesson`,
+            url: buildSearchUrl('https://www.youtube.com/results?search_query=', topicQuery),
+        },
+    };
+}
+
+// ── Verify URL is alive ─────────────────────────────────────────────
+async function checkUrlAlive(url) {
+    if (!url) return false;
+    try {
+        const res = await axios.get(url, { timeout: 3000, maxRedirects: 3 });
+        return res.status >= 200 && res.status < 400;
+    } catch {
+        return false;
+    }
+}
+
+async function normalizeStudyResources(content, fallbackTopic) {
+    const fallback = fallbackStudyResources(fallbackTopic);
+    const resources = content?.study_resources && typeof content.study_resources === 'object'
+        ? content.study_resources
+        : {};
+
+    const rawReference = asResource(resources.reference_site || resources.reference || resources.website);
+    const rawYoutube = asResource(resources.youtube_video || resources.youtube || resources.video);
+
+    // Written reference -> try the exact URL LLM provided. If it's dead, fallback to Google search
+    let referenceUrl = safeHttpsUrl(rawReference.exact_url || rawReference.url || rawReference.href);
+    if (referenceUrl) {
+        const isAlive = await checkUrlAlive(referenceUrl);
+        if (!isAlive) {
+            const query = rawReference.title || fallbackTopic;
+            referenceUrl = buildSearchUrl('https://www.google.com/search?q=', query + ' competitive programming');
+        }
+    } else {
+        const query = rawReference.search_query || rawReference.title || fallbackTopic;
+        referenceUrl = buildSearchUrl('https://www.google.com/search?q=', query + ' competitive programming');
+    }
+
+    let finalYoutubeUrl = fallback.youtube_video.url;
+    let finalYoutubeTitle = cleanResourceTitle(rawYoutube.title || rawYoutube.name, fallback.youtube_video.title);
+
+    // YouTube -> Use yt-search to get the direct video link! Append English to force English videos.
+    if (rawYoutube.search_query) {
+        try {
+            const ytRes = await ytSearch(rawYoutube.search_query + " English tutorial");
+            if (ytRes && ytRes.videos && ytRes.videos.length > 0) {
+                finalYoutubeUrl = ytRes.videos[0].url;
+                finalYoutubeTitle = ytRes.videos[0].title || finalYoutubeTitle;
+            } else {
+                finalYoutubeUrl = buildSearchUrl('https://www.youtube.com/results?search_query=', rawYoutube.search_query);
+            }
+        } catch (err) {
+            finalYoutubeUrl = buildSearchUrl('https://www.youtube.com/results?search_query=', rawYoutube.search_query);
+        }
+    } else {
+        const youtubeUrl = safeHttpsUrl(rawYoutube.url || rawYoutube.href);
+        if (youtubeUrl && isYoutubeUrl(youtubeUrl)) {
+            finalYoutubeUrl = youtubeUrl;
+        }
+    }
+
+    return {
+        reference_site: {
+            title: cleanResourceTitle(rawReference.title || rawReference.name, fallback.reference_site.title),
+            url: referenceUrl,
+        },
+        youtube_video: {
+            title: finalYoutubeTitle,
+            url: finalYoutubeUrl,
+        },
+    };
 }
 
 // ── Flat set of all unique sub-topics (for exhaustion check) ────────
@@ -605,12 +773,24 @@ function generateOrFetchDailyTopic(userId, language = 'cpp') {
 
 async function _doGenerate(userId, today, language) {
     const existing = await DailyTopic.findOne({ userId, date: today }).lean();
-    if (existing) return existing;
+    if (existing) {
+        if (existing.content && !existing.content.study_resources) {
+            const studyResources = await normalizeStudyResources(existing.content, existing.topic);
+            await DailyTopic.updateOne(
+                { _id: existing._id },
+                { $set: { 'content.study_resources': studyResources } },
+            );
+            existing.content.study_resources = studyResources;
+        }
+        return existing;
+    }
 
     const weakTopic = await findWeakestTopic(userId);
     console.log(`[DailyTopic] Generating for user=${userId} topic="${weakTopic}"`);
 
     const content = await callGemma(weakTopic, language);
+    const topicName = content.topic || weakTopic;
+    const studyResources = await normalizeStudyResources(content, topicName);
 
     const doc = await DailyTopic.findOneAndUpdate(
         { userId, date: today },
@@ -618,7 +798,7 @@ async function _doGenerate(userId, today, language) {
             $setOnInsert: {
                 userId,
                 date: today,
-                topic: content.topic || weakTopic,
+                topic: topicName,
                 language,
                 content: {
                     article:            content.article            || '',
@@ -626,6 +806,7 @@ async function _doGenerate(userId, today, language) {
                     code_template:      content.code_template      || '',
                     visualization_data: content.visualization_data || '',
                     term_glossary:      content.term_glossary      || {},
+                    study_resources:    studyResources,
                 },
                 generatedAt: new Date(),
             },

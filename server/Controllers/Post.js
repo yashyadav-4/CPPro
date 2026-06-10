@@ -68,6 +68,26 @@ async function handleDeletePost(req , res){
     }
 }
 
+async function handleEditPost(req, res){
+    try {
+        const post = await Post.findById(req.params.id);
+        if (!post) return res.status(404).json({ message: "Post not found" });
+
+        if (post.authorId.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+            return res.status(403).json({ message: "You are not authorized to edit this post" });
+        }
+
+        const { title, content } = req.body;
+        if (title) post.title = title;
+        if (content) post.content = content;
+        
+        await post.save();
+        res.json(post);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+}
+
 async function handleUpvotes(req , res){
     try{
         const post =await Post.findById(req.params.id);
@@ -135,4 +155,5 @@ module.exports={
     handleDeletePost,
     handleDownVote,
     handleTogglePin,
+    handleEditPost,
 }

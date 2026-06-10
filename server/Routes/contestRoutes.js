@@ -25,6 +25,45 @@ router.get('/', optionalAuth, async (req, res) => {
             .select('-__v -createdAt -updatedAt')
             .lean();
 
+        // Deduplicate contests with the same URL
+        const uniqueContests = [];
+        const seenUrls = new Set();
+        for (const c of contests) {
+            if (c.url && seenUrls.has(c.url)) continue;
+            if (c.url) seenUrls.add(c.url);
+            uniqueContests.push(c);
+        }
+        contests = uniqueContests;
+
+        // Filter out AtCoder contests with Japanese/Chinese/CJK characters in name
+        const CJK_RE = /[\u3000-\u9fff\uac00-\ud7af\uf900-\ufaff]/;
+        contests = contests.filter(c => c.platform !== 'atcoder' || !CJK_RE.test(c.name));
+
+        // Deduplicate AtCoder division contests (Div.1/Div.2/Div.3 etc. same start time)
+        // This runs at serve-time so old DB entries are also cleaned up
+        const AC_DIV_RE = /[\s\-–]*(div(ision)?\.?\s*\d+)$/i;
+        const acSeen = new Map();
+        const nonAc = contests.filter(c => c.platform !== 'atcoder');
+        const acOnly = contests.filter(c => c.platform === 'atcoder');
+        for (const c of acOnly) {
+            // Group by base name and the date (YYYY-MM-DD) so divisions starting 30 mins apart are grouped
+            const dateStr = new Date(c.startTime).toISOString().substring(0, 10);
+            const baseKey = c.name.replace(AC_DIV_RE, '').trim().toLowerCase() + '::' + dateStr;
+            if (!acSeen.has(baseKey)) {
+                acSeen.set(baseKey, c);
+            } else {
+                // Prefer main round (no suffix) > Div.1 > others
+                const existing = acSeen.get(baseKey);
+                const cIsMain  = !AC_DIV_RE.test(c.name);
+                const cIsDiv1  = /div(ision)?\.?\s*1$/i.test(c.name);
+                const exIsMain = !AC_DIV_RE.test(existing.name);
+                if (!exIsMain && (cIsMain || cIsDiv1)) acSeen.set(baseKey, c);
+            }
+        }
+        contests = [...nonAc, ...Array.from(acSeen.values())]
+            .sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+
+
         // ── Personalized Analytics (In-Memory Aggregate) ────────────────────
         if (req.user) {
             const userId = req.user._id;
@@ -45,6 +84,9 @@ router.get('/', optionalAuth, async (req, res) => {
                         if (h.contestName) {
                             attemptMap[platKey][h.contestName.trim().toLowerCase()] = { rank: h.rank || null };
                         }
+                        if (h.contestCode) {
+                            attemptMap[platKey][h.contestCode.trim().toLowerCase()] = { rank: h.rank || null };
+                        }
                     });
                 }
             });
@@ -61,18 +103,21 @@ router.get('/', optionalAuth, async (req, res) => {
                 });
             }
 
-            // 2. Fetch all AC submissions in window for Codeforces (LC gives solved natively)
+            // 2. Fetch all AC submissions in window for Codeforces & CodeChef (LC gives solved natively)
             const submissions = await Submission.find({
                 userId,
-                platform: 'codeforces',
+                platform: { $in: ['codeforces', 'codechef'] },
                 verdict: 'AC',
                 submittedAt: { $gte: from, $lte: to }
-            }).select('platform submittedAt').lean();
+            }).select('platform submittedAt contestId').lean();
 
-            const subsByPlatform = { codeforces: [] };
+            const subsByPlatform = { codeforces: [], codechef: [] };
             submissions.forEach(sub => {
                 if (subsByPlatform[sub.platform]) {
-                    subsByPlatform[sub.platform].push(sub.submittedAt.getTime());
+                    subsByPlatform[sub.platform].push({
+                        time: sub.submittedAt.getTime(),
+                        contestId: sub.contestId
+                    });
                 }
             });
 
@@ -80,16 +125,43 @@ router.get('/', optionalAuth, async (req, res) => {
             contests = contests.map(c => {
                 const platMaps = attemptMap[c.platform] || {};
                 const nameKey = (c.name || '').trim().toLowerCase();
-                const attemptInfo = platMaps[nameKey] || {};
+                let attemptInfo = platMaps[nameKey];
+
+                // CodeChef fallback: match by contestCode from URL
+                if (!attemptInfo && c.platform === 'codechef' && c.url) {
+                    const codeMatch = c.url.match(/codechef\.com\/(.+)$/i);
+                    if (codeMatch && codeMatch[1]) {
+                        const baseCode = codeMatch[1].trim().toLowerCase();
+                        // CodeChef adds division letters (A/B/C/D) to user attempts (e.g. START241B vs START241)
+                        const matchedKey = Object.keys(platMaps).find(k => 
+                            k === baseCode || (k.startsWith(baseCode) && k.length === baseCode.length + 1) || baseCode.startsWith(k)
+                        );
+                        if (matchedKey) {
+                            attemptInfo = platMaps[matchedKey];
+                        }
+                    }
+                }
+                
+                attemptInfo = attemptInfo || {};
 
                 const rank = attemptInfo.rank;
                 let solvedCount = attemptInfo.solvedCount || 0; // Pre-filled for LC
 
-                // Fallback to Codeforces manual Submission check
-                if (c.platform === 'codeforces' && subsByPlatform.codeforces.length > 0) {
+                // Fallback to manual Submission check
+                if (c.platform === 'codechef' && subsByPlatform.codechef.length > 0) {
+                    const codeMatch = c.url ? c.url.match(/codechef\.com\/(.+)$/i) : null;
+                    const baseCode = codeMatch && codeMatch[1] ? codeMatch[1].trim().toLowerCase() : null;
+                    if (baseCode) {
+                        solvedCount = subsByPlatform.codechef.filter(s => {
+                            if (!s.contestId) return false;
+                            const sId = s.contestId.toLowerCase();
+                            return sId === baseCode || (sId.startsWith(baseCode) && sId.length === baseCode.length + 1) || baseCode.startsWith(sId);
+                        }).length;
+                    }
+                } else if (c.platform === 'codeforces' && subsByPlatform.codeforces.length > 0) {
                     const cStart = c.startTime.getTime();
                     const cEnd = c.endTime.getTime();
-                    solvedCount = subsByPlatform.codeforces.filter(t => t >= cStart && t <= cEnd).length;
+                    solvedCount = subsByPlatform.codeforces.filter(s => s.time >= cStart && s.time <= cEnd).length;
                 }
 
                 if (rank > 0 || solvedCount > 0) {

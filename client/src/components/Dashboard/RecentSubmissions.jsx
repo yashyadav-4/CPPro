@@ -99,7 +99,7 @@ export default function RecentSubmissions({ loading, cfSubmissions, lcSubmission
       platform: 'cc',
       title: s.title || s.problemId || 'Unknown',
       url: s.url || null,
-      difficulty: null,
+      difficulty: s.difficulty || null,
       time: s.submittedAt,
     }));
 
@@ -150,9 +150,17 @@ export default function RecentSubmissions({ loading, cfSubmissions, lcSubmission
               {item.title}
             </span>
 
-            {/* Difficulty (CF only) */}
+            {/* Difficulty tag */}
             {item.difficulty && (
-              <span className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 flex-shrink-0">
+              <span className={`text-[10px] font-semibold flex-shrink-0 ${
+                item.platform === 'lc'
+                  ? item.difficulty === 'Easy'
+                    ? 'text-emerald-500 dark:text-emerald-400'
+                    : item.difficulty === 'Medium'
+                      ? 'text-amber-500 dark:text-amber-400'
+                      : 'text-rose-500 dark:text-rose-400'
+                  : 'text-gray-400 dark:text-gray-500'
+              }`}>
                 {item.difficulty}
               </span>
             )}

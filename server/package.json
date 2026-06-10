@@ -19,13 +19,16 @@
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "dotenv": "^17.2.3",
+    "duck-duck-scrape": "^2.2.7",
     "express": "^5.2.1",
     "google-auth-library": "^10.6.2",
+    "googlethis": "^1.8.0",
     "helmet": "^8.2.0",
     "http-proxy-agent": "^8.0.0",
     "https-proxy-agent": "^8.0.0",
     "jsonwebtoken": "^9.0.3",
-    "mongoose": "^9.1.5"
+    "mongoose": "^9.1.5",
+    "yt-search": "^2.13.1"
   },
   "devDependencies": {
     "nodemon": "^3.1.11"
