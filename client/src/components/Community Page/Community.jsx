@@ -309,10 +309,10 @@ export default function Community() {
   /* ─────────────────────────────── RENDER ──────────────────────────────────── */
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#0a0a0a]">
-      <div className="max-w-[1380px] mx-auto flex gap-0 min-h-screen">
+      <div className="w-full max-w-[1600px] mx-auto flex gap-0 min-h-screen px-4 sm:px-6 lg:px-8">
 
         {/* ───────────── LEFT SIDEBAR ───────────── */}
-        <aside className="w-56 flex-shrink-0 border-r border-gray-200 dark:border-white/[0.07] px-3 py-8 flex flex-col gap-2 sticky top-0 h-screen overflow-y-auto">
+        <aside className="w-48 flex-shrink-0 border-r border-gray-200 dark:border-white/[0.07] px-3 py-8 flex flex-col gap-2 sticky top-0 h-screen overflow-y-auto">
           {/* Brand */}
           <div className="flex items-center gap-2 px-3 mb-6">
             <div className="w-7 h-7 rounded-lg bg-emerald-600 flex items-center justify-center">
@@ -361,7 +361,18 @@ export default function Community() {
 
         {/* ───────────── MIDDLE: FEED ───────────── */}
         <main className="flex-1 min-w-0 px-6 py-8">
-          {/* Page header */}
+          {selectedPost ? (
+            <PostDetailModal
+              post={posts.find((p) => p._id === selectedPost._id) || selectedPost}
+              onClose={() => setSelectedPost(null)}
+              onVoteToggle={handleVote}
+              onPinToggle={handleTogglePin}
+              onEditPost={handleEditPost}
+              currentUser={currentUser}
+            />
+          ) : (
+            <>
+              {/* Page header */}
           <div className="mb-6">
             <div className="flex items-center gap-2 mb-1">
               {(() => { const Icon = activeNav.icon; return <Icon size={18} className="text-emerald-500" />; })()}
@@ -470,7 +481,7 @@ export default function Community() {
 
                       {/* Excerpt */}
                       <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed line-clamp-2 mb-3">
-                        {post.content}
+                        {post.content?.replace(/^#+\s+/gm, '').replace(/(\*\*|__)(.*?)\1/g, '$2').replace(/(\*|_)(.*?)\1/g, '$2').replace(/\[(.*?)\]\(.*?\)/g, '$1').replace(/`/g, '')}
                       </p>
 
                       {/* Tags */}
@@ -586,10 +597,12 @@ export default function Community() {
               </button>
             </div>
           )}
+            </>
+          )}
         </main>
 
         {/* ───────────── RIGHT SIDEBAR ───────────── */}
-        <aside className="w-72 flex-shrink-0 border-l border-gray-200 dark:border-white/[0.07] px-4 py-8 flex flex-col gap-5 sticky top-0 h-screen overflow-y-auto">
+        <aside className="w-64 flex-shrink-0 border-l border-gray-200 dark:border-white/[0.07] px-4 py-8 flex flex-col gap-5 sticky top-0 h-screen overflow-y-auto">
 
           {/* Pinned Post */}
           <div>
@@ -613,7 +626,7 @@ export default function Community() {
                   {pinnedPost.title}
                 </h3>
                 <p className="text-xs text-gray-500 dark:text-gray-500 line-clamp-2 leading-relaxed">
-                  {pinnedPost.content}
+                  {pinnedPost.content?.replace(/^#+\s+/gm, '').replace(/(\*\*|__)(.*?)\1/g, '$2').replace(/(\*|_)(.*?)\1/g, '$2').replace(/\[(.*?)\]\(.*?\)/g, '$1').replace(/`/g, '')}
                 </p>
                 <div className="flex items-center gap-3 mt-3 pt-3 border-t border-gray-100 dark:border-white/[0.06]">
                   <span className="flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">
@@ -725,16 +738,6 @@ export default function Community() {
       {/* ── Modals ── */}
       {isNewModalOpen && (
         <NewPostModal onClose={() => setIsNewModalOpen(false)} onSubmit={handleCreatePost} />
-      )}
-      {selectedPost && (
-        <PostDetailModal
-          post={posts.find((p) => p._id === selectedPost._id) || selectedPost}
-          onClose={() => setSelectedPost(null)}
-          onVoteToggle={handleVote}
-          onPinToggle={handleTogglePin}
-          onEditPost={handleEditPost}
-          currentUser={currentUser}
-        />
       )}
       <DeleteConfirmModal
         isOpen={!!postToDelete}

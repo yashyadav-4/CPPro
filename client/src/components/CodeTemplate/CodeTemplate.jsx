@@ -193,7 +193,7 @@ export default function CodeTemplate() {
                     </div>
 
                     <div className="flex flex-wrap gap-2">
-                        {LANGUAGE_FILTERS.map(f => (
+                        {LANGUAGE_FILTERS.filter(f => f.value === "all" || langCounts[f.value] > 0).map(f => (
                             <button
                                 key={f.value}
                                 onClick={() => setActiveFilter(f.value)}

@@ -1,10 +1,38 @@
 import { useState, useEffect } from "react";
 import {
   X, ArrowUp, ArrowDown, MessageCircle, Send,
-  User, Trash2, ShieldCheck, Pin, Edit2, Save,
+  User, Trash2, ShieldCheck, Pin, Edit2, Save, ArrowLeft
 } from "lucide-react";
 import axios from "axios";
 import DeleteConfirmModal from "../common/DeleteConfirmModal";
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+
+const markdownComponents = {
+  h1: ({ children }) => <h1 className="text-xl font-black text-gray-900 dark:text-white mb-3 mt-6 tracking-tight">{children}</h1>,
+  h2: ({ children }) => <h2 className="text-lg font-bold text-emerald-600 dark:text-emerald-400 mb-2 mt-5">{children}</h2>,
+  h3: ({ children }) => <h3 className="text-base font-bold text-gray-800 dark:text-gray-200 mb-2 mt-4">{children}</h3>,
+  p: ({ children }) => <p className="text-[14px] leading-relaxed text-gray-700 dark:text-gray-300 mb-4">{children}</p>,
+  strong: ({ children }) => <strong className="font-bold text-gray-900 dark:text-white">{children}</strong>,
+  em: ({ children }) => <em className="italic text-gray-800 dark:text-gray-200">{children}</em>,
+  a: ({ href, children }) => <a href={href} target="_blank" rel="noopener noreferrer" className="text-emerald-500 font-medium hover:underline decoration-emerald-500/30 underline-offset-4 transition-all">{children}</a>,
+  ul: ({ children }) => <ul className="space-y-2 mb-4 ml-1">{children}</ul>,
+  ol: ({ children }) => <ol className="list-decimal list-inside space-y-2 mb-4 ml-1">{children}</ol>,
+  li: ({ children }) => (
+    <li className="text-[14px] text-gray-700 dark:text-gray-300 leading-relaxed flex gap-2.5 items-start">
+        <span className="text-emerald-500 mt-1 shrink-0 text-[9px]">▶</span>
+        <span>{children}</span>
+    </li>
+  ),
+  blockquote: ({ children }) => (
+    <blockquote className="border-l-4 border-emerald-500/40 bg-emerald-500/[0.04] rounded-r-xl px-4 py-3 my-4 text-[14px] text-gray-700 dark:text-gray-300 italic shadow-sm">
+      {children}
+    </blockquote>
+  ),
+  code: ({ inline, children }) => inline 
+    ? <code className="px-1.5 py-0.5 rounded-md text-[13px] font-mono bg-emerald-500/[0.08] text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">{children}</code> 
+    : <pre className="bg-[#0a0a0a] text-gray-300 p-5 rounded-xl overflow-x-auto text-[13px] my-6 border border-white/[0.08] shadow-inner font-mono leading-relaxed"><code>{children}</code></pre>
+};
 
 const TYPE_COLORS = {
   blog:       "bg-blue-500/10 text-blue-400 border-blue-500/20",
@@ -110,12 +138,16 @@ export default function PostDetailModal({ post, onClose, onVoteToggle, onPinTogg
   const typeKey  = (Array.isArray(post.types) ? post.types[0] : post.types)?.toLowerCase();
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-      onClick={onClose}
-    >
+    <div className="w-full flex flex-col animate-in fade-in duration-300">
+      <button 
+        onClick={onClose}
+        className="flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400 mb-6 transition-colors w-fit"
+      >
+        <ArrowLeft size={16} /> Back to feed
+      </button>
+
       <div
-        className="bg-white dark:bg-[#111111] rounded-2xl shadow-2xl border border-gray-200 dark:border-white/[0.08] w-full max-w-4xl max-h-[92vh] overflow-hidden flex flex-col"
+        className="bg-white dark:bg-[#0a0a0a] rounded-2xl shadow-sm border border-gray-200 dark:border-white/[0.08] w-full overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -157,19 +189,13 @@ export default function PostDetailModal({ post, onClose, onVoteToggle, onPinTogg
                 <Edit2 size={16} />
               </button>
             )}
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 p-2 rounded-full transition-colors"
-            >
-              <X size={18} />
-            </button>
           </div>
         </div>
 
         {/* Body */}
-        <div className="flex flex-col md:flex-row overflow-hidden flex-1">
+        <div className="flex flex-col items-center bg-gray-50/30 dark:bg-[#0a0a0a]">
           {/* Post content */}
-          <div className="w-full md:w-3/5 p-6 border-b md:border-b-0 md:border-r border-gray-100 dark:border-white/[0.07] overflow-y-auto">
+          <div className="w-full max-w-5xl p-8 md:p-12 border-b border-gray-100 dark:border-white/[0.07] bg-white dark:bg-transparent">
             {/* Content */}
             {isEditing ? (
               <div className="flex flex-col gap-3 mb-6">
@@ -209,7 +235,7 @@ export default function PostDetailModal({ post, onClose, onVoteToggle, onPinTogg
               </div>
             ) : (
               <>
-                <h2 className="text-xl font-extrabold text-gray-900 dark:text-white mb-4 leading-tight">
+                <h2 className="text-3xl font-black text-gray-900 dark:text-white mb-5 leading-tight tracking-tight">
                   {post.title}
                 </h2>
                 <div className="flex flex-wrap gap-1.5 mb-5">
@@ -227,8 +253,10 @@ export default function PostDetailModal({ post, onClose, onVoteToggle, onPinTogg
                     </span>
                   ))}
                 </div>
-                <div className="text-gray-700 dark:text-gray-300 leading-relaxed text-sm whitespace-pre-wrap">
-                  {post.content}
+                <div className="mt-8">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                    {post.content}
+                  </ReactMarkdown>
                 </div>
               </>
             )}
@@ -273,9 +301,9 @@ export default function PostDetailModal({ post, onClose, onVoteToggle, onPinTogg
           </div>
 
           {/* Comments panel */}
-          <div className="w-full md:w-2/5 p-5 flex flex-col bg-gray-50/50 dark:bg-[#0a0a0a]/40 overflow-hidden">
-            <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4 flex-shrink-0">
-              Comments
+          <div className="w-full max-w-5xl p-8 md:p-12 flex flex-col bg-transparent">
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex-shrink-0 flex items-center gap-2">
+              <MessageCircle size={20} className="text-emerald-500" /> Discussion
             </h3>
 
             {/* Add comment */}
@@ -298,7 +326,7 @@ export default function PostDetailModal({ post, onClose, onVoteToggle, onPinTogg
             </form>
 
             {/* Comment list */}
-            <div className="flex-1 overflow-y-auto space-y-2.5 pr-1">
+            <div className="flex-1 space-y-3">
               {loadingComments ? (
                 <div className="text-center text-sm text-gray-400 dark:text-gray-600 py-6 animate-pulse">
                   Loading comments…
@@ -319,10 +347,10 @@ export default function PostDetailModal({ post, onClose, onVoteToggle, onPinTogg
                 comments.map((comment) => (
                   <div
                     key={comment._id}
-                    className="bg-white dark:bg-[#111111] border border-gray-200 dark:border-white/[0.07] rounded-xl p-3.5 group"
+                    className="bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-white/[0.05] rounded-xl p-4 group shadow-sm transition-all hover:border-gray-300 dark:hover:border-white/[0.1]"
                   >
-                    <div className="flex items-start justify-between mb-1.5">
-                      <span className="text-xs font-bold text-gray-900 dark:text-gray-100">
+                    <div className="flex items-start justify-between mb-2">
+                      <span className="text-sm font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                         {comment.authorId?.name || comment.authorName || "User"}
                       </span>
                       <div className="flex items-center gap-2">
