@@ -70,6 +70,18 @@ export default function Header() {
         ]
     };
 
+    // Maps nav item labels to data-tour ids for the onboarding tour
+    const TOUR_ID = {
+        'Dashboard':      'nav-dashboard',
+        'Daily':          'nav-daily',
+        'Leaderboard':    'nav-leaderboard',
+        'Contest Tracker':'nav-contests',
+        'Learning':       'nav-learning',
+        'Level-up':       'nav-levelup',
+        'Code Snippet':   'nav-snippets',
+        'Community':      'nav-community',
+    };
+
     return (
         <header className="sticky top-4 z-50 w-[95%] max-w-[1300px] mx-auto bg-white/70 dark:bg-black/60 backdrop-blur-xl border border-white/[0.08] dark:border-white/[0.05] rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_20px_40px_-15px_rgba(16,185,129,0.15)] shadow-emerald-500/5 transition-all duration-300">
             <div className="mx-auto px-4 sm:px-6">
@@ -95,6 +107,7 @@ export default function Header() {
                                         onMouseLeave={() => setActiveDropdown(null)}
                                     >
                                         <button
+                                            data-tour={TOUR_ID[item]}
                                             className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors whitespace-nowrap gap-1 ${activeDropdown === item || window.location.pathname.startsWith('/learning')
                                                 ? 'border-emerald-600 text-gray-900 dark:text-white'
                                                 : 'border-transparent text-gray-500 dark:text-gray-200 hover:text-gray-700 dark:hover:text-white hover:border-gray-300 dark:hover:border-white/25'
@@ -132,6 +145,7 @@ export default function Header() {
                                     key={item}
                                     to={path}
                                     end={item === 'Home'}
+                                    data-tour={TOUR_ID[item]}
                                     className={({ isActive }) =>
                                         `inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors whitespace-nowrap ${isActive
                                             ? 'border-emerald-600 text-gray-900 dark:text-white'
@@ -181,6 +195,7 @@ export default function Header() {
                                             <p className="text-sm text-gray-500 dark:text-gray-300 truncate" title={user.email}>{user.email}</p>
                                         </div>
                                         <button
+                                            data-tour="nav-settings"
                                             className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 flex items-center gap-2"
                                             onMouseDown={(e) => { e.preventDefault(); navigate('/settings'); setIsDropdownOpen(false); }}
                                         >

@@ -5,6 +5,7 @@ import Header from './components/Header/Header'
 import Footer from "./components/Footer/Footer";
 import LoadingScreen from "./components/common/LoadingScreen";
 import HelpButton from "./components/HelpSupport/HelpButton";
+import OnboardingTour from "./components/Onboarding/OnboardingTour";
 import { apiFetch } from './api';
 
 function Layout() {
@@ -58,6 +59,7 @@ function Layout() {
             </main>
             {!isAuthPage && <Footer/>}
             {!isAuthPage && <HelpButton />}
+            {!isAuthPage && <OnboardingTour />}
         </div>
     )
 }
