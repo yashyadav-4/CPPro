@@ -219,7 +219,10 @@ const verifyAndLinkLeetcode = async (userId, handle) => {
     await User.findByIdAndUpdate(
         userId,
         {
-            $set:{ "linkedAccounts.leetcode": cleanHandle, lastLcHardSync: new Date()},
+            // lastLcHardSync intentionally set to null — no real authenticated hard sync
+            // has run yet (no session). lcSessionPendingSync=true ensures the 30-day
+            // gate in handleLcHardSync is bypassed when the user later adds their session.
+            $set:{ "linkedAccounts.leetcode": cleanHandle, lastLcHardSync: null, lcSessionPendingSync: true },
             $unset: {verificationCode: ""}
         },
         {new: true}
@@ -241,11 +244,24 @@ const unlinkLeetcode= async(userId) =>{
         throw err;
     }
     await User.findByIdAndUpdate(userId, {
-        $set: { "linkedAccounts.leetcode": "",lastLcUpdate: null },
+        $set: {
+            "linkedAccounts.leetcode": "",
+            lastLcUpdate:    null,
+            lastLcHardSync:  null,   // clean slate — prevents 30d gate blocking re-link sync
+            lcSessionPendingSync: false,
+            // Wipe session so re-linking starts fresh
+            'lcSession.iv':             null,
+            'lcSession.encryptedToken': null,
+            'lcSession.authTag':        null,
+            'lcSession.status':         'not_set',
+            'lcSession.updatedAt':      new Date(),
+        },
         $unset: {verificationCode: ""}
     });
     const LeetCodeData = require('../Model/LeetCodeData');
+    const Submission = require('../Model/Submissions');
     await LeetCodeData.deleteMany({userId});
+    await Submission.deleteMany({userId, platform: 'leetcode'});
     return {message: "LeetCode account unlinked successfully"};
 };
 
@@ -310,6 +326,17 @@ const saveLcSession = async (userId, rawToken) => {
         err.status = 503;
         throw err;
     }
+
+    // Read current session state BEFORE overwriting so we can decide sync depth
+    const existingUser = await User.findById(userId).select('lcSession linkedAccounts').lean();
+    const wasNoSession = !existingUser?.lcSession?.encryptedToken;      // first time ever
+    const wasExpired   = existingUser?.lcSession?.status === 'expired'; // re-auth after expiry
+    // needsDeepSync = true when history could be missing (first time OR re-auth)
+    const needsDeepSync      = wasNoSession || wasExpired;
+    // isFirstTimeSession = true only when user literally never had a session stored
+    // → use syncDepth:'first' (3000 subs) vs 'hard' (600 subs for re-auth)
+    const isFirstTimeSession = wasNoSession;
+
     const { iv, encryptedToken, authTag } = encrypt(rawToken.trim());
     await User.findByIdAndUpdate(userId, {
         $set: {
@@ -319,17 +346,29 @@ const saveLcSession = async (userId, rawToken) => {
             'lcSession.status':         'active',
             'lcSession.updatedAt':      new Date(),
             lastLcUpdate:               null,   // force re-sync with new session
+            ...(needsDeepSync ? {
+                lastLcHardSync:      null,   // bypass 30-day cooldown gate
+                lcSessionPendingSync: true,  // signal: deep sync needed
+            } : {}),
         },
     });
-    // Notify user that session was saved successfully
+
+    // Contextual notification — message differs based on scenario
+    const notifMessage = wasExpired
+        ? 'LeetCode session reconnected. Your recent submissions will be updated in the background.'
+        : wasNoSession
+            ? 'LeetCode session connected! We are now importing your full submission history in the background. This may take a moment.'
+            : 'LeetCode session updated successfully.';
+
     await Notification.create({
         userId,
         type:    'lc_session_saved',
         title:   'LeetCode Session Connected',
-        message: 'Your LeetCode session is active. Full submission history will be fetched on the next sync.',
+        message: notifMessage,
         actionUrl: '/dashboard',
     });
-    return { status: 'active' };
+
+    return { status: 'active', needsDeepSync, isFirstTimeSession };
 };
 
 const getLcSessionStatus = async (userId) => {

@@ -153,8 +153,8 @@ export default function Settings() {
       if (res.data.success) {
         setLcSessionStatus('active');
         setLcSession('');
-        setLcSessionSuccess('Session saved. Full submission history will sync on next refresh.');
-        setTimeout(() => setLcSessionSuccess(''), 5000);
+        setLcSessionSuccess('Session saved! Your full submission history is being imported in the background — this may take a minute.');
+        setTimeout(() => setLcSessionSuccess(''), 8000);
       } else {
         setLcSessionError(res.data.message || 'Failed to save session');
       }
@@ -694,6 +694,28 @@ export default function Settings() {
                   </span>
                 )}
               </div>
+
+              {/* No-session warning banner — shown when LC is linked but session never set */}
+              {lcSessionStatus === 'not_set' && (
+                <div className="flex items-start gap-3 p-3.5 rounded-lg bg-amber-50 dark:bg-amber-500/[0.08] border border-amber-200 dark:border-amber-500/25 mb-4">
+                  <AlertTriangle size={15} className="text-amber-500 dark:text-amber-400 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">Submission history is incomplete</p>
+                    <p className="text-xs text-amber-600 dark:text-amber-300/80 mt-1 leading-relaxed">
+                      Without a session key, CPPro only sees your last <strong>20 accepted submissions</strong>.
+                      This affects:
+                    </p>
+                    <ul className="mt-1.5 space-y-0.5 text-xs text-amber-600 dark:text-amber-300/70">
+                      <li className="flex items-start gap-1.5"><span className="shrink-0 mt-0.5">•</span>Daily Problems — previously solved problems may appear as new</li>
+                      <li className="flex items-start gap-1.5"><span className="shrink-0 mt-0.5">•</span>Upsolve Queue — older attempted problems won't show</li>
+                      <li className="flex items-start gap-1.5"><span className="shrink-0 mt-0.5">•</span>Skill Analysis — tag accuracy based on partial data only</li>
+                    </ul>
+                    <p className="mt-2 text-xs text-amber-600 dark:text-amber-400 font-medium">
+                      Add your session key below to fix this ↓
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Expired session banner — shown prominently so user can't miss it */}
               {lcSessionStatus === 'expired' && (

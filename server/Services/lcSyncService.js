@@ -60,9 +60,19 @@ const getLeetcodeData = async (userId, handle, role = 'user') => {
     const { getDecryptedLcSession } = require('./settingsService');
     const sessionToken = await getDecryptedLcSession(userId, { allowExpired: true });
 
+    // If the pending sync flag is set and the user now has a valid session,
+    // escalate to 'first' depth (3000 subs) so full history is imported.
+    // This handles the case where the dashboard refreshes before the background
+    // sync triggered by saveLcSession() has completed.
+    let autoSyncDepth = 'incremental';
+    if (user.lcSessionPendingSync && sessionToken) {
+        autoSyncDepth = 'first';
+        console.log(`[LC-SYNC] >> ${handle} | lcSessionPendingSync=true + session present → escalating to depth='first'`);
+    }
+
     // Fire-and-forget: enqueue job on NexusLC, then poll until done.
-    syncLeetcodeProfile(userId, handle, sessionToken)
-        .then(() => console.log(`[LC-SYNC] >> ${handle} | NexusLC sync complete`))
+    syncLeetcodeProfile(userId, handle, sessionToken, { syncDepth: autoSyncDepth })
+        .then(() => console.log(`[LC-SYNC] >> ${handle} | NexusLC sync complete (depth=${autoSyncDepth})`))
         .catch(async (err) => {
             console.error(`[LC-SYNC] >> ${handle} | NexusLC sync failed:`, err.message);
             // Roll back timestamp so user can retry.
@@ -129,8 +139,51 @@ const syncLeetcodeProfile = async (userId, handle, sessionToken = null, opts = {
         }
 
         if (state === 'completed') {
-            await User.findByIdAndUpdate(userId, { $set: { lastLcUpdate: new Date() } });
+            // Build update set — always stamp lastLcUpdate
+            const completedUpdates = { lastLcUpdate: new Date() };
+
+            // Clear the pending flag if it was set, but ONLY when we had a valid session.
+            // Without a session the pending flag stays so the next session-save triggers
+            // a proper deep sync.
+            if (sessionToken) {
+                const freshUser = await User.findById(userId, 'lcSessionPendingSync').lean();
+                if (freshUser?.lcSessionPendingSync) {
+                    completedUpdates.lcSessionPendingSync = false;
+                    console.log(`[LC-SYNC] >> ${handle} | Cleared lcSessionPendingSync flag after successful authenticated sync`);
+                }
+            }
+
+            await User.findByIdAndUpdate(userId, { $set: completedUpdates });
             console.log(`[LC-SYNC] >> ${handle} | sync done ✓`);
+
+            // If sync completed WITHOUT a session and LC is linked but no session ever set,
+            // send a weekly warning notification explaining partial data.
+            if (!sessionToken) {
+                (async () => {
+                    try {
+                        const freshUser = await User.findById(userId, 'lcSession linkedAccounts').lean();
+                        if (freshUser?.linkedAccounts?.leetcode && freshUser?.lcSession?.status === 'not_set') {
+                            const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+                            const recentWarn = await Notification.findOne({
+                                userId, type: 'lc_no_session_warning',
+                                createdAt: { $gte: sevenDaysAgo },
+                            });
+                            if (!recentWarn) {
+                                await Notification.create({
+                                    userId,
+                                    type:      'lc_no_session_warning',
+                                    title:     '⚠️ LeetCode Sync is Incomplete',
+                                    message:   'Without a Session Key, CPPro can only see your last 20 accepted submissions — not your full history. This means previously solved problems may appear in your Daily Problems. Go to Settings → LeetCode Session to add your session key and unlock full sync.',
+                                    actionUrl: '/settings',
+                                });
+                                console.log(`[LC-SYNC] >> ${handle} | Sent lc_no_session_warning notification`);
+                            }
+                        }
+                    } catch (warnErr) {
+                        console.warn('[LC-SYNC] no-session warning notification failed:', warnErr.message);
+                    }
+                })();
+            }
 
             // Post-sync fire-and-forget: persist LC AC slugs to Submissions collection so
             // buildAttemptedSet's Submission.find query starts working for LC over time.

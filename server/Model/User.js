@@ -123,6 +123,10 @@ const userSchema = new mongoose.Schema({
         longest:    { type: Number, default: 0 },
         lastSolved: { type: Date,   default: null },
     },
+    // Set to true whenever an LC session is added for the first time, or re-added after expiry.
+    // Forces the next sync to run as a deep/first sync (bypassing 30-day hard-sync cooldown).
+    // Cleared only after a successful authenticated deep sync completes.
+    lcSessionPendingSync: { type: Boolean, default: false },
 }, {timestamps:true});
 
 

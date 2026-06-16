@@ -40,8 +40,14 @@ async function getToday(req, res) {
             daily = result?.toObject ? result.toObject() : result;
         }
 
-        const user = await User.findById(userId, 'dailyStreak').lean();
+        const user = await User.findById(userId, 'dailyStreak linkedAccounts lcSession').lean();
         const ds   = user?.dailyStreak;
+
+        // Warn the frontend when LC is linked but no working session is set.
+        // This powers the "why am I seeing solved problems?" banner.
+        const lcLinked      = !!user?.linkedAccounts?.leetcode;
+        const sessionStatus = user?.lcSession?.status || 'not_set';
+        const sessionWarning = lcLinked && sessionStatus !== 'active';
 
         return res.status(200).json({
             success: true,
@@ -55,6 +61,8 @@ async function getToday(req, res) {
                     longest: ds?.longest || 0,
                 },
             },
+            sessionWarning,
+            sessionStatus,
         });
     } catch (err) {
         console.error('[DAILY] getToday error:', err.message);

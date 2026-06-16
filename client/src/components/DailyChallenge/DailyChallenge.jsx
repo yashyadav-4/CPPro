@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
-import { Clock, RefreshCw, LinkIcon, Brain, Swords, ChevronDown, ChevronUp } from 'lucide-react';
+import { Clock, RefreshCw, LinkIcon, Brain, Swords, ChevronDown, ChevronUp, AlertTriangle, X } from 'lucide-react';
 import { API_BASE } from '../../api';
 import ProblemCard from './ProblemCard';
 import DailyStreak from './DailyStreak';
@@ -57,6 +57,10 @@ export default function DailyChallenge() {
     const [histPage, setHistPage]     = useState(1);
     const [histTotal, setHistTotal]   = useState(0);
     const [histLoading, setHistLoading] = useState(false);
+    const [sessionWarning, setSessionWarning] = useState(false);
+    const [warnDismissed, setWarnDismissed]   = useState(
+        () => sessionStorage.getItem('daily_session_warn_dismissed') === '1'
+    );
     const countdown = useCountdownIST();
 
     useEffect(() => { fetchToday(); }, []);
@@ -70,6 +74,16 @@ export default function DailyChallenge() {
                 setData({ noAccount: true });
             } else {
                 setData(res.data.data);
+                // Unconditionally sync warning state — ensures banner clears
+                // if user adds session in another tab and data refreshes.
+                const warn = !!res.data.sessionWarning;
+                setSessionWarning(warn);
+                // If warning cleared (session added), reset dismissed state so
+                // the banner shows again if the session later expires.
+                if (!warn) {
+                    setWarnDismissed(false);
+                    sessionStorage.removeItem('daily_session_warn_dismissed');
+                }
             }
         } catch (err) {
             setError(err.response?.data?.message || 'Failed to load daily problems');
@@ -199,6 +213,42 @@ export default function DailyChallenge() {
 
             {/* ── Problems tab ── */}
             <div className={tab === 'problems' ? '' : 'hidden'}>
+
+                {/* Session warning banner — shown when LC is linked but no session set */}
+                {sessionWarning && !warnDismissed && (
+                    <div className="mb-5 flex items-start gap-3 p-3.5 rounded-xl
+                        bg-amber-500/[0.08] border border-amber-500/25 relative">
+                        <AlertTriangle size={16} className="text-amber-400 shrink-0 mt-0.5" />
+                        <div className="flex-1 min-w-0">
+                            <p className="text-[12px] font-semibold text-amber-400 mb-0.5">
+                                Why am I seeing problems I've already solved?
+                            </p>
+                            <p className="text-[11px] text-amber-300/80 leading-relaxed">
+                                Without a LeetCode Session Key, CPPro can only see your last 20 accepted
+                                submissions — not your full history. Your older solved problems aren't
+                                visible to us yet, so they may appear here.
+                            </p>
+                            <Link
+                                to="/settings"
+                                className="inline-block mt-2 text-[11px] font-semibold text-amber-400
+                                    hover:text-amber-300 underline underline-offset-2 transition-colors"
+                            >
+                                Fix in Settings → Add Session Key
+                            </Link>
+                        </div>
+                        <button
+                            onClick={() => {
+                                setWarnDismissed(true);
+                                sessionStorage.setItem('daily_session_warn_dismissed', '1');
+                            }}
+                            className="shrink-0 p-1 rounded-md hover:bg-amber-500/20 text-amber-500/60
+                                hover:text-amber-400 transition-colors"
+                            title="Dismiss"
+                        >
+                            <X size={13} />
+                        </button>
+                    </div>
+                )}
 
                 {/* Streak bar */}
                 <div className="mb-5">

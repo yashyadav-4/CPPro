@@ -301,17 +301,22 @@ async function handleLcHardSync(req, res) {
             return res.status(429).json({ success: false, message: `Regular sync cooldown active. Try again in ${remainingSeconds}s`, remainingSeconds });
         }
 
-        if (role === 'admin') {
-            const timeSinceHard = user.lastLcHardSync ? (Date.now() - new Date(user.lastLcHardSync).getTime()) : Infinity;
-            if (timeSinceHard < ADMIN_HARD_SYNC_COOLDOWN) {
-                const nextAvailable = new Date(new Date(user.lastLcHardSync).getTime() + ADMIN_HARD_SYNC_COOLDOWN);
-                return res.status(429).json({ success: false, message: 'Admin hard sync on cooldown', nextAvailableAt: nextAvailable.toISOString() });
-            }
-        } else {
-            const timeSinceHard = user.lastLcHardSync ? (Date.now() - new Date(user.lastLcHardSync).getTime()) : Infinity;
-            if (timeSinceHard < THIRTY_DAYS) {
-                const nextAvailable = new Date(new Date(user.lastLcHardSync).getTime() + THIRTY_DAYS);
-                return res.status(429).json({ success: false, message: 'Hard sync on cooldown', nextAvailableAt: nextAvailable.toISOString() });
+        // Gate 2: Hard sync 30-day cooldown.
+        // BYPASS entirely when lcSessionPendingSync=true — the user just added their
+        // session for the first time (or re-authed), so we MUST run a deep sync.
+        if (!user.lcSessionPendingSync) {
+            if (role === 'admin') {
+                const timeSinceHard = user.lastLcHardSync ? (Date.now() - new Date(user.lastLcHardSync).getTime()) : Infinity;
+                if (timeSinceHard < ADMIN_HARD_SYNC_COOLDOWN) {
+                    const nextAvailable = new Date(new Date(user.lastLcHardSync).getTime() + ADMIN_HARD_SYNC_COOLDOWN);
+                    return res.status(429).json({ success: false, message: 'Admin hard sync on cooldown', nextAvailableAt: nextAvailable.toISOString() });
+                }
+            } else {
+                const timeSinceHard = user.lastLcHardSync ? (Date.now() - new Date(user.lastLcHardSync).getTime()) : Infinity;
+                if (timeSinceHard < THIRTY_DAYS) {
+                    const nextAvailable = new Date(new Date(user.lastLcHardSync).getTime() + THIRTY_DAYS);
+                    return res.status(429).json({ success: false, message: 'Hard sync on cooldown', nextAvailableAt: nextAvailable.toISOString() });
+                }
             }
         }
 
@@ -319,8 +324,35 @@ async function handleLcHardSync(req, res) {
 
         const handle = user.linkedAccounts.leetcode;
         const sessionToken = await getDecryptedLcSession(userId, { allowExpired: true });
-        lcSyncService.syncLeetcodeProfile(userId, handle, sessionToken, { syncDepth: 'hard' })
-            .then(() => console.log(`[HARD-SYNC-LC] ${handle} | done`))
+
+        // Use 'first' depth when the pending flag is set (= first time session ever added)
+        // so NexusLC fetches up to 3000 subs. Otherwise 'hard' = 600.
+        // Guard: if no session token, 'first' depth is meaningless (auth query is skipped in NexusLC)
+        // \u2014 degrade to 'hard' to at least refresh public data. The flag stays set so the real
+        // 3000-sub sync fires correctly once the user adds their session.
+        let manualSyncDepth = user.lcSessionPendingSync ? 'first' : 'hard';
+        if (manualSyncDepth === 'first' && !sessionToken) {
+            console.log(`[HARD-SYNC-LC] ${handle} | lcSessionPendingSync=true but no session \u2014 degrading to 'hard' (public only)`);
+            manualSyncDepth = 'hard';
+        }
+
+        lcSyncService.syncLeetcodeProfile(userId, handle, sessionToken, { syncDepth: manualSyncDepth })
+            .then(async () => {
+                console.log(`[HARD-SYNC-LC] ${handle} | done (depth=${manualSyncDepth})`);
+                // Clear the pending flag after a successful manual hard sync
+                await User.findByIdAndUpdate(userId, { $set: { lcSessionPendingSync: false } });
+                // Regenerate daily problems when doing a full history import
+                if (manualSyncDepth === 'first') {
+                    try {
+                        const DailyProblem = require('../Model/DailyProblem');
+                        const { getTodayIST } = require('../Utils/dateUtils');
+                        await DailyProblem.deleteOne({ userId, date: getTodayIST() });
+                        console.log(`[HARD-SYNC-LC] Deleted today's DailyProblem for ${handle} — regenerating with full history`);
+                    } catch (dailyErr) {
+                        console.warn('[HARD-SYNC-LC] Daily problem reset failed:', dailyErr.message);
+                    }
+                }
+            })
             .catch(async (err) => {
                 console.error(`[HARD-SYNC-LC] ${handle} | failed:`, err.message);
                 await User.findByIdAndUpdate(userId, { $set: { lastLcHardSync: user.lastLcHardSync || null, lastLcUpdate: user.lastLcUpdate || null } });
