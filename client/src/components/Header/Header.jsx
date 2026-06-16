@@ -204,7 +204,7 @@ export default function Header() {
                                         </button>
                                         <button
                                             className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 flex items-center gap-2"
-                                            onMouseDown={(e) => { e.preventDefault(); navigate('/verify-codeforces'); setIsDropdownOpen(false); }}
+                                            onMouseDown={(e) => { e.preventDefault(); navigate('/verification'); setIsDropdownOpen(false); }}
                                         >
                                             <Shield size={16} />
                                             Verification
@@ -307,7 +307,7 @@ export default function Header() {
                                     Settings
                                 </Link>
                                 <Link
-                                    to="/verify-codeforces"
+                                    to="/verification"
                                     onClick={() => setIsMobileMenuOpen(false)}
                                     className="w-full flex items-center gap-2 px-4 py-2 text-base font-medium text-gray-500 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-white/10"
                                 >

@@ -601,7 +601,7 @@ function CodeChefSection() {
 /* ═══════════════════════════════════════════════════════════════
    Main Verification Page
    ═══════════════════════════════════════════════════════════════ */
-export default function VerifyCodeforces() {
+export default function Verification() {
   const [handle, setHandle] = useState('');
   const [secretCode, setSecretCode] = useState('');
   const [state, setState] = useState(STATE.LOADING);

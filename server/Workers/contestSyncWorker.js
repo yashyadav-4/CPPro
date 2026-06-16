@@ -3,6 +3,7 @@
 // On startup it immediately checks the DB time, and repeats every 6h.
 const { syncContests } = require('../Services/contestSyncService');
 const GlobalSyncState  = require('../Model/GlobalSyncState');
+const { delCache } = require('../Utils/redisClient');
 
 const INTERVAL_MS = 6 * 60 * 60 * 1000; // 6 hours
 
@@ -33,6 +34,9 @@ async function runOnce() {
             { upsert: true }
         );
 
+        // 4. Clear the Redis cache so next request rebuilds it
+        await delCache('contests:list');
+
     } catch (err) {
         console.error('[contestWorker] Sync error:', err.message);
     }
@@ -56,6 +60,7 @@ async function forceSyncContests() {
         { $set: { lastSyncedAt: new Date(now) } },
         { upsert: true }
     );
+    await delCache('contests:list');
     return count;
 }
 

@@ -99,6 +99,8 @@ export function useDashboardData() {
 
                 if (hasCached) {
                     setLoading(false);
+                    // Background fetch to revalidate
+                    fetchPlatformData(uid, linked, true).catch(() => {});
                 } else {
                     // First visit ever — no cache, must fetch
                     await fetchPlatformData(uid, linked, false);

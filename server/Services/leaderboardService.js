@@ -1,14 +1,14 @@
 const leaderboardRepo = require('../Repositories/leaderboardRepository');
-const LeaderboardCache = require('../Model/LeaderboardCache');
+const { getCache } = require('../Utils/redisClient');
 
 const getLeaderboard = async ({ scope, scopeValue, category, currentUserId, isAdmin = false }) => {
     let rawLeaderboard;
 
     if (scope === 'global') {
-        // Serve from precomputed cache — falls back to live if cache is empty
-        const cached = await LeaderboardCache.findOne({ cacheKey: `global:${category}` }).lean();
-        if (cached?.entries?.length) {
-            rawLeaderboard = cached.entries;
+        // Serve from Redis precomputed cache — falls back to live if cache is empty
+        const cachedEntries = await getCache(`leaderboard:global:${category}`);
+        if (cachedEntries?.length) {
+            rawLeaderboard = cachedEntries;
             // If admin, the cached entries won't have real names for anonymous users.
             // Fall through to live query so admin sees full data.
             if (isAdmin) rawLeaderboard = null;

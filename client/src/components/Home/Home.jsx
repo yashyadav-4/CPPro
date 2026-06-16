@@ -4,6 +4,7 @@ import { motion, useScroll, useTransform, useInView, AnimatePresence } from "fra
 import { Link } from "react-router-dom";
 import { Link2, Zap, LineChart } from "lucide-react";
 import { useTheme } from "../../hooks/useTheme";
+import { useSwrCache } from "../../hooks/useSwrCache";
 
 /* ══════════════════════════════════════════════════════
    THEME TOKENS
@@ -532,14 +533,18 @@ export default function Home(){
     topAvatars: []
   });
 
-  useEffect(() => {
-    fetch(`${API_BASE}/api/stats/public/summary`)
-      .then(res => res.json())
-      .then(res => {
-        if (res.success) setStats(res.data);
-      })
-      .catch(err => console.error("Stats fetch failed:", err));
+  const fetchStats = useCallback(async () => {
+    const res = await fetch(`${API_BASE}/api/stats/public/summary`);
+    const json = await res.json();
+    if (!json.success) throw new Error("Failed to fetch stats");
+    return json.data;
   }, []);
+
+  const { data: cachedStats } = useSwrCache('home_stats', fetchStats, 5 * 60 * 1000);
+
+  useEffect(() => {
+    if (cachedStats) setStats(cachedStats);
+  }, [cachedStats]);
 
   return(
     <motion.div animate={{backgroundColor:t.bg,color:t.body}} transition={{duration:0.35,ease:"easeInOut"}} style={{minHeight:"100vh"}}>

@@ -162,7 +162,7 @@ export default function Dashboard() {
           <p className="text-gray-500 dark:text-gray-400 mb-6 font-normal">Link at least one platform to view your dashboard.</p>
           <button
             className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
-            onClick={() => navigate('/verify-codeforces')}
+            onClick={() => navigate('/verification')}
           >
             <Shield size={16} /> Go to Verification
           </button>

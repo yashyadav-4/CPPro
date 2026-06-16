@@ -72,7 +72,7 @@ export default function Footer() {
             <h3 className="text-sm font-semibold text-gray-900 dark:text-white tracking-wider uppercase mb-5 font-mono">Account</h3>
             <ul className="space-y-4">
               {[
-                { name: 'Verification', path: '/verify-codeforces' },
+                { name: 'Verification', path: '/verification' },
                 { name: 'Settings', path: '/settings' },
               ].map((item) => (
                 <li key={item.name}>

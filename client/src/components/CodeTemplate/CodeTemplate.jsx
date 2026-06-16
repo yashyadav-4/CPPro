@@ -4,6 +4,7 @@ import { API_BASE } from '../../api'
 import CodeTemplateList from "./CodeTemplateList"
 import AddSnippetModal from "./AddSnippetModal"
 import SnippetDetailModal from "./SnippetDetailModal"
+import { useSwrCache } from '../../hooks/useSwrCache'
 
 const LANGUAGE_FILTERS = [
     { label: "All", value: "all" },
@@ -33,27 +34,32 @@ export default function CodeTemplate() {
     const [loading, setLoading] = useState(true)
     const [fetchError, setFetchError] = useState(null)
 
-    const fetchSnippets = useCallback(async () => {
-        setLoading(true)
-        setFetchError(null)
-        try {
-            const res = await fetch(`${API_BASE}/api/codeTemplate`, { credentials: "include" })
-            if (res.ok) {
-                const data = await res.json()
-                setSnippets(data)
-            } else {
-                throw new Error("API failed")
-            }
-        } catch (err) {
-            setFetchError("Could not load snippets — server is unreachable.")
-        } finally {
-            setLoading(false)
+    const fetcher = useCallback(async () => {
+        const res = await fetch(`${API_BASE}/api/codeTemplate`, { credentials: "include" })
+        if (res.ok) {
+            return await res.json()
         }
+        throw new Error("API failed")
     }, [])
 
+    const { data, loading: swrLoading, error: swrError, revalidate } = useSwrCache('user_snippets', fetcher)
+
     useEffect(() => {
-        fetchSnippets()
-    }, [fetchSnippets])
+        if (data) setSnippets(data)
+    }, [data])
+
+    useEffect(() => {
+        setLoading(swrLoading)
+    }, [swrLoading])
+
+    useEffect(() => {
+        if (swrError) setFetchError("Could not load snippets — server is unreachable.")
+        else setFetchError(null)
+    }, [swrError])
+
+    const fetchSnippets = useCallback(() => {
+        revalidate(false)
+    }, [revalidate])
 
     async function handleDelete(id) {
         try {

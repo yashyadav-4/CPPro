@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, CheckCheck, Trash2, X } from 'lucide-react';
+import { Bell, Check, Trash2, X } from 'lucide-react';
 import { useNotifications } from '../../context/NotificationContext';
 
 function timeAgo(dateStr) {
@@ -69,7 +69,7 @@ export default function NotificationBell() {
                                     className="flex items-center gap-1 px-2 py-1 text-xs text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 rounded transition-colors"
                                     title="Mark all read"
                                 >
-                                    <CheckCheck size={13} /> All read
+                                    <Check size={13} /> All read
                                 </button>
                             )}
                             <button

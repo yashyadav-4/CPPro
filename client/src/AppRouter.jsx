@@ -11,7 +11,7 @@ const Dashboard = lazy(() => import('./components/Dashboard/Dashboard.jsx'));
 const LeaderBoard = lazy(() => import('./components/Leaderboard/Leaderboard.jsx'));
 const CodeTemplate = lazy(() => import('./components/CodeTemplate/CodeTemplate.jsx'));
 const Community = lazy(() => import('./components/Community Page/Community.jsx'));
-const VerifyCodeforces = lazy(() => import('./components/VerifyCodeforces/VerifyCodeforces.jsx'));
+const Verification = lazy(() => import('./components/Verification/Verification.jsx'));
 const LearningPage = lazy(() => import('./components/LearningTree/LearningPage.jsx'));
 const LevelUpPage = lazy(() => import('./components/LevelUp/LevelUpPage.jsx'));
 const Settings = lazy(() => import('./components/Settings/Settings.jsx'));
@@ -42,7 +42,7 @@ const router = createBrowserRouter([
       { path: 'level-up', element: withSuspense(<ProtectedRoute><LevelUpPage /></ProtectedRoute>) },
       { path: 'codesnippet', element: withSuspense(<ProtectedRoute><CodeTemplate /></ProtectedRoute>) },
       { path: 'community', element: withSuspense(<Community />) },
-      { path: 'verify-codeforces', element: withSuspense(<ProtectedRoute><VerifyCodeforces /></ProtectedRoute>) },
+      { path: 'verification', element: withSuspense(<ProtectedRoute><Verification /></ProtectedRoute>) },
       { path: 'learning', element: withSuspense(<ProtectedRoute><LearningPage /></ProtectedRoute>) },
       { path: 'learning/cp', element: withSuspense(<ProtectedRoute><LearningPage /></ProtectedRoute>) },
       { path: 'learning/dsa', element: withSuspense(<ProtectedRoute><LearningPage /></ProtectedRoute>) },

@@ -467,7 +467,7 @@ export default function Settings() {
                     })()}
                   </div>
                 ) : (
-                  <Link to="/verify-codeforces"
+                  <Link to="/verification"
                     className="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium rounded-lg transition-colors">
                     <Shield size={12} /> Link
                   </Link>
@@ -522,7 +522,7 @@ export default function Settings() {
                     })()}
                   </div>
                 ) : (
-                  <Link to="/verify-codeforces"
+                  <Link to="/verification"
                     className="inline-flex items-center gap-1 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-medium rounded-lg transition-colors">
                     <Shield size={12} /> Link
                   </Link>

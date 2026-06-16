@@ -1,5 +1,6 @@
-import { ExternalLink, CheckCircle2, Clock, Zap, Dumbbell, Tag, Star,
+﻿import { ExternalLink, CheckCircle2, Clock, Zap, Dumbbell, Tag, Star,
          Building2, BookOpen, Trophy, Heart, Layers } from 'lucide-react';
+import { useTheme } from '../../hooks/useTheme';
 
 const PLATFORM_COLORS = {
     codeforces: { bg: 'rgba(59,130,246,0.08)',  border: 'rgba(59,130,246,0.2)',  text: '#3b82f6',  label: 'CF'  },
@@ -54,7 +55,6 @@ function getSheetBadge(problem) {
 }
 
 // ── Sheet badge ───────────────────────────────────────────────────────────────
-// w-fit prevents flex children from stretching to full card width
 function SheetBadge({ problem }) {
     const badge = getSheetBadge(problem);
     if (!badge) return null;
@@ -82,7 +82,7 @@ function DifficultyBadge({ platform, difficulty }) {
         );
     }
     return (
-        <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-white/[0.06] text-gray-400">
+        <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 dark:bg-white/[0.06] text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-transparent">
             {typeof difficulty === 'number' ? difficulty : difficulty}
         </span>
     );
@@ -90,21 +90,25 @@ function DifficultyBadge({ platform, difficulty }) {
 
 // ── Main card ─────────────────────────────────────────────────────────────────
 export default function ProblemCard({ type, problem, loading }) {
+    const { isDark } = useTheme();
     const slot        = SLOT_CONFIG[type] || SLOT_CONFIG.bonus;
     const accentColor = slot.color;
     const SlotIcon    = slot.Icon;
 
+    const bgBase = isDark ? '#111111' : '#ffffff';
+    const borderAlpha = isDark ? '22' : '40'; // slightly stronger border in light mode
+
     // ── Loading skeleton ──────────────────────────────────────────────────────
     if (loading) {
         return (
-            <div className="bg-[#111111] border border-white/[0.07] rounded-xl p-5 flex-1 animate-pulse">
+            <div className="bg-white dark:bg-[#111111] border border-gray-200 dark:border-white/[0.07] rounded-xl p-5 flex-1 animate-pulse">
                 <div className="flex items-center gap-2 mb-5">
-                    <div className="h-3 w-6 bg-white/5 rounded" />
-                    <div className="h-3 w-24 bg-white/5 rounded" />
+                    <div className="h-3 w-6 bg-gray-200 dark:bg-white/5 rounded" />
+                    <div className="h-3 w-24 bg-gray-200 dark:bg-white/5 rounded" />
                 </div>
-                <div className="h-5 w-3/4 bg-white/5 rounded mb-3" />
-                <div className="h-3 w-1/2 bg-white/5 rounded mb-6" />
-                <div className="h-9 w-full bg-white/5 rounded" />
+                <div className="h-5 w-3/4 bg-gray-200 dark:bg-white/5 rounded mb-3" />
+                <div className="h-3 w-1/2 bg-gray-200 dark:bg-white/5 rounded mb-6" />
+                <div className="h-9 w-full bg-gray-200 dark:bg-white/5 rounded" />
             </div>
         );
     }
@@ -112,10 +116,10 @@ export default function ProblemCard({ type, problem, loading }) {
     // ── Empty state ───────────────────────────────────────────────────────────
     if (!problem) {
         return (
-            <div className="bg-[#111111] border border-white/[0.07] rounded-xl p-5 flex-1
-                flex flex-col items-center justify-center min-h-[190px] gap-2">
-                <SlotIcon size={26} className="text-gray-700" />
-                <p className="text-[12px] text-gray-600">
+            <div className="bg-white dark:bg-[#111111] border border-gray-200 dark:border-white/[0.07] rounded-xl p-5 flex-1
+                flex flex-col items-center justify-center min-h-[190px] gap-2 shadow-sm">
+                <SlotIcon size={26} className="text-gray-400 dark:text-gray-700" />
+                <p className="text-[12px] text-gray-500 dark:text-gray-600">
                     {type === 'bonus'
                         ? 'Link a 3rd platform to unlock bonus'
                         : type === 'challenger'
@@ -131,10 +135,10 @@ export default function ProblemCard({ type, problem, loading }) {
     // ── Solved state ──────────────────────────────────────────────────────────
     if (problem.isSolved) {
         return (
-            <div className="rounded-xl flex-1 flex flex-col relative overflow-hidden"
+            <div className="rounded-xl flex-1 flex flex-col relative overflow-hidden shadow-sm"
                 style={{
-                    background: `linear-gradient(145deg, #111111 70%, ${accentColor}0a)`,
-                    border: `1px solid ${accentColor}30`,
+                    background: `linear-gradient(145deg, ${bgBase} 70%, ${accentColor}12)`,
+                    border: `1px solid ${accentColor}${borderAlpha}`,
                 }}>
                 {/* top accent line */}
                 <div className="absolute top-0 left-0 right-0 h-[2px]"
@@ -156,16 +160,16 @@ export default function ProblemCard({ type, problem, loading }) {
 
                     <SheetBadge problem={problem} />
 
-                    <p className="text-[15px] font-semibold text-white leading-snug mb-1">{problem.title}</p>
+                    <p className="text-[15px] font-semibold text-gray-900 dark:text-white leading-snug mb-1">{problem.title}</p>
 
                     {problem.solvedAt && (
-                        <p className="text-[11px] text-gray-600 flex items-center gap-1">
+                        <p className="text-[11px] text-gray-500 dark:text-gray-600 flex items-center gap-1">
                             <Clock size={10} />
                             {new Date(problem.solvedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </p>
                     )}
                     {type === 'challenger' && problem.weakTag && (
-                        <p className="text-[11px] text-amber-500 mt-1.5 flex items-center gap-1">
+                        <p className="text-[11px] text-amber-600 dark:text-amber-500 mt-1.5 flex items-center gap-1">
                             <Tag size={10} /> Targeted: <span className="font-semibold">{problem.weakTag}</span>
                         </p>
                     )}
@@ -175,7 +179,7 @@ export default function ProblemCard({ type, problem, loading }) {
                     <a href={problem.url} target="_blank" rel="noopener noreferrer"
                         className="mt-4 flex items-center justify-center gap-2 w-full py-2 rounded-lg
                             text-[12px] font-medium transition-all hover:brightness-110"
-                        style={{ background: `${accentColor}0e`, color: accentColor, border: `1px solid ${accentColor}20` }}>
+                        style={{ background: `${accentColor}12`, color: accentColor, border: `1px solid ${accentColor}30` }}>
                         Review
                         <ExternalLink size={11} />
                     </a>
@@ -186,10 +190,10 @@ export default function ProblemCard({ type, problem, loading }) {
 
     // ── Default (unsolved) state ──────────────────────────────────────────────
     return (
-        <div className="rounded-xl flex-1 flex flex-col relative overflow-hidden"
+        <div className="rounded-xl flex-1 flex flex-col relative overflow-hidden shadow-sm"
             style={{
-                background: `linear-gradient(145deg, #111111 60%, ${accentColor}08)`,
-                border: `1px solid ${accentColor}22`,
+                background: `linear-gradient(145deg, ${bgBase} 60%, ${accentColor}0e)`,
+                border: `1px solid ${accentColor}${borderAlpha}`,
             }}>
             {/* top accent line */}
             <div className="absolute top-0 left-0 right-0 h-[2px]"
@@ -209,18 +213,18 @@ export default function ProblemCard({ type, problem, loading }) {
                     </span>
                 </div>
 
-                {/* Sheet source badge — w-fit prevents full-width stretch */}
+                {/* Sheet source badge */}
                 <SheetBadge problem={problem} />
 
                 {/* Problem title */}
-                <p className="text-[15px] font-semibold text-white leading-snug mb-2">{problem.title}</p>
+                <p className="text-[15px] font-semibold text-gray-900 dark:text-white leading-snug mb-2">{problem.title}</p>
 
                 {/* Difficulty + tags */}
                 <div className="flex items-center gap-1.5 flex-wrap mb-1">
                     <DifficultyBadge platform={problem.platform} difficulty={problem.difficulty} />
                     {(problem.tags || []).slice(0, 3).map(tag => (
                         <span key={tag}
-                            className="text-[10px] text-gray-500 bg-white/[0.04] border border-white/[0.05] px-1.5 py-0.5 rounded-full">
+                            className="text-[10px] text-gray-600 dark:text-gray-500 bg-gray-100 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.05] px-1.5 py-0.5 rounded-full">
                             {tag}
                         </span>
                     ))}
@@ -228,7 +232,7 @@ export default function ProblemCard({ type, problem, loading }) {
 
                 {/* Weak tag */}
                 {type === 'challenger' && problem.weakTag && (
-                    <p className="text-[11px] text-amber-500 mt-1 flex items-center gap-1">
+                    <p className="text-[11px] text-amber-600 dark:text-amber-500 mt-1 flex items-center gap-1">
                         <Tag size={10} /> Targeting weakness: <span className="font-semibold">{problem.weakTag}</span>
                     </p>
                 )}
@@ -239,12 +243,12 @@ export default function ProblemCard({ type, problem, loading }) {
                 <a href={problem.url} target="_blank" rel="noopener noreferrer"
                     className="mt-4 flex items-center justify-center gap-2 w-full py-2.5 rounded-lg
                         text-[13px] font-semibold transition-all hover:brightness-110 active:scale-[0.98]"
-                    style={{ background: `${accentColor}18`, color: accentColor, border: `1px solid ${accentColor}30` }}>
+                    style={{ background: `${accentColor}15`, color: accentColor, border: `1px solid ${accentColor}35` }}>
                     Solve on {problem.platform === 'codeforces' ? 'Codeforces' : problem.platform === 'leetcode' ? 'LeetCode' : 'CodeChef'}
                     <ExternalLink size={13} />
                 </a>
 
-                <p className="text-[10px] text-gray-700 text-center mt-2">
+                <p className="text-[10px] text-gray-500 dark:text-gray-700 text-center mt-2">
                     Auto-detected as solved on next sync
                 </p>
             </div>

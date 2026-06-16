@@ -7,6 +7,7 @@ const Platform = require('../Model/Platform');
 const Submission = require('../Model/Submissions');
 const LeetCodeData = require('../Model/LeetCodeData');
 const { optionalAuth } = require('../Middlewares/auth');
+const { getCache, setCache } = require('../Utils/redisClient');
 
 const router  = express.Router();
 
@@ -19,49 +20,58 @@ router.get('/', optionalAuth, async (req, res) => {
         const from = new Date(now.getTime() - WINDOW_BACK_MS);
         const to   = new Date(now.getTime() + WINDOW_FORWARD_MS);
 
-        let contests = await Contest
-            .find({ startTime: { $gte: from, $lte: to } })
-            .sort({ startTime: 1 })
-            .select('-__v -createdAt -updatedAt')
-            .lean();
+        let contests = await getCache('contests:list');
+        
+        if (!contests) {
+            contests = await Contest
+                .find({ startTime: { $gte: from, $lte: to } })
+                .sort({ startTime: 1 })
+                .select('-__v -createdAt -updatedAt')
+                .lean();
 
-        // Deduplicate contests with the same URL
-        const uniqueContests = [];
-        const seenUrls = new Set();
-        for (const c of contests) {
-            if (c.url && seenUrls.has(c.url)) continue;
-            if (c.url) seenUrls.add(c.url);
-            uniqueContests.push(c);
-        }
-        contests = uniqueContests;
-
-        // Filter out AtCoder contests with Japanese/Chinese/CJK characters in name
-        const CJK_RE = /[\u3000-\u9fff\uac00-\ud7af\uf900-\ufaff]/;
-        contests = contests.filter(c => c.platform !== 'atcoder' || !CJK_RE.test(c.name));
-
-        // Deduplicate AtCoder division contests (Div.1/Div.2/Div.3 etc. same start time)
-        // This runs at serve-time so old DB entries are also cleaned up
-        const AC_DIV_RE = /[\s\-–]*(div(ision)?\.?\s*\d+)$/i;
-        const acSeen = new Map();
-        const nonAc = contests.filter(c => c.platform !== 'atcoder');
-        const acOnly = contests.filter(c => c.platform === 'atcoder');
-        for (const c of acOnly) {
-            // Group by base name and the date (YYYY-MM-DD) so divisions starting 30 mins apart are grouped
-            const dateStr = new Date(c.startTime).toISOString().substring(0, 10);
-            const baseKey = c.name.replace(AC_DIV_RE, '').trim().toLowerCase() + '::' + dateStr;
-            if (!acSeen.has(baseKey)) {
-                acSeen.set(baseKey, c);
-            } else {
-                // Prefer main round (no suffix) > Div.1 > others
-                const existing = acSeen.get(baseKey);
-                const cIsMain  = !AC_DIV_RE.test(c.name);
-                const cIsDiv1  = /div(ision)?\.?\s*1$/i.test(c.name);
-                const exIsMain = !AC_DIV_RE.test(existing.name);
-                if (!exIsMain && (cIsMain || cIsDiv1)) acSeen.set(baseKey, c);
+            // Deduplicate contests with the same URL
+            const uniqueContests = [];
+            const seenUrls = new Set();
+            for (const c of contests) {
+                if (c.url && seenUrls.has(c.url)) continue;
+                if (c.url) seenUrls.add(c.url);
+                uniqueContests.push(c);
             }
+            contests = uniqueContests;
+
+            // Filter out AtCoder contests with Japanese/Chinese/CJK characters in name
+            const CJK_RE = /[\u3000-\u9fff\uac00-\ud7af\uf900-\ufaff]/;
+            contests = contests.filter(c => c.platform !== 'atcoder' || !CJK_RE.test(c.name));
+
+            // Deduplicate AtCoder division contests (Div.1/Div.2/Div.3 etc. same start time)
+            const AC_DIV_RE = /[\s\-–]*(div(ision)?\.?\s*\d+)$/i;
+            const acSeen = new Map();
+            const nonAc = contests.filter(c => c.platform !== 'atcoder');
+            const acOnly = contests.filter(c => c.platform === 'atcoder');
+            for (const c of acOnly) {
+                const dateStr = new Date(c.startTime).toISOString().substring(0, 10);
+                const baseKey = c.name.replace(AC_DIV_RE, '').trim().toLowerCase() + '::' + dateStr;
+                if (!acSeen.has(baseKey)) {
+                    acSeen.set(baseKey, c);
+                } else {
+                    const existing = acSeen.get(baseKey);
+                    const cIsMain  = !AC_DIV_RE.test(c.name);
+                    const cIsDiv1  = /div(ision)?\.?\s*1$/i.test(c.name);
+                    const exIsMain = !AC_DIV_RE.test(existing.name);
+                    if (!exIsMain && (cIsMain || cIsDiv1)) acSeen.set(baseKey, c);
+                }
+            }
+            contests = [...nonAc, ...Array.from(acSeen.values())]
+                .sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+            
+            await setCache('contests:list', contests, 6 * 3600); // 6 hours
+        } else {
+            // Restore Date objects from JSON stringified cache
+            contests.forEach(c => {
+                c.startTime = new Date(c.startTime);
+                c.endTime = new Date(c.endTime);
+            });
         }
-        contests = [...nonAc, ...Array.from(acSeen.values())]
-            .sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
 
 
         // ── Personalized Analytics (In-Memory Aggregate) ────────────────────

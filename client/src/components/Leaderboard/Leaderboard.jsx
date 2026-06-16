@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { Trophy, Medal, Award, AlertTriangle, RefreshCw, ChevronDown, Crown, Eye, EyeOff, Search } from 'lucide-react';
 import PodiumCard from './PodiumCard';
+import { useSwrCache } from '../../hooks/useSwrCache';
 
 const CATEGORIES = [
   { key: 'cpscore', label: 'CPScore', icon: '🏆' },
@@ -42,34 +43,27 @@ export default function LeaderBoard() {
   const [category, setCategory] = useState('cpscore');
   const [scope, setScope] = useState('global');
   const [scopeOpen, setScopeOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
+  const cacheKey = `leaderboard_${scope}_${category}`;
 
-  const fetchLeaderboard = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await axios.get(`/api/leaderboard?scope=${scope}&category=${category}`, {
-        withCredentials: true,
-      });
-      if (response.data.success) {
-        setLeaderboard(response.data.data.leaderboard || []);
-        setCurrentUser(response.data.data.currentUser || null);
-      } else {
-        setError(response.data.message || "Failed to fetch leaderboard data.");
-      }
-    } catch (err) {
-      console.error("Error fetching leaderboard:", err);
-      setError(err.response?.data?.message || "An error occurred while fetching the leaderboard.");
-    } finally {
-      setLoading(false);
+  const fetcher = useCallback(async () => {
+    const response = await axios.get(`/api/leaderboard?scope=${scope}&category=${category}`, {
+      withCredentials: true,
+    });
+    if (response.data.success) {
+      return response.data.data;
     }
+    throw new Error(response.data.message || "Failed to fetch leaderboard data.");
   }, [scope, category]);
 
+  const { data, loading, error } = useSwrCache(cacheKey, fetcher, { ttlMs: 15 * 60 * 1000 });
+
   useEffect(() => {
-    fetchLeaderboard();
-  }, [fetchLeaderboard]);
+    if (data) {
+      setLeaderboard(data.leaderboard || []);
+      setCurrentUser(data.currentUser || null);
+    }
+  }, [data]);
 
   // Search filtering
   const filteredLeaderboard = search.trim()
@@ -219,7 +213,10 @@ export default function LeaderBoard() {
               </div>
               <div className="flex-shrink-0 relative z-20 mt-2">
                 {currentUser.profilePic ? (
-                  <img className="h-12 w-12 rounded-full object-cover ring-2 ring-emerald-500/50" src={currentUser.profilePic} alt="" />
+                  <img className="h-12 w-12 rounded-full object-cover ring-2 ring-emerald-500/50" src={currentUser.profilePic} alt="" onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100%" height="100%" fill="%2310b981"/><text x="50" y="50" dominant-baseline="central" text-anchor="middle" fill="white" font-size="40" font-family="sans-serif">' + encodeURIComponent((currentUser.name || currentUser.username || 'A').charAt(0).toUpperCase()) + '</text></svg>';
+                  }} />
                 ) : (
                   <div className="h-12 w-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xl ring-2 ring-emerald-500/50">
                     {(currentUser.name || currentUser.username || 'A').charAt(0).toUpperCase()}
@@ -268,7 +265,10 @@ export default function LeaderBoard() {
                         <Link to={`/user/${user.realUsername || user.username}`} className="flex items-center group">
                           <div className="flex-shrink-0 h-9 w-9">
                             {user.profilePic ? (
-                              <img className="h-9 w-9 rounded-full object-cover border border-white/[0.1]" src={user.profilePic} alt={user.username} />
+                              <img className="h-9 w-9 rounded-full object-cover border border-white/[0.1]" src={user.profilePic} alt={user.username} onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100%" height="100%" fill="%2310b981"/><text x="50" y="50" dominant-baseline="central" text-anchor="middle" fill="white" font-size="40" font-family="sans-serif">' + encodeURIComponent((user.realName || user.name || user.username || 'A').charAt(0).toUpperCase()) + '</text></svg>';
+                              }} />
                             ) : (
                               <div className="h-9 w-9 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-sm border border-emerald-400/30">
                                 {((user.realName || user.name || user.username || 'A')).charAt(0).toUpperCase()}

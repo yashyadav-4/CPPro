@@ -1,6 +1,6 @@
 const { getLeaderboardData } = require('../Repositories/leaderboardRepository');
-const LeaderboardCache = require('../Model/LeaderboardCache');
 const GlobalSyncState  = require('../Model/GlobalSyncState');
+const { getCache, setCache } = require('../Utils/redisClient');
 
 const INTERVAL_MS  = 15 * 60 * 1000; // 15 minutes
 const CATEGORIES   = ['cpscore', 'totalQuestions', 'leetcodeRating', 'codeforcesRating', 'codechefRating'];
@@ -11,11 +11,8 @@ async function computeAndCache() {
     await Promise.all(
         CATEGORIES.map(async category => {
             const entries = await getLeaderboardData('global', null, category);
-            await LeaderboardCache.updateOne(
-                { cacheKey: `global:${category}` },
-                { $set: { entries, computedAt: now } },
-                { upsert: true }
-            );
+            // Cache in Redis without TTL (will be overwritten next run)
+            await setCache(`leaderboard:global:${category}`, entries);
         })
     );
     await GlobalSyncState.updateOne(
@@ -29,7 +26,9 @@ async function computeAndCache() {
 async function runOnce() {
     try {
         const state = await GlobalSyncState.findOne({ syncKey: SYNC_KEY }).lean();
-        if (state?.lastSyncedAt) {
+        const hasCache = await getCache(`leaderboard:global:cpscore`);
+        
+        if (state?.lastSyncedAt && hasCache) {
             const elapsed = Date.now() - state.lastSyncedAt.getTime();
             if (elapsed < INTERVAL_MS) {
                 const minsLeft = Math.round((INTERVAL_MS - elapsed) / 60000);

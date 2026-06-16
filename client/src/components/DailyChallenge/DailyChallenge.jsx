@@ -3,6 +3,7 @@ import axios from 'axios';
 import { Link } from 'react-router-dom';
 import { Clock, RefreshCw, LinkIcon, Brain, Swords, ChevronDown, ChevronUp, AlertTriangle, X } from 'lucide-react';
 import { API_BASE } from '../../api';
+import { useSwrCache } from '../../hooks/useSwrCache';
 import ProblemCard from './ProblemCard';
 import DailyStreak from './DailyStreak';
 import DailyTopicSection from './DailyTopicSection';
@@ -63,34 +64,47 @@ export default function DailyChallenge() {
     );
     const countdown = useCountdownIST();
 
-    useEffect(() => { fetchToday(); }, []);
+    const dateStr = new Date().toISOString().substring(0, 10);
+    const cacheKey = `daily_problems_${dateStr}`;
 
-    async function fetchToday() {
-        setLoading(true);
-        setError(null);
-        try {
-            const res = await axios.get(`${API_BASE}/api/daily`, { withCredentials: true });
-            if (res.data.status === 'no_account_linked') {
+    const fetcher = useCallback(async () => {
+        const res = await axios.get(`${API_BASE}/api/daily`, { withCredentials: true });
+        return res.data;
+    }, []);
+
+    const { data: rawData, loading: swrLoading, error: swrError, revalidate } = useSwrCache(cacheKey, fetcher);
+
+    useEffect(() => {
+        if (rawData) {
+            if (rawData.status === 'no_account_linked') {
                 setData({ noAccount: true });
             } else {
-                setData(res.data.data);
-                // Unconditionally sync warning state — ensures banner clears
-                // if user adds session in another tab and data refreshes.
-                const warn = !!res.data.sessionWarning;
+                setData(rawData.data);
+                const warn = !!rawData.sessionWarning;
                 setSessionWarning(warn);
-                // If warning cleared (session added), reset dismissed state so
-                // the banner shows again if the session later expires.
                 if (!warn) {
                     setWarnDismissed(false);
                     sessionStorage.removeItem('daily_session_warn_dismissed');
                 }
             }
-        } catch (err) {
-            setError(err.response?.data?.message || 'Failed to load daily problems');
-        } finally {
-            setLoading(false);
         }
-    }
+    }, [rawData]);
+
+    useEffect(() => {
+        setLoading(swrLoading);
+    }, [swrLoading]);
+
+    useEffect(() => {
+        if (swrError) {
+            setError(swrError.response?.data?.message || swrError.message || 'Failed to load daily problems');
+        } else {
+            setError(null);
+        }
+    }, [swrError]);
+
+    const fetchToday = useCallback(() => {
+        revalidate(false);
+    }, [revalidate]);
 
     async function loadHistory(page = 1) {
         setHistLoading(true);

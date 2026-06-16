@@ -15,15 +15,9 @@ function checkAndMarkFirstDay() {
   const stored = localStorage.getItem(FIRST_DAY_KEY);
   if (stored === null) {
     localStorage.setItem(FIRST_DAY_KEY, new Date().toISOString());
-    return true;
+    return true; // First time visiting, show tour
   }
-  const signupDate = new Date(stored);
-  const today = new Date();
-  return (
-    signupDate.getFullYear() === today.getFullYear() &&
-    signupDate.getMonth() === today.getMonth() &&
-    signupDate.getDate() === today.getDate()
-  );
+  return false; // Already visited, do not show again
 }
 
 // ─── Tour steps ───────────────────────────────────────────────────────────────

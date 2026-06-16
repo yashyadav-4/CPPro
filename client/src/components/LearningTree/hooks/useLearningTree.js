@@ -1,27 +1,29 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import axios from 'axios';
+import { useSwrCache } from '../../../hooks/useSwrCache';
 import { CP_TREE, getAllTrackableIds } from '../data/learningTreeData';
 
 export function useLearningTree(activeTree = CP_TREE) {
   const [progress, setProgress] = useState({});
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch from the new backend on mount
-  useEffect(() => {
-    const fetchProgress = async () => {
-      try {
-        const { data } = await axios.get('/api/learning/progress', { withCredentials: true });
-        if (data && data.progress) {
-          setProgress(data.progress);
-        }
-      } catch (err) {
-        console.error('Failed to fetch learning progress:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchProgress();
+  const fetcher = useCallback(async () => {
+    const { data } = await axios.get('/api/learning/progress', { withCredentials: true });
+    return data && data.progress ? data.progress : {};
   }, []);
+
+  const { data, loading, mutate } = useSwrCache('learning_progress_cache', fetcher);
+
+  useEffect(() => {
+    if (data) {
+      setProgress(data);
+    }
+  }, [data]);
+
+  // Derive loading from swr
+  useEffect(() => {
+    setIsLoading(loading);
+  }, [loading]);
 
   const getState = useCallback((id) => progress[id] || 0, [progress]);
 
@@ -31,11 +33,10 @@ export function useLearningTree(activeTree = CP_TREE) {
     const nextStatus = currentStatus === targetValue ? Math.max(0, targetValue - 1) : targetValue;
 
     // 2. Perform optimistic update locally
-    setProgress(prev => {
-      const updated = { ...prev, [id]: nextStatus };
-      if (nextStatus === 0) delete updated[id];
-      return updated;
-    });
+    const newProgress = { ...progress, [id]: nextStatus };
+    if (nextStatus === 0) delete newProgress[id];
+    setProgress(newProgress);
+    mutate(newProgress);
 
     // 3. Push to backend
     try {

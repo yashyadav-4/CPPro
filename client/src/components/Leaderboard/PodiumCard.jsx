@@ -58,6 +58,10 @@ export default function PodiumCard({ user, category, position, getPrimaryValue, 
               className={`${c.size} rounded-full object-cover ring-2 ${c.ring}`}
               src={user.profilePic}
               alt={user.username}
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100%" height="100%" fill="%2310b981"/><text x="50" y="50" dominant-baseline="central" text-anchor="middle" fill="white" font-size="40" font-family="sans-serif">' + encodeURIComponent((user.name || user.username || 'A').charAt(0).toUpperCase()) + '</text></svg>';
+              }}
             />
           ) : (
             <div className={`${c.size} rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-2xl ring-2 ${c.ring}`}>
