@@ -22,6 +22,7 @@ const notificationRoutes = require('./Routes/notificationRoutes');
 const adminRoutes = require('./Routes/adminRoutes');
 const dailyRoutes = require('./Routes/dailyRoutes');
 const userProfileRoutes = require('./Routes/userProfileRoutes');
+const levelUpRoutes = require('./Routes/levelUpRoutes');
 const { startContestSyncWorker } = require('./Workers/contestSyncWorker');
 const { startLeaderboardSyncWorker } = require('./Workers/leaderboardSyncWorker');
 const { dailyWarmup } = require('./Middlewares/dailyWarmup');
@@ -95,6 +96,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/daily', dailyRoutes);
 app.use('/api/users', userProfileRoutes);
+app.use('/api/levelup', levelUpRoutes);
 
 // test
 app.get('/api/test', (req, res)=>{
@@ -122,6 +124,12 @@ app.get('/api/health',(req, res)=> {
     });
 });
 
+// global error handler to catch unhandled errors and return JSON instead of HTML stack trace
+app.use((err, req, res, next) => {
+    console.error("[Express] unhandled error:", err.message);
+    res.status(500).json({ success: false, message: "Internal server error" });
+});
+
 app.listen(port , ()=>{
     console.log('Server is live at : ' , port);
-})
+})

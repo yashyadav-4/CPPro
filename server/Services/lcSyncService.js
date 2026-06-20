@@ -4,6 +4,7 @@ const Notification = require('../Model/Notification');
 const LeetCodeData = require('../Model/LeetCodeData');
 const Submission = require('../Model/Submissions');
 const { checkDailyProblemSolves } = require('./dailyProblemService');
+const { checkUpsolveProblemSolves } = require('./upsolveRecommendationService');
 
 const FIFTEEN_MINUTES = 15 * 60 * 1000;
 const ADMIN_COOLDOWN  = 10 * 1000; // 10 s for admins
@@ -201,33 +202,67 @@ const syncLeetcodeProfile = async (userId, handle, sessionToken = null, opts = {
                     // of epoch+slug-hash avoids the unique(userId,problemId,submittedAt) conflict
                     // while still deduplicating naturally across syncs.
                     const uniqueSlugs = [...new Set(acIds.filter(Boolean))];
-                    if (uniqueSlugs.length) {
-                        // submittedAt: new Date(0) is the sentinel for "LC AC placeholder".
-                        // Including it in the filter aligns with the unique index {userId,problemId,submittedAt}
-                        // so MongoDB can do an index-based find and won't duplicate on re-sync.
-                        const LC_PLACEHOLDER_DATE = new Date(0);
-                        const ops = uniqueSlugs.map(slug => ({
+                    const LC_PLACEHOLDER_DATE = new Date(0);
+                    const ops = uniqueSlugs.map(slug => ({
+                        updateOne: {
+                            filter: { userId, problemId: slug, platform: 'leetcode', submittedAt: LC_PLACEHOLDER_DATE },
+                            update: {
+                                $setOnInsert: {
+                                    userId,
+                                    problemId: slug,
+                                    problemTitle: slug,
+                                    platform: 'leetcode',
+                                    verdict: 'AC',
+                                    submittedAt: LC_PLACEHOLDER_DATE,
+                                    difficulty: '0',
+                                },
+                            },
+                            upsert: true,
+                        },
+                    }));
+
+                    // Also persist failed attempts from recentSubmissions so they appear in Upsolve Queue
+                    const failedSubs = (lcData?.recentSubmissions || []).filter(s => s.statusDisplay !== 'Accepted');
+                    failedSubs.forEach(s => {
+                        const date = s.timestamp ? new Date(Number(s.timestamp) * 1000) : new Date();
+                        let stdVerdict = 'OTHER';
+                        const display = s.statusDisplay || '';
+                        if (display === 'Wrong Answer') stdVerdict = 'WA';
+                        else if (display === 'Time Limit Exceeded') stdVerdict = 'TLE';
+                        else if (display === 'Memory Limit Exceeded') stdVerdict = 'MLE';
+                        else if (display === 'Runtime Error') stdVerdict = 'RE';
+                        else if (display === 'Compile Error') stdVerdict = 'CE';
+                        else if (display) stdVerdict = display;
+
+                        ops.push({
                             updateOne: {
-                                filter: { userId, problemId: slug, platform: 'leetcode', submittedAt: LC_PLACEHOLDER_DATE },
+                                filter: { userId, problemId: s.titleSlug, platform: 'leetcode', submittedAt: date },
                                 update: {
                                     $setOnInsert: {
                                         userId,
-                                        problemId: slug,
-                                        problemTitle: slug,
+                                        problemId: s.titleSlug,
+                                        problemTitle: s.title,
                                         platform: 'leetcode',
-                                        verdict: 'AC',
-                                        submittedAt: LC_PLACEHOLDER_DATE,
+                                        verdict: stdVerdict,
+                                        submittedAt: date,
                                         difficulty: '0',
                                     },
                                 },
                                 upsert: true,
                             },
-                        }));
-                        const result = await Submission.bulkWrite(ops, { ordered: false });
-                        console.log(`[LC-SYNC] >> ${handle} | persisted ${uniqueSlugs.length} AC slugs to Submissions (inserted=${result.upsertedCount || 0})`);
-                    }
+                        });
+                    });
 
-                    return checkDailyProblemSolves(userId, 'leetcode', acIds);
+                    if (ops.length > 0) {
+                        const result = await Submission.bulkWrite(ops, { ordered: false });
+                        console.log(`[LC-SYNC] >> ${handle} | persisted ${ops.length} submissions (AC + Failed) to Submissions (inserted=${result.upsertedCount || 0})`);
+                    }
+                    checkDailyProblemSolves(userId, 'leetcode', acIds);
+                    await checkUpsolveProblemSolves(userId, 'leetcode', acIds);
+                    
+                    // Recalculate Level Up Data after sync
+                    const { recalculateLevelUpData } = require('./levelUpRecalculationService');
+                    recalculateLevelUpData(userId);
                 })
                 .catch(err => console.warn('[DAILY-LC] post-sync hook failed:', err.message));
             return { success: true };

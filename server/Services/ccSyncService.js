@@ -2,6 +2,7 @@ const axios = require('axios');
 const User = require('../Model/User');
 const Submission = require('../Model/Submissions');
 const { checkDailyProblemSolves } = require('./dailyProblemService');
+const { checkUpsolveProblemSolves } = require('./upsolveRecommendationService');
 
 const FIFTEEN_MINUTES = 15 * 60 * 1000;
 const ADMIN_COOLDOWN  = 10 * 1000;
@@ -115,7 +116,13 @@ const syncCodeChefProfile = async (userId, handle, opts = {}) => {
                 { userId, platform: 'codechef', verdict: 'AC' },
                 { problemId: 1, _id: 0 }
             ).sort({ submittedAt: -1 }).limit(50).lean()
-                .then(subs => checkDailyProblemSolves(userId, 'codechef', subs.map(s => s.problemId)))
+                .then(async subs => {
+                    checkDailyProblemSolves(userId, 'codechef', subs.map(s => s.problemId));
+                    await checkUpsolveProblemSolves(userId, 'codechef', subs.map(s => s.problemId));
+                    // Recalculate Level Up Data after sync
+                    const { recalculateLevelUpData } = require('./levelUpRecalculationService');
+                    recalculateLevelUpData(userId);
+                })
                 .catch(err => console.warn('[DAILY-CC] solve check failed:', err.message));
             return { success: true };
         }
