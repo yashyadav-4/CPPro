@@ -23,9 +23,11 @@ const HelpSupport = lazy(() => import('./components/HelpSupport/HelpSupport.jsx'
 const PublicProfile = lazy(() => import('./components/PublicProfile/PublicProfile.jsx'));
 const NotFound = lazy(() => import('./components/NotFound/NotFound.jsx'));
 
+import { RefreshCw } from 'lucide-react';
+
 const PageLoader = () => (
-  <div className="min-h-screen bg-white dark:bg-[#0a0a0a] flex items-center justify-center">
-    <div className="w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+  <div className="min-h-screen bg-white dark:bg-[#0a0a0a] flex justify-center items-center">
+    <RefreshCw size={24} className="animate-spin text-emerald-500" />
   </div>
 );
 

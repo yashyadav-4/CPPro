@@ -160,7 +160,7 @@ export default function Header() {
                     </nav>
 
                     {/* Right Section - Actions & Profile */}
-                    <div className="hidden md:flex flex-shrink-0 items-center justify-end gap-3 xl:gap-4">
+                    <div className="hidden lg:flex flex-shrink-0 items-center justify-end gap-3 xl:gap-4">
                         <button
                             onClick={toggleTheme}
                             title={isDark ? 'Light mode' : 'Dark mode'}
@@ -229,13 +229,14 @@ export default function Header() {
                     </div>
 
                     {/* Mobile menu button */}
-                    <div className="flex md:hidden flex-1 justify-end items-center gap-4">
+                    <div className="flex lg:hidden flex-1 justify-end items-center gap-3">
                         <button
                             onClick={toggleTheme}
                             className="flex items-center gap-1 px-2 py-1 rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-gray-600 dark:text-gray-300 text-xs font-medium hover:text-gray-900 dark:hover:text-white transition-colors"
                         >
                             {isDark ? <Sun size={14} /> : <Moon size={14} />}
                         </button>
+                        {isAuthenticated && <NotificationBell />}
                         <button
                             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                             className="text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-100"
@@ -248,7 +249,7 @@ export default function Header() {
 
             {/* Mobile Menu */}
             {isMobileMenuOpen && (
-                <div className="md:hidden bg-white/90 dark:bg-black/80 backdrop-blur-2xl border-t border-white/[0.08] dark:border-white/[0.05] rounded-b-2xl overflow-hidden shadow-2xl transition-all duration-300">
+                <div className="lg:hidden bg-white/90 dark:bg-black/80 backdrop-blur-2xl border-t border-white/[0.08] dark:border-white/[0.05] rounded-b-2xl overflow-hidden shadow-2xl transition-all duration-300">
                     <div className="pt-2 pb-3 space-y-1">
                         {navItems.map((item) => {
                             if (dropdownThemes[item]) {

@@ -57,7 +57,8 @@ export default function LevelUpPage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-5 py-3 rounded-2xl font-semibold text-sm transition-all whitespace-nowrap ${
+                title={tab.label}
+                className={`flex items-center gap-2 px-3 sm:px-5 py-3 rounded-2xl font-semibold text-sm transition-all whitespace-nowrap ${
                   isActive 
                     ? 'bg-white dark:bg-[#1a1a1a] text-gray-900 dark:text-white shadow-sm ring-1 ring-gray-200 dark:ring-gray-800' 
                     : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-200/50 dark:hover:bg-gray-800/50'
@@ -66,7 +67,7 @@ export default function LevelUpPage() {
                 <div className={`p-1.5 rounded-lg transition-colors ${isActive ? tab.bg : 'bg-transparent'}`}>
                   <Icon className={`w-4 h-4 ${isActive ? tab.color : 'text-current'}`} />
                 </div>
-                {tab.label}
+                <span className="hidden sm:inline">{tab.label}</span>
               </button>
             );
           })}

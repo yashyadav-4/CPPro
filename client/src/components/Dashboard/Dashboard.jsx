@@ -333,7 +333,7 @@ export default function Dashboard() {
   const achievements = lc.achievements || [];
 
   return (
-    <div className="bg-[#ffffff] dark:bg-[#0a0a0a] px-6 py-6 min-h-screen">
+    <div className="bg-[#ffffff] dark:bg-[#0a0a0a] px-4 sm:px-6 py-6 min-h-screen">
       <div className="max-w-[1400px] mx-auto space-y-3">
         {/* CC sync error banner */}
         {ccSyncError && (
@@ -346,7 +346,8 @@ export default function Dashboard() {
           </div>
         )}
         {/* Header */}
-        <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:flex-wrap">
+          {/* Title + subtitle */}
           <div>
             <h1 className="text-lg font-medium text-gray-900 dark:text-white">Dashboard</h1>
             <div className="flex items-center gap-3">
@@ -368,31 +369,32 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Platform Filter Tabs — show when 2+ platforms are linked */}
-          {[linkedAccounts.codeforces, linkedAccounts.leetcode, linkedAccounts.codechef].filter(Boolean).length >= 2 && (
-            <div className="flex items-center gap-1 bg-gray-100 dark:bg-white/[0.04] rounded-lg p-1 border border-black/[0.05] dark:border-white/[0.06]">
-              {[
-                { key: 'all', label: 'All' },
-                linkedAccounts.codeforces && { key: 'cf', label: 'Codeforces' },
-                linkedAccounts.leetcode && { key: 'lc', label: 'LeetCode' },
-                linkedAccounts.codechef && { key: 'cc', label: 'CodeChef' },
-              ].filter(Boolean).map(tab => (
-                <button
-                  key={tab.key}
-                  onClick={() => setView(tab.key)}
-                  className={`px-3 py-1 text-xs font-medium rounded-md transition-all duration-150 ${
-                    view === tab.key
-                      ? 'bg-white dark:bg-white/[0.1] text-gray-900 dark:text-white shadow-sm'
-                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-          )}
+          {/* Right side: filter tabs + action buttons — wrap on mobile */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Platform Filter Tabs — show when 2+ platforms are linked */}
+            {[linkedAccounts.codeforces, linkedAccounts.leetcode, linkedAccounts.codechef].filter(Boolean).length >= 2 && (
+              <div className="flex items-center gap-1 bg-gray-100 dark:bg-white/[0.04] rounded-lg p-1 border border-black/[0.05] dark:border-white/[0.06]">
+                {[
+                  { key: 'all', label: 'All' },
+                  linkedAccounts.codeforces && { key: 'cf', label: 'CF' },
+                  linkedAccounts.leetcode && { key: 'lc', label: 'LC' },
+                  linkedAccounts.codechef && { key: 'cc', label: 'CC' },
+                ].filter(Boolean).map(tab => (
+                  <button
+                    key={tab.key}
+                    onClick={() => setView(tab.key)}
+                    className={`px-2.5 sm:px-3 py-1 text-xs font-medium rounded-md transition-all duration-150 ${
+                      view === tab.key
+                        ? 'bg-white dark:bg-white/[0.1] text-gray-900 dark:text-white shadow-sm'
+                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            )}
 
-          <div className="flex items-center gap-2">
             <button
               onClick={() => setShareOpen(true)}
               disabled={loading || (!linkedAccounts.codeforces && !linkedAccounts.leetcode && !linkedAccounts.codechef)}
@@ -478,7 +480,7 @@ export default function Dashboard() {
         </ErrorBoundary>
 
         {/* Row 2: Platform info trio */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           <ErrorBoundary>
             <PlatformProfiles
               loading={loading}

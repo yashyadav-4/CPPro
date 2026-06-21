@@ -244,7 +244,8 @@ export default function LeaderBoard() {
         {/* ── Leaderboard Table (ranks 4+) ── */}
         {rest.length > 0 && (
           <div className="bg-gray-50 dark:bg-[#111111] rounded-xl border border-gray-200 dark:border-gray-200 dark:border-white/[0.08] overflow-hidden">
-            <table className="w-full whitespace-nowrap">
+            <div className="overflow-x-auto">
+            <table className="w-full whitespace-nowrap min-w-[640px]">
               <thead className="bg-white dark:bg-[#0a0a0a] border-b border-gray-200 dark:border-gray-200 dark:border-white/[0.08] text-gray-500 text-xs uppercase tracking-wider">
                 <tr>
                   <th className="px-4 py-3 font-semibold text-center w-16">#</th>
@@ -328,6 +329,7 @@ export default function LeaderBoard() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         )}
 

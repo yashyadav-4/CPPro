@@ -145,7 +145,9 @@ export default function CalendarGrid({ contests = [], year, month, onPrev, onNex
         </div>
       </div>
 
-      {/* ── Weekday labels ── */}
+      {/* ── Weekday labels + Day cells (horizontally scrollable on mobile) ── */}
+      <div className="overflow-x-auto -mx-1">
+        <div style={{ minWidth: '420px' }}>
       <div className="grid grid-cols-7 gap-1 mb-1 shrink-0">
         {WEEKDAYS.map(w => (
           <div key={w} className="text-center text-[10px] font-bold text-gray-400 dark:text-gray-600 uppercase tracking-widest py-1">
@@ -223,6 +225,8 @@ export default function CalendarGrid({ contests = [], year, month, onPrev, onNex
             </div>
           );
         })}
+      </div>
+      </div>
       </div>
     </div>
   );

@@ -309,50 +309,59 @@ export default function Community() {
   /* ─────────────────────────────── RENDER ──────────────────────────────────── */
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#0a0a0a]">
-      <div className="w-full max-w-[1600px] mx-auto flex gap-0 min-h-screen px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-[1600px] mx-auto flex flex-col lg:flex-row gap-0 min-h-screen px-0 sm:px-4 lg:px-8">
 
         {/* ───────────── LEFT SIDEBAR ───────────── */}
-        <aside className="w-48 flex-shrink-0 border-r border-gray-200 dark:border-white/[0.07] px-3 py-8 flex flex-col gap-2 sticky top-0 h-screen overflow-y-auto">
+        <aside className="w-full lg:w-48 flex-shrink-0 border-b lg:border-b-0 lg:border-r border-gray-200 dark:border-white/[0.07] px-4 lg:px-3 py-4 lg:py-8 flex flex-col gap-4 lg:gap-2 lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto z-10 bg-gray-50 dark:bg-[#0a0a0a]">
           {/* Brand */}
-          <div className="flex items-center gap-2 px-3 mb-6">
-            <div className="w-7 h-7 rounded-lg bg-emerald-600 flex items-center justify-center">
-              <Users size={14} className="text-white" />
+          <div className="flex items-center justify-between lg:justify-start gap-2 lg:mb-6">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-emerald-600 flex items-center justify-center">
+                <Users size={14} className="text-white" />
+              </div>
+              <div>
+                <div className="text-sm font-bold text-gray-900 dark:text-white leading-none">Community</div>
+                <div className="text-[10px] text-gray-500 dark:text-gray-500 mt-0.5">CPPro Forums</div>
+              </div>
             </div>
-            <div>
-              <div className="text-sm font-bold text-gray-900 dark:text-white leading-none">Community</div>
-              <div className="text-[10px] text-gray-500 dark:text-gray-500 mt-0.5">CPPro Forums</div>
-            </div>
+            {/* New Post Button (Mobile) */}
+            <button
+              onClick={() => setIsNewModalOpen(true)}
+              className="lg:hidden flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm"
+            >
+              <Plus size={14} /> New Post
+            </button>
           </div>
 
-          {/* New Post */}
+          {/* New Post Button (Desktop) */}
           <button
             onClick={() => setIsNewModalOpen(true)}
-            className="flex items-center gap-2 w-full px-3 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm mb-4"
+            className="hidden lg:flex items-center gap-2 w-full px-3 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm mb-4"
           >
             <Plus size={16} />
             New Post
           </button>
 
           {/* Nav */}
-          <div className="space-y-0.5">
+          <div className="flex flex-row lg:flex-col gap-2 lg:gap-0.5 overflow-x-auto hide-scrollbar pb-1 lg:pb-0">
             {NAV_ITEMS.map(({ key, label, icon: Icon }) => (
               <button
                 key={key}
                 onClick={() => { setActiveFilter(key); setPage(1); }}
-                className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                className={`flex items-center gap-2 lg:gap-3 flex-shrink-0 lg:w-full px-3 py-2 lg:py-2.5 rounded-xl text-xs lg:text-sm font-medium transition-all ${
                   activeFilter === key
                     ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-500/20"
-                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/[0.05] hover:text-gray-900 dark:hover:text-white"
+                    : "text-gray-600 dark:text-gray-400 border border-transparent hover:bg-gray-100 dark:hover:bg-white/[0.05] hover:text-gray-900 dark:hover:text-white"
                 }`}
               >
-                <Icon size={16} className={activeFilter === key ? "text-emerald-600 dark:text-emerald-400" : ""} />
+                <Icon size={14} className={activeFilter === key ? "text-emerald-600 dark:text-emerald-400" : ""} />
                 {label}
               </button>
             ))}
           </div>
 
           {/* Divider */}
-          <div className="mt-auto pt-4 border-t border-gray-200 dark:border-white/[0.06]">
+          <div className="hidden lg:block mt-auto pt-4 border-t border-gray-200 dark:border-white/[0.06]">
             <p className="text-[10px] text-gray-400 dark:text-gray-600 px-3 leading-relaxed">
               A place to discuss competitive programming, share knowledge, and get help.
             </p>
@@ -360,7 +369,7 @@ export default function Community() {
         </aside>
 
         {/* ───────────── MIDDLE: FEED ───────────── */}
-        <main className="flex-1 min-w-0 px-6 py-8">
+        <main className="flex-1 min-w-0 px-4 sm:px-6 py-6 lg:py-8">
           {selectedPost ? (
             <PostDetailModal
               post={posts.find((p) => p._id === selectedPost._id) || selectedPost}
@@ -505,7 +514,7 @@ export default function Community() {
 
                       {/* Footer */}
                       <div
-                        className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-white/[0.06]"
+                        className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-gray-100 dark:border-white/[0.06]"
                         onClick={(e) => e.stopPropagation()}
                       >
                         {/* Vote pill */}
@@ -534,7 +543,7 @@ export default function Community() {
                         </div>
 
                         {/* Admin controls */}
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex flex-wrap items-center gap-1.5 ml-auto sm:ml-0">
                           {currentUser?.role === "admin" && (
                             <button
                               onClick={(e) => { e.stopPropagation(); handleTogglePin(post._id); }}
@@ -602,7 +611,7 @@ export default function Community() {
         </main>
 
         {/* ───────────── RIGHT SIDEBAR ───────────── */}
-        <aside className="w-64 flex-shrink-0 border-l border-gray-200 dark:border-white/[0.07] px-4 py-8 flex flex-col gap-5 sticky top-0 h-screen overflow-y-auto">
+        <aside className="w-full xl:w-64 flex-shrink-0 border-t xl:border-t-0 xl:border-l border-gray-200 dark:border-white/[0.07] px-4 py-8 flex flex-col gap-5 xl:sticky xl:top-0 xl:h-screen xl:overflow-y-auto">
 
           {/* Pinned Post */}
           <div>

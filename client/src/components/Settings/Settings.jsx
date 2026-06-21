@@ -253,7 +253,7 @@ export default function Settings() {
 
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-emerald-50 dark:bg-emerald-500/15 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
                 <SettingsIcon size={22} />
@@ -730,7 +730,7 @@ export default function Settings() {
 
               <div className="space-y-3 mb-4">
                 {/* Without vs With comparison */}
-                <div className="grid grid-cols-2 gap-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <div className="p-3 rounded-lg bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.06]">
                     <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Without session</p>
                     <ul className="space-y-1.5 text-xs text-gray-500 dark:text-gray-400">
