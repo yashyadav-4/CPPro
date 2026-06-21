@@ -547,7 +547,7 @@ export default function Home(){
   }, [cachedStats]);
 
   return(
-    <motion.div animate={{backgroundColor:t.bg,color:t.body}} transition={{duration:0.35,ease:"easeInOut"}} style={{minHeight:"100vh"}}>
+    <motion.div animate={{backgroundColor:t.bg,color:t.body}} transition={{duration:0.35,ease:"easeInOut"}} style={{minHeight:"100vh", overflowX:"hidden", width:"100%"}}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600;700;800&display=swap');
         html{scroll-behavior:smooth;}
@@ -559,7 +559,10 @@ export default function Home(){
           .feat-row{grid-template-columns:1fr!important;gap:2rem!important;}
           .feat-row>div{order:0!important;}
           .g3{grid-template-columns:1fr!important;}
-          .stats-flex>div{border-right:none!important;border-bottom:1px solid ${t.statsDvdr}!important;}
+          .stats-flex{display:grid!important;grid-template-columns:1fr 1fr!important;padding:0 1.4rem!important;}
+          .stats-flex>div{border:none!important;border-bottom:1px solid ${t.statsDvdr}!important;padding:1.25rem 0.5rem!important;text-align:center!important;}
+          .stats-flex>div:nth-child(odd){border-right:1px solid ${t.statsDvdr}!important;}
+          .stats-flex>div:nth-last-child(-n+2){border-bottom:none!important;}
           .container{padding:0 1.4rem;}
           .hero-dash{grid-template-columns:1fr!important;}
         }

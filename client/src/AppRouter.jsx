@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { createBrowserRouter } from 'react-router-dom';
+import { createBrowserRouter, useRouteError } from 'react-router-dom';
 import Layout from './Layout.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import AdminRoute from './components/AdminRoute.jsx';
@@ -33,10 +33,34 @@ const PageLoader = () => (
 
 const withSuspense = (element) => <Suspense fallback={<PageLoader />}>{element}</Suspense>;
 
+function GlobalErrorBoundary() {
+  const error = useRouteError();
+  
+  // If Vite chunks fail to load due to a stale cache or new deployment, reload the page.
+  if (error && error.message && (error.message.includes('Failed to fetch dynamically imported module') || error.message.includes('Importing a module script failed'))) {
+    window.location.reload();
+    return null;
+  }
+
+  return (
+    <div className="min-h-screen bg-white dark:bg-[#0a0a0a] flex flex-col items-center justify-center p-4 text-center">
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Oops! Something went wrong.</h1>
+      <p className="text-gray-500 mb-6">{error?.message || "An unexpected error occurred."}</p>
+      <button 
+        onClick={() => window.location.reload()}
+        className="px-4 py-2 bg-emerald-600 text-white rounded-lg font-medium"
+      >
+        Refresh Page
+      </button>
+    </div>
+  );
+}
+
 const router = createBrowserRouter([
   {
     path: '/',
     element: <Layout />,
+    errorElement: <GlobalErrorBoundary />,
     children: [
       { index: true, element: withSuspense(<Home />) },
       { path: 'dashboard', element: withSuspense(<ProtectedRoute><Dashboard /></ProtectedRoute>) },

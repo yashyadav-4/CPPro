@@ -188,11 +188,13 @@ export default function LeaderBoard() {
 
         {/* ── Top 3 Podium ── */}
         {top3.length > 0 && (
-          <div className="flex justify-center items-end mb-10 gap-2">
-            {/* Render in order: #2, #1, #3 */}
-            {top3[1] && <PodiumCard user={top3[1]} category={category} position={2} getPrimaryValue={getPrimaryValue} getPrimaryLabel={getPrimaryLabel} />}
-            {top3[0] && <PodiumCard user={top3[0]} category={category} position={1} getPrimaryValue={getPrimaryValue} getPrimaryLabel={getPrimaryLabel} />}
-            {top3[2] && <PodiumCard user={top3[2]} category={category} position={3} getPrimaryValue={getPrimaryValue} getPrimaryLabel={getPrimaryLabel} />}
+          <div className="w-full overflow-x-auto hide-scrollbar pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 mb-6">
+            <div className="flex justify-center items-end min-w-max mx-auto gap-2">
+              {/* Render in order: #2, #1, #3 */}
+              {top3[1] && <PodiumCard user={top3[1]} category={category} position={2} getPrimaryValue={getPrimaryValue} getPrimaryLabel={getPrimaryLabel} />}
+              {top3[0] && <PodiumCard user={top3[0]} category={category} position={1} getPrimaryValue={getPrimaryValue} getPrimaryLabel={getPrimaryLabel} />}
+              {top3[2] && <PodiumCard user={top3[2]} category={category} position={3} getPrimaryValue={getPrimaryValue} getPrimaryLabel={getPrimaryLabel} />}
+            </div>
           </div>
         )}
 
