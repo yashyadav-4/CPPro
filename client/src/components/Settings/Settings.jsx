@@ -594,7 +594,7 @@ export default function Settings() {
                     <div className="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-500/[0.07] border border-emerald-200 dark:border-emerald-500/20 flex gap-2.5">
                       <Info size={14} className="text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
                       <div className="text-xs text-emerald-800 dark:text-emerald-300 leading-relaxed space-y-1">
-                        <p>Generate a code → set it as your <strong>Name</strong> field at <a href="https://www.codechef.com/settings/" target="_blank" rel="noopener noreferrer" className="underline font-medium">codechef.com/settings/</a> → enter your handle below and verify.</p>
+                        <p>Generate a code → set it as your <strong>Name</strong> field at <a href="https://www.codechef.com/users/your_handle/edit" target="_blank" rel="noopener noreferrer" className="underline font-medium">codechef.com/users/your_handle/edit</a> → enter your handle below and verify.</p>
                         <p className="text-emerald-600 dark:text-emerald-500">You can restore your real name once linked.</p>
                       </div>
                     </div>
@@ -624,9 +624,9 @@ export default function Settings() {
                     {/* Step 2: Enter handle */}
                     {ccCode && (
                       <div>
-                        <a href="https://www.codechef.com/settings/" target="_blank" rel="noopener noreferrer"
+                        <a href="https://www.codechef.com/users/your_handle/edit" target="_blank" rel="noopener noreferrer"
                           className="inline-flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 underline font-medium mb-3">
-                          Open codechef.com/settings/ → set the Name field to the code above, then verify below
+                          Open codechef.com/users/your_handle/edit → set the Name field to the code above, then verify below
                         </a>
                         <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5">Step 2 — Enter your CodeChef handle</p>
                         <div className="flex items-center gap-2">

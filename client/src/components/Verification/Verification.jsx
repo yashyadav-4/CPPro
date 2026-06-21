@@ -512,7 +512,7 @@ function CodeChefSection() {
                   <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Instructions</p>
                   <ol className="space-y-2.5">
                     {[
-                      <><a href="https://www.codechef.com/settings/" target="_blank" rel="noopener noreferrer" className="text-emerald-600 dark:text-emerald-400 underline font-medium">codechef.com/settings/</a> — open your profile settings</>,
+                      <><a href="https://www.codechef.com/users/your_handle/edit" target="_blank" rel="noopener noreferrer" className="text-emerald-600 dark:text-emerald-400 underline font-medium">codechef.com/users/your_handle/edit</a> — open your profile settings</>,
                       'Find the "Name" field under "Personal Details" and set it to the verification code above',
                       'Click "Save"',
                       'Come back here and click "Verify Account"',
@@ -524,7 +524,7 @@ function CodeChefSection() {
                     ))}
                   </ol>
                 </div>
-                <a href="https://www.codechef.com/settings/" target="_blank" rel="noopener noreferrer"
+                <a href="https://www.codechef.com/users/your_handle/edit" target="_blank" rel="noopener noreferrer"
                   className="mt-5 inline-flex items-center gap-2 text-sm font-medium text-emerald-600 dark:text-emerald-400 hover:underline group">
                   <ExternalLink size={14} /> Open CodeChef Settings <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
                 </a>

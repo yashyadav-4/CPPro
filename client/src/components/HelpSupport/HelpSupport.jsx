@@ -518,15 +518,19 @@ export default function HelpSupport() {
                 </div>
               </a>
 
-              <div className="flex items-center gap-4 bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.08] rounded-2xl p-4 hover:bg-gray-100 dark:hover:bg-white/[0.07] transition-all group cursor-default">
-                <div className="p-3 bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400 rounded-xl flex-shrink-0">
+              <a
+                href="mailto:support@cppro.dev?subject=Bug%20Report%20—%20CPPro"
+                className="flex items-center gap-4 bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.08] rounded-2xl p-4 hover:bg-orange-50 dark:hover:bg-orange-500/[0.07] hover:border-orange-300 dark:hover:border-orange-500/40 hover:shadow-[0_0_18px_4px_rgba(249,115,22,0.25)] focus:outline-none focus:shadow-[0_0_18px_4px_rgba(249,115,22,0.35)] transition-all duration-300 group"
+              >
+                <div className="p-3 bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400 rounded-xl flex-shrink-0 group-hover:bg-orange-200 dark:group-hover:bg-orange-500/30 transition-colors duration-300">
                   <Bug size={20} />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-gray-900 dark:text-white">Report a Bug</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Help me enrich the community!</p>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors duration-300">Report a Bug</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 block group-hover:hidden">Help me enrich the community!</p>
+                  <p className="text-xs text-orange-500 dark:text-orange-400 mt-0.5 hidden group-hover:block">support@cppro.dev</p>
                 </div>
-              </div>
+              </a>
             </div>{/* end right column */}
 
           </div>{/* end flex row */}
