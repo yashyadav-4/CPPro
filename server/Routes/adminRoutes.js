@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { verifyAdmin } = require('../Middlewares/adminAuth');
-const { getAdminStats, refreshContests, refreshLeaderboard, refreshStats, sendNotification, refreshDailyProblems, refreshMyDailyProblems, refreshDailyTopics, refreshMyDailyTopic, getErrorLogs, clearErrorLogs, getActiveUsers, syncCFProblems, syncLCProblems, syncCCProblems, getCatalogSyncStatus } = require('../Controllers/adminController');
+const { getAdminStats, refreshContests, refreshLeaderboard, refreshStats, sendNotification, refreshDailyProblems, refreshMyDailyProblems, refreshDailyTopics, refreshMyDailyTopic, getErrorLogs, clearErrorLogs, getActiveUsers, syncCFProblems, syncLCProblems, syncCCProblems, syncLCContestTags, getCatalogSyncStatus } = require('../Controllers/adminController');
 
 // GET /api/admin/stats?days=7|30
 router.get('/stats', verifyAdmin, getAdminStats);
@@ -38,9 +38,10 @@ router.delete('/errors', verifyAdmin, clearErrorLogs);
 router.get('/active-users', verifyAdmin, getActiveUsers);
 
 // Problem catalog sync — background + polling pattern (returns immediately, poll /sync/catalog-status)
-router.post('/sync/cf-problems',  verifyAdmin, syncCFProblems);
-router.post('/sync/lc-problems',  verifyAdmin, syncLCProblems);
-router.post('/sync/cc-problems',  verifyAdmin, syncCCProblems);
-router.get('/sync/catalog-status', verifyAdmin, getCatalogSyncStatus);
+router.post('/sync/cf-problems',       verifyAdmin, syncCFProblems);
+router.post('/sync/lc-problems',       verifyAdmin, syncLCProblems);
+router.post('/sync/cc-problems',       verifyAdmin, syncCCProblems);
+router.post('/sync/lc-contest-tags',   verifyAdmin, syncLCContestTags);
+router.get('/sync/catalog-status',     verifyAdmin, getCatalogSyncStatus);
 
 module.exports = router;

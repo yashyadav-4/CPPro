@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   X, ArrowUp, ArrowDown, MessageCircle, Send,
   User, Trash2, ShieldCheck, Pin, Edit2, Save, ArrowLeft
@@ -54,6 +54,16 @@ const timeAgo = (date) => {
 export default function PostDetailModal({ post, onClose, onVoteToggle, onPinToggle, onEditPost, currentUser }) {
   const [comments, setComments]           = useState([]);
   const [newComment, setNewComment]       = useState("");
+  const textareaRef                       = useRef(null);
+
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "inherit";
+      const scrollHeight = textareaRef.current.scrollHeight;
+      textareaRef.current.style.height = `${Math.min(scrollHeight, 200)}px`;
+      textareaRef.current.style.overflowY = scrollHeight > 200 ? "auto" : "hidden";
+    }
+  }, [newComment]);
   const [loadingComments, setLoadingComments] = useState(true);
   const [isSubmitting, setIsSubmitting]   = useState(false);
   const [error, setError]                 = useState(null);
@@ -308,12 +318,19 @@ export default function PostDetailModal({ post, onClose, onVoteToggle, onPinTogg
 
             {/* Add comment */}
             <form onSubmit={handleAddComment} className="relative mb-4 flex-shrink-0">
-              <input
-                type="text"
-                className="w-full pl-4 pr-11 py-2.5 bg-white dark:bg-[#111111] border border-gray-200 dark:border-white/[0.08] rounded-xl text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/60 transition-all placeholder:text-gray-400 dark:placeholder:text-gray-600"
+              <textarea
+                ref={textareaRef}
+                rows={1}
+                className="w-full pl-4 pr-11 py-2.5 bg-white dark:bg-[#111111] border border-gray-200 dark:border-white/[0.08] rounded-xl text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/60 transition-all placeholder:text-gray-400 dark:placeholder:text-gray-600 resize-none overflow-hidden"
                 placeholder="Add a comment…"
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleAddComment(e);
+                  }
+                }}
                 disabled={isSubmitting}
               />
               <button

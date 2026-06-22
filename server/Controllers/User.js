@@ -3,6 +3,7 @@ const { setUser, getUser } = require('../Services/auth')
 const bcrypt = require('bcryptjs');
 const { OAuth2Client } = require('google-auth-library');
 const crypto = require('crypto');
+const { incrementDailyStat, recordDAU } = require('../Utils/dailyStatHelper');
 
 const client = new OAuth2Client(process.env.CLIENT_ID);
 
@@ -30,6 +31,9 @@ async function handleVerifyAuth(req, res) {
 
         const user = await User.findById(userPayload._id).select('-password');
         if (!user) return res.json({ authenticated: false });
+
+        // Record DAU (safe against race conditions)
+        recordDAU(user._id);
 
         // Update lastLogin on every page load (throttled to 1 DB write/min)
         throttledUpdateLastLogin(user._id);
@@ -60,7 +64,11 @@ async function handleUserSignup(req, res) {
             name,
             email,
             password: hashedPassword,
-        })
+        });
+
+        incrementDailyStat('newSignups');
+        incrementDailyStat('activeUsers'); // Signups are active
+
         return res.status(201).json({ message: "Account created successfully" })
     } catch (err) {
         console.error("Signup error:", err);
@@ -84,6 +92,9 @@ async function handleUserLogin(req, res) {
         }
 
         const token = setUser(user);
+
+        // Record DAU
+        recordDAU(user._id);
 
         // Track last login
         User.updateOne({ _id: user._id }, { lastLogin: new Date() }).catch(() => {});
@@ -168,6 +179,12 @@ async function handleGoogleAuth(req, res) {
                 profilePic: picture,
                 isVerified: true,
             });
+
+            incrementDailyStat('newSignups');
+            incrementDailyStat('activeUsers'); // Signups are active
+        } else {
+            // Existing user, Record DAU
+            recordDAU(user._id);
         }
 
         const token = setUser(user);

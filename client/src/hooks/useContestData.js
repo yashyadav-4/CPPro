@@ -7,6 +7,7 @@ const CACHE_TTL  = 60 * 60 * 1000; // 1 hour
 
 function hydrate(raw) {
   return {
+    _id:       raw._id ?? null,
     id:        raw.contestId ?? (raw._id?.toString() ?? (raw.name + raw.startTime)),
     platform:  raw.platform,
     name:      raw.name,
@@ -16,6 +17,7 @@ function hydrate(raw) {
     url:       raw.url       ?? null,
     status:    raw.status    ?? null,
     attempted: raw.attempted ?? null,
+    creatorId: raw.creatorId ?? null,
   };
 }
 

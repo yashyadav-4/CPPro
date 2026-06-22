@@ -24,6 +24,11 @@ const PLATFORM_META = {
     badge:  'bg-violet-500/10 dark:bg-violet-500/15 border border-violet-500/20 text-violet-600 dark:text-violet-400',
     abbr:   'AC',
   },
+  custom: {
+    dot:    'bg-rose-500',
+    badge:  'bg-rose-500/10 dark:bg-rose-500/15 border border-rose-500/20 text-rose-600 dark:text-rose-400',
+    abbr:   'CT',
+  },
 };
 
 const MONTH_ABBR = ['JAN','FEB','MAR','APR','MAY','JUN',
@@ -91,7 +96,7 @@ function DateBadge({ date, muted = false }) {
 }
 
 // ── Single contest row ────────────────────────────────────────────────────────
-function ContestRow({ c, now, muted = false }) {
+function ContestRow({ c, now, muted = false, onDelete }) {
   const meta = PLATFORM_META[c.platform] || PLATFORM_META.codeforces;
   const rel  = formatRelative(c.startTime, now);
   const isLive = rel.running && !rel.past;
@@ -122,14 +127,25 @@ function ContestRow({ c, now, muted = false }) {
           }`}>
             {c.name}
           </p>
-          <ExternalLink
-            size={11}
-            className={`shrink-0 mt-0.5 transition-colors ${
-              muted
-                ? 'text-gray-200 dark:text-gray-700 group-hover:text-gray-400 dark:group-hover:text-gray-500'
-                : 'text-gray-300 dark:text-gray-600 group-hover:text-emerald-500 dark:group-hover:text-emerald-400'
-            }`}
-          />
+          <div className="flex items-center gap-1 shrink-0">
+            {c.creatorId && onDelete && (
+              <button
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(c._id); }}
+                className="text-gray-400 hover:text-red-500 transition-colors px-1"
+                title="Delete custom contest"
+              >
+                ×
+              </button>
+            )}
+            <ExternalLink
+              size={11}
+              className={`mt-0.5 transition-colors ${
+                muted
+                  ? 'text-gray-200 dark:text-gray-700 group-hover:text-gray-400 dark:group-hover:text-gray-500'
+                  : 'text-gray-300 dark:text-gray-600 group-hover:text-emerald-500 dark:group-hover:text-emerald-400'
+              }`}
+            />
+          </div>
         </div>
 
         <div className="flex items-center gap-2 mt-1 flex-wrap">
@@ -189,7 +205,7 @@ function ContestRow({ c, now, muted = false }) {
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
-export default function UpcomingSidebar({ contests = [], loading }) {
+export default function UpcomingSidebar({ contests = [], loading, onDelete }) {
   const now = useNow(30_000);
   const [pastExpanded, setPastExpanded] = useState(false);
 
@@ -248,7 +264,7 @@ export default function UpcomingSidebar({ contests = [], loading }) {
           </p>
         ) : (
           upcoming.map((c, i) => (
-            <ContestRow key={c.id || i} c={c} now={now} />
+            <ContestRow key={i} c={c} now={now} onDelete={onDelete} />
           ))
         )}
       </div>

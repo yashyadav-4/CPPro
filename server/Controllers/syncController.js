@@ -7,6 +7,7 @@ const dashboardService = require('../Services/cfDashboardService');
 const LeetCodeData = require('../Model/LeetCodeData');
 const Platform = require('../Model/Platform');
 const { getDecryptedLcSession } = require('../Services/settingsService');
+const { incrementDailyStat } = require('../Utils/dailyStatHelper');
 
 const CF_SYNC_API    = (process.env.CF_SYNC_API    || 'http://localhost:3001').replace(/\/$/, '');
 const CF_SYNC_SECRET = process.env.CF_SYNC_SECRET  || '';
@@ -55,6 +56,8 @@ async function handleManualRefresh(req, res) {
             await User.findByIdAndUpdate(userId, { $set: { lastCfUpdate: user.lastCfUpdate || null } });
             return res.status(500).json({ success: false, message: `Sync failed: ${err.message}` });
         }
+
+        incrementDailyStat('syncs');
 
         const profileData = await dashboardService.getProfileSummary(userId);
         return res.status(200).json({
@@ -108,11 +111,13 @@ async function handleLcManualRefresh(req, res) {
         try {
             await lcSyncService.syncLeetcodeProfile(userId, handle, sessionToken);
         } catch (err) {
-            console.error('[LEAN-NEXUS-LC] sync failed:', err.message);
+            console.error('[LEAN-NEXUS] sync failed:', err.message);
             // Roll back the timestamp so the user can retry after a page reload.
             await User.findByIdAndUpdate(userId, { $set: { lastLcUpdate: user.lastLcUpdate || null } });
             return res.status(500).json({ success: false, message: `Sync failed: ${err.message}` });
         }
+
+        incrementDailyStat('syncs');
 
         const lcData = await LeetCodeData.findOne({ userId }).lean();
         return res.status(200).json({
@@ -193,6 +198,8 @@ async function handleCcManualRefresh(req, res) {
             await User.findByIdAndUpdate(userId, { $set: { lastCcUpdate: user.lastCcUpdate || null } });
             return res.status(500).json({ success: false, message: `Sync failed: ${err.message}` });
         }
+
+        incrementDailyStat('syncs');
 
         const ccData = await Platform.findOne({ userId, platform: 'codechef' }).lean();
         return res.status(200).json({

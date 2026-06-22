@@ -1,4 +1,5 @@
 const User = require('../Model/User');
+const DailyStat = require('../Model/DailyStat');
 const { clearStatsCache } = require('../Routes/publicStats');
 const { forceSyncContests } = require('../Workers/contestSyncWorker');
 const { forceRefreshLeaderboard } = require('../Workers/leaderboardSyncWorker');
@@ -23,9 +24,10 @@ const axios = require('axios');
 // Tracks the status of each platform's problem catalog sync.
 // Resets on server restart — admin just re-triggers if needed.
 const catalogSyncState = {
-    cf: { status: 'idle', startedAt: null, finishedAt: null, total: 0, inserted: 0, updated: 0, error: null },
-    lc: { status: 'idle', startedAt: null, finishedAt: null, total: 0, inserted: 0, updated: 0, error: null },
-    cc: { status: 'idle', startedAt: null, finishedAt: null, total: 0, inserted: 0, cloudflareHits: 0, error: null },
+    cf:      { status: 'idle', startedAt: null, finishedAt: null, total: 0, inserted: 0, updated: 0, error: null },
+    lc:      { status: 'idle', startedAt: null, finishedAt: null, total: 0, inserted: 0, updated: 0, error: null },
+    cc:      { status: 'idle', startedAt: null, finishedAt: null, total: 0, inserted: 0, cloudflareHits: 0, error: null },
+    lc_tags: { status: 'idle', startedAt: null, finishedAt: null, contests: 0, tagged: 0, skipped: 0, error: null },
 };
 
 /**
@@ -133,29 +135,11 @@ async function getAdminStats(req, res) {
             Comment.countDocuments(),
             Post.countDocuments({ createdAt: { $gte: startOfThisWeek } }),
 
-            // ── New users per day (for graph) ────────────────────────────────
-            User.aggregate([
-                { $match: { createdAt: { $gte: startOfRange } } },
-                {
-                    $group: {
-                        _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
-                        count: { $sum: 1 }
-                    }
-                },
-                { $sort: { _id: 1 } }
-            ]),
+            // ── Daily Stats (New Users, Syncs, DAU) ─────────────────────────
+            DailyStat.find({ date: { $gte: startOfRange.toISOString().slice(0, 10) } }).sort({ date: 1 }).lean(),
 
-            // ── Synced per day (CF only — LC doesn't write to Platform) ──────
-            Platform.aggregate([
-                { $match: { lastSyncedAt: { $gte: startOfRange } } },
-                {
-                    $group: {
-                        _id: { $dateToString: { format: '%Y-%m-%d', date: '$lastSyncedAt' } },
-                        count: { $sum: 1 }
-                    }
-                },
-                { $sort: { _id: 1 } }
-            ]),
+            // Dummy for syncedOverTime slot
+            Promise.resolve(null),
 
             // ── AC submissions per day ────────────────────────────────────────
             Submission.aggregate([
@@ -169,15 +153,8 @@ async function getAdminStats(req, res) {
                 { $sort: { _id: 1 } }
             ]),
 
-            // ── Daily Active Users ─────────────────────────────────────────────
-            // Source: DailyTopic (userId + date, unique index).
-            // Created on each user's FIRST visit of the day by dailyWarmup.
-            // Has full historical data since the platform launched.
-            DailyTopic.aggregate([
-                { $match: { date: { $gte: startOfRange.toISOString().slice(0, 10) } } },
-                { $group: { _id: '$date', count: { $sum: 1 } } },
-                { $sort: { _id: 1 } },
-            ]),
+            // Dummy for dauOverTime slot
+            Promise.resolve(null),
 
             // ── Top countries ────────────────────────────────────────────────
             User.aggregate([
@@ -318,10 +295,10 @@ async function getAdminStats(req, res) {
                 newUsersThisMonth,
             },
             timeSeries: {
-                newUsers:          buildTimeSeries(newUsersOverTime,   startOfRange, days),
-                synced:            buildTimeSeries(syncedOverTime,      startOfRange, days),
+                newUsers:          buildTimeSeries(newUsersOverTime.map(s => ({ _id: s.date, count: s.newSignups })), startOfRange, days),
+                synced:            buildTimeSeries(newUsersOverTime.map(s => ({ _id: s.date, count: s.syncs })), startOfRange, days),
                 acSubmissions:     buildTimeSeries(submissionsOverTime, startOfRange, days),
-                dailyActiveUsers:  buildTimeSeries(dauOverTime,         startOfRange, days),
+                dailyActiveUsers:  buildTimeSeries(newUsersOverTime.map(s => ({ _id: s.date, count: s.activeUsers })), startOfRange, days),
             },
             distributions: {
                 cfRating: cfRatingFormatted,
@@ -948,6 +925,127 @@ async function syncCCProblems(req, res) {
     });
 }
 
+// ── LC Contest Tags ──────────────────────────────────────────────────────────
+const LC_CONTEST_GQL = `
+query pastContests($pageNo: Int!, $numPerPage: Int!) {
+  pastContests(pageNo: $pageNo, numPerPage: $numPerPage) {
+    data {
+      title
+      titleSlug
+      startTime
+      questions { title titleSlug }
+    }
+  }
+}
+`;
+
+/**
+ * POST /api/admin/sync/lc-contest-tags
+ * Fetches the last 100 LC contests (Weekly + Biweekly) and appends each
+ * contest's titleSlug to the tags array of every matching LCProblem document.
+ * Uses $addToSet so it is fully idempotent — safe to re-run.
+ * Returns immediately; background work runs via setImmediate.
+ * Poll GET /api/admin/sync/catalog-status for progress.
+ */
+async function syncLCContestTags(req, res) {
+    if (catalogSyncState.lc_tags.status === 'running') {
+        return res.json({ success: true, status: 'already_running', message: 'LC contest tag sync is already in progress.' });
+    }
+
+    res.json({ success: true, status: 'started', message: 'LC contest tag sync started in background. Poll /api/admin/sync/catalog-status for progress.' });
+    catalogSyncState.lc_tags = { status: 'running', startedAt: new Date(), finishedAt: null, contests: 0, tagged: 0, skipped: 0, error: null };
+
+    setImmediate(async () => {
+        try {
+            const LC_PAGE_SIZE = 10; // LC's actual enforced page size for pastContests
+            const MAX_CONTESTS = 30;  // fetch last 30 contests per run
+            const allContests  = [];
+            let   pageNo       = 1;
+
+            console.log('[ADMIN] LC contest tag sync started — fetching last 30 contests');
+
+            // Paginate until a page returns fewer results than PAGE_SIZE (end of list)
+            while (true) {
+                const gqlRes = await axios.post(
+                    'https://leetcode.com/graphql',
+                    { query: LC_CONTEST_GQL, variables: { pageNo, numPerPage: LC_PAGE_SIZE } },
+                    {
+                        timeout: 30_000,
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'User-Agent':   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+                            Referer:        'https://leetcode.com',
+                            Origin:         'https://leetcode.com',
+                            Accept:         'application/json',
+                        },
+                    }
+                );
+
+                const page = gqlRes.data?.data?.pastContests?.data || [];
+                if (!page.length) break; // no more contests
+
+                allContests.push(...page);
+                console.log(`[ADMIN] LC contest tag sync — page ${pageNo}: ${page.length} contests (total so far: ${allContests.length})`);
+
+                if (page.length < LC_PAGE_SIZE || allContests.length >= MAX_CONTESTS) break;
+                pageNo++;
+            }
+
+            if (!allContests.length) throw new Error('LC returned 0 contests — unexpected response');
+
+            console.log(`[ADMIN] LC contest tag sync — fetched ${allContests.length} contests total, tagging problems...`);
+
+            let tagged  = 0;
+            let skipped = 0;
+
+            for (const contest of allContests) {
+                const { titleSlug: contestSlug, questions = [] } = contest;
+                if (!questions.length) { skipped++; continue; }
+
+                // For each problem in this contest, append contestSlug to tags (no duplicate via $addToSet)
+                const slugs = questions.map(q => q.titleSlug).filter(Boolean);
+                if (!slugs.length) { skipped++; continue; }
+
+                const result = await LCProblem.updateMany(
+                    { problemId: { $in: slugs } },
+                    { $addToSet: { tags: contestSlug } }
+                );
+
+                tagged  += result.modifiedCount || 0;
+                skipped += slugs.length - (result.matchedCount || 0); // problems not yet in catalog
+
+                console.log(`[ADMIN] LC contest tag sync — ${contestSlug}: ${result.modifiedCount} tagged`);
+            }
+
+            const finishedAt = new Date();
+            catalogSyncState.lc_tags = {
+                status:    'done',
+                startedAt: catalogSyncState.lc_tags.startedAt,
+                finishedAt,
+                contests:  allContests.length,
+                tagged,
+                skipped,
+                error:     null,
+            };
+
+            // Persist to DB so stats survive server restarts
+            await GlobalSyncState.findOneAndUpdate(
+                { syncKey: 'lc_contest_tags' },
+                { syncKey: 'lc_contest_tags', lastSyncedAt: finishedAt, contests: allContests.length, tagged, skipped },
+                { upsert: true, new: true, strict: false }
+            );
+
+            console.log(`[ADMIN] LC contest tag sync done — ${allContests.length} contests, ${tagged} problems tagged, ${skipped} skipped`);
+
+        } catch (err) {
+            const errMsg = err.response?.data?.errors?.[0]?.message || err.response?.data?.error || err.message || err.code || String(err);
+            console.error('[ADMIN] LC contest tag sync failed:', errMsg);
+            ErrorLog.create({ source: 'Admin:syncLCContestTags', level: 'error', message: errMsg }).catch(() => {});
+            catalogSyncState.lc_tags = { ...catalogSyncState.lc_tags, status: 'error', finishedAt: new Date(), error: errMsg };
+        }
+    });
+}
+
 /**
  * GET /api/admin/sync/catalog-status
  * Returns the current in-memory sync state for all three platforms,
@@ -956,10 +1054,11 @@ async function syncCCProblems(req, res) {
 async function getCatalogSyncStatus(req, res) {
     try {
         // Fetch persisted last-sync timestamps from DB
-        const [cfState, lcState, ccState] = await Promise.all([
+        const [cfState, lcState, ccState, lcTagsState] = await Promise.all([
             GlobalSyncState.findOne({ syncKey: 'cf_problems' }).lean(),
             GlobalSyncState.findOne({ syncKey: 'lc_problems' }).lean(),
             GlobalSyncState.findOne({ syncKey: 'cc_problems' }).lean(),
+            GlobalSyncState.findOne({ syncKey: 'lc_contest_tags' }).lean(),
         ]);
 
         // Also fetch current document counts so admin can see catalog size
@@ -986,6 +1085,17 @@ async function getCatalogSyncStatus(req, res) {
                 lastSyncedAt: ccState?.lastSyncedAt || null,
                 catalogCount: ccCount,
             },
+            lc_tags: {
+                // When in-memory is idle (e.g. after server restart), fall back to
+                // DB-persisted stats so the UI shows the real last-run numbers.
+                ...(catalogSyncState.lc_tags.status === 'idle' && lcTagsState ? {
+                    status:    'idle',
+                    contests:  lcTagsState.contests  ?? 0,
+                    tagged:    lcTagsState.tagged    ?? 0,
+                    skipped:   lcTagsState.skipped   ?? 0,
+                } : catalogSyncState.lc_tags),
+                lastSyncedAt: lcTagsState?.lastSyncedAt || null,
+            },
         });
     } catch (err) {
         console.error('[ADMIN] getCatalogSyncStatus error:', err.message);
@@ -994,4 +1104,4 @@ async function getCatalogSyncStatus(req, res) {
     }
 }
 
-module.exports = { getAdminStats, refreshContests, refreshLeaderboard, refreshStats, sendNotification, refreshDailyProblems, refreshMyDailyProblems, refreshDailyTopics, refreshMyDailyTopic, getErrorLogs, clearErrorLogs, getActiveUsers, syncCFProblems, syncLCProblems, syncCCProblems, getCatalogSyncStatus };
+module.exports = { getAdminStats, refreshContests, refreshLeaderboard, refreshStats, sendNotification, refreshDailyProblems, refreshMyDailyProblems, refreshDailyTopics, refreshMyDailyTopic, getErrorLogs, clearErrorLogs, getActiveUsers, syncCFProblems, syncLCProblems, syncCCProblems, syncLCContestTags, getCatalogSyncStatus };

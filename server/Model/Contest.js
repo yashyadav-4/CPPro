@@ -11,7 +11,7 @@ const contestSchema = new mongoose.Schema({
     },
     platform: {
         type:     String,
-        enum:     ['codeforces', 'leetcode', 'codechef'],
+        enum:     ['codeforces', 'leetcode', 'codechef', 'custom'],
         required: true,
         index:    true,
     },
@@ -40,6 +40,12 @@ const contestSchema = new mongoose.Schema({
     status: {
         type: String,      // 'BEFORE' | 'CODING' | 'FINISHED' etc
         default: null,
+    },
+    creatorId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        default: null,
+        index: true,
     },
 }, { timestamps: true });
 

@@ -35,6 +35,13 @@ const PLATFORM_META = {
     pillAttempted: 'bg-violet-600 dark:bg-violet-500 border-violet-600 text-white shadow-sm shadow-violet-500/20',
     label: 'AC',
   },
+  custom: {
+    dot:   'bg-rose-500',
+    pill:  'bg-rose-500/10 dark:bg-rose-500/15 border border-rose-500/20 text-rose-600 dark:text-rose-400',
+    dotAttempted: 'bg-white',
+    pillAttempted: 'bg-rose-600 dark:bg-rose-500 border-rose-600 text-white shadow-sm shadow-rose-500/20',
+    label: 'CT',
+  },
 };
 
 
@@ -65,7 +72,7 @@ function dateKey(year, month, day) {
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
-export default function CalendarGrid({ contests = [], year, month, onPrev, onNext, loading }) {
+export default function CalendarGrid({ contests = [], year, month, onPrev, onNext, loading, onDelete }) {
   if (loading) {
     return (
       <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-5 flex-1">
@@ -193,9 +200,9 @@ export default function CalendarGrid({ contests = [], year, month, onPrev, onNex
               {dayItems.slice(0, 5).map((c, i) => {
                 const meta = PLATFORM_META[c.platform] || PLATFORM_META.codeforces;
                 return (
-                  <a
-                    key={i}
-                    href={c.url || '#'}
+                  <div key={i} className="flex items-center gap-1">
+                    <a
+                      href={c.url || '#'}
                     target="_blank"
                     rel="noopener noreferrer"
                     title={c.name}
@@ -213,7 +220,17 @@ export default function CalendarGrid({ contests = [], year, month, onPrev, onNex
                         {c.attempted.solvedCount > 0 && <span>{c.attempted.solvedCount} AC</span>}
                       </span>
                     )}
-                  </a>
+                    </a>
+                    {c.creatorId && onDelete && (
+                      <button
+                        onClick={(e) => { e.preventDefault(); onDelete(c._id); }}
+                        className="text-gray-400 hover:text-red-500 transition-colors"
+                        title="Delete custom contest"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
                 );
               })}
 

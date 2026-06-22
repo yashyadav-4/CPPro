@@ -605,8 +605,8 @@ function StatusBadge({ status }) {
 
 function ProblemCatalogPanel() {
   const [syncStatus, setSyncStatus] = useState(null);
-  const [syncing, setSyncing]       = useState({ cf: false, lc: false, cc: false });
-  const [messages, setMessages]     = useState({ cf: null, lc: null, cc: null });
+  const [syncing, setSyncing]       = useState({ cf: false, lc: false, cc: false, lc_tags: false });
+  const [messages, setMessages]     = useState({ cf: null, lc: null, cc: null, lc_tags: null });
   const [polling, setPolling]       = useState(false);
 
   const fetchStatus = useCallback(async () => {
@@ -623,7 +623,7 @@ function ProblemCatalogPanel() {
   // Auto-poll every 3s while any sync is running
   useEffect(() => {
     if (!syncStatus) return;
-    const anyRunning = ['cf', 'lc', 'cc'].some(k => syncStatus[k]?.status === 'running');
+    const anyRunning = ['cf', 'lc', 'cc', 'lc_tags'].some(k => syncStatus[k]?.status === 'running');
     if (!anyRunning) { setPolling(false); return; }
     setPolling(true);
     const timer = setInterval(fetchStatus, 3000);
@@ -764,6 +764,109 @@ function ProblemCatalogPanel() {
           );
         })}
       </div>
+
+      {/* LC Contest Tags — standalone card */}
+      {(() => {
+        const st        = syncStatus?.lc_tags || {};
+        const status    = st.status || 'idle';
+        const isRunning = status === 'running';
+        const isDone    = status === 'done';
+        const isError   = status === 'error';
+        const handleSync = async () => {
+          setSyncing(prev => ({ ...prev, lc_tags: true }));
+          setMessages(prev => ({ ...prev, lc_tags: null }));
+          try {
+            const r    = await fetch(`${API_BASE}/api/admin/sync/lc-contest-tags`, { method: 'POST', credentials: 'include' });
+            const json = await r.json();
+            setMessages(prev => ({ ...prev, lc_tags: { ok: json.success, text: json.message } }));
+            setTimeout(fetchStatus, 500);
+          } catch {
+            setMessages(prev => ({ ...prev, lc_tags: { ok: false, text: 'Network error — could not start sync.' } }));
+          } finally {
+            setSyncing(prev => ({ ...prev, lc_tags: false }));
+          }
+        };
+        return (
+          <div className="mt-3 bg-white/[0.03] border border-amber-500/20 rounded-xl p-4 flex flex-col gap-3 relative overflow-hidden">
+            {/* Glow */}
+            <div className="absolute top-0 right-0 w-20 h-20 blur-[40px] opacity-10 pointer-events-none" style={{ background: '#f59e0b' }} />
+
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-amber-400" />
+                <span className="text-sm font-bold text-white">LC Contest Tags</span>
+                <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide bg-amber-500/15 text-amber-400">New</span>
+              </div>
+              <StatusBadge status={status} />
+            </div>
+
+            <p className="text-[11px] text-gray-500 leading-relaxed">
+              Fetches the last 30 LC contests (Weekly + Biweekly) and appends each contest slug
+              (e.g. <span className="text-gray-400 font-mono">weekly-contest-507</span>) to the matching
+              problem&apos;s tags. Run this after syncing LC Problems to enable upsolve queue support.
+            </p>
+
+            {/* Stats row */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="bg-white/[0.03] rounded-lg px-2.5 py-2">
+                <p className="text-[9px] text-gray-600 uppercase tracking-wide mb-0.5">Contests</p>
+                <p className="text-base font-bold text-white font-mono">{st.contests ?? '—'}</p>
+              </div>
+              <div className="bg-white/[0.03] rounded-lg px-2.5 py-2">
+                <p className="text-[9px] text-gray-600 uppercase tracking-wide mb-0.5">Last Synced</p>
+                <p className="text-[11px] font-medium text-gray-400">{st.lastSyncedAt ? timeAgo(st.lastSyncedAt) : 'Never'}</p>
+              </div>
+              <div className="bg-white/[0.03] rounded-lg px-2.5 py-2">
+                <p className="text-[9px] text-gray-600 uppercase tracking-wide mb-0.5">Tagged</p>
+                <p className="text-base font-bold text-emerald-400 font-mono">{st.tagged ?? '—'}</p>
+              </div>
+              <div className="bg-white/[0.03] rounded-lg px-2.5 py-2">
+                <p className="text-[9px] text-gray-600 uppercase tracking-wide mb-0.5">Skipped</p>
+                <p className="text-base font-bold text-gray-500 font-mono">{st.skipped ?? '—'}</p>
+              </div>
+            </div>
+
+            {/* Status messages */}
+            {isDone && (
+              <p className="text-[11px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1.5 rounded-lg">
+                ✓ {st.contests} contests processed — {st.tagged} problems tagged
+              </p>
+            )}
+            {isError && (
+              <p className="text-[11px] text-red-400 bg-red-500/10 border border-red-500/20 px-2.5 py-1.5 rounded-lg break-all">
+                ✕ {st.error || 'Unknown error'}
+              </p>
+            )}
+            {isRunning && (
+              <p className="text-[11px] text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1.5 rounded-lg flex items-center gap-1.5">
+                <Loader2 size={11} className="animate-spin" />
+                Syncing… started {timeAgo(st.startedAt)}
+              </p>
+            )}
+            {messages.lc_tags && !isRunning && (
+              <p className={`text-[11px] px-2.5 py-1.5 rounded-lg ${
+                messages.lc_tags.ok ? 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/20' : 'text-red-400 bg-red-500/10 border border-red-500/20'
+              }`}>
+                {messages.lc_tags.text}
+              </p>
+            )}
+
+            {/* Sync button */}
+            <button
+              onClick={handleSync}
+              disabled={syncing.lc_tags || isRunning}
+              className="mt-auto flex items-center justify-center gap-2 px-4 py-2 rounded-lg border text-xs font-semibold transition-all disabled:opacity-50"
+              style={{ background: '#f59e0b18', borderColor: '#f59e0b44', color: '#f59e0b' }}
+            >
+              {(syncing.lc_tags || isRunning)
+                ? <><Loader2 size={12} className="animate-spin" /> Syncing…</>
+                : <><RefreshCw size={12} /> Sync Contest Tags</>
+              }
+            </button>
+          </div>
+        );
+      })()}
 
       {/* Footer note */}
       <p className="text-[10px] text-gray-600 mt-3">

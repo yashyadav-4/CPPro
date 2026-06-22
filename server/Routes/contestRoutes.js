@@ -6,7 +6,7 @@ const Contest = require('../Model/Contest');
 const Platform = require('../Model/Platform');
 const Submission = require('../Model/Submissions');
 const LeetCodeData = require('../Model/LeetCodeData');
-const { optionalAuth } = require('../Middlewares/auth');
+const { optionalAuth, verifyToken } = require('../Middlewares/auth');
 const { getCache, setCache } = require('../Utils/redisClient');
 
 const router  = express.Router();
@@ -24,7 +24,7 @@ router.get('/', optionalAuth, async (req, res) => {
         
         if (!contests) {
             contests = await Contest
-                .find({ startTime: { $gte: from, $lte: to } })
+                .find({ startTime: { $gte: from, $lte: to }, creatorId: null })
                 .sort({ startTime: 1 })
                 .select('-__v -createdAt -updatedAt')
                 .lean();
@@ -77,6 +77,16 @@ router.get('/', optionalAuth, async (req, res) => {
         // ── Personalized Analytics (In-Memory Aggregate) ────────────────────
         if (req.user) {
             const userId = req.user._id;
+
+            // Fetch the user's private custom contests and append them
+            const customContests = await Contest.find({
+                creatorId: userId,
+                startTime: { $gte: from, $lte: to }
+            }).select('-__v -createdAt -updatedAt').lean();
+
+            if (customContests.length > 0) {
+                contests = [...contests, ...customContests].sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+            }
 
             // 1. O(1) query for Platform ratedHistory
             const platforms = await Platform.find({ userId }).select('platform ratedHistory').lean();
@@ -185,6 +195,52 @@ router.get('/', optionalAuth, async (req, res) => {
     } catch (err) {
         console.error('[contestRoutes] DB read failed:', err.message);
         return res.status(500).json({ error: 'Failed to load contests', message: err.message });
+    }
+});
+
+// ── Custom Contests ─────────────────────────────────────────────────────────
+
+router.post('/custom', verifyToken, async (req, res) => {
+    try {
+        const { name, platform, url, startTime, duration } = req.body;
+        if (!name || !platform || !startTime) {
+            return res.status(400).json({ error: 'Name, platform, and startTime are required.' });
+        }
+
+        const newContest = new Contest({
+            contestId: `custom_${Date.now()}_${req.user._id}`,
+            platform,
+            name,
+            url: url || null,
+            startTime: new Date(startTime),
+            endTime: duration ? new Date(new Date(startTime).getTime() + duration * 60000) : null,
+            duration: duration || null,
+            creatorId: req.user._id,
+            status: 'BEFORE'
+        });
+
+        await newContest.save();
+        res.status(201).json(newContest);
+    } catch (err) {
+        console.error('[contestRoutes POST /custom] Error:', err.message);
+        res.status(500).json({ error: 'Failed to create custom contest', message: err.message });
+    }
+});
+
+router.delete('/custom/:id', verifyToken, async (req, res) => {
+    try {
+        const contestId = req.params.id;
+        const contest = await Contest.findOne({ _id: contestId, creatorId: req.user._id });
+        
+        if (!contest) {
+            return res.status(404).json({ error: 'Custom contest not found or unauthorized' });
+        }
+
+        await Contest.deleteOne({ _id: contestId });
+        res.json({ message: 'Custom contest deleted successfully' });
+    } catch (err) {
+        console.error('[contestRoutes DELETE /custom/:id] Error:', err.message);
+        res.status(500).json({ error: 'Failed to delete custom contest', message: err.message });
     }
 });
 

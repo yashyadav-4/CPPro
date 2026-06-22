@@ -1,10 +1,12 @@
 // ContestTracker.jsx — main page: calendar (left) + upcoming sidebar (right)
 import { useState } from 'react';
-import { AlertTriangle, RefreshCcw } from 'lucide-react';
+import { AlertTriangle, RefreshCcw, Plus } from 'lucide-react';
+import axios from 'axios';
 
 import { useContestData } from '../../hooks/useContestData';
 import CalendarGrid      from './CalendarGrid';
 import UpcomingSidebar   from './UpcomingSidebar';
+import AddCustomContestModal from './AddCustomContestModal';
 
 // ── Helper: today's year/month ────────────────────────────────────────────────
 function todayYM() {
@@ -13,10 +15,20 @@ function todayYM() {
 }
 
 export default function ContestTracker() {
-  const { contests, loading, error } = useContestData();
+  const { contests, loading, error, refetch } = useContestData();
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Separate state for which month the calendar is showing
   const [{ year, month }, setYM] = useState(todayYM);
+
+  const handleDeleteContest = async (id) => {
+    try {
+      await axios.delete(`/api/contests/custom/${id}`, { withCredentials: true });
+      refetch();
+    } catch (err) {
+      console.error('Failed to delete custom contest:', err);
+    }
+  };
 
   const goPrev = () =>
     setYM(({ year: y, month: m }) =>
@@ -93,11 +105,20 @@ export default function ContestTracker() {
           </div>
 
           {/* Auto-update info chip — no manual refresh needed */}
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.06]">
-            <RefreshCcw size={11} className="text-gray-400 dark:text-gray-500 shrink-0" />
-            <span className="text-[10px] font-medium text-gray-400 dark:text-gray-500 whitespace-nowrap">
-              Auto-updated every 6h
-            </span>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm shadow-emerald-500/20 text-xs font-medium transition-colors"
+            >
+              <Plus size={14} />
+              Add Custom
+            </button>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.06]">
+              <RefreshCcw size={11} className="text-gray-400 dark:text-gray-500 shrink-0" />
+              <span className="text-[10px] font-medium text-gray-400 dark:text-gray-500 whitespace-nowrap">
+                Auto-updated every 6h
+              </span>
+            </div>
           </div>
         </div>
 
@@ -121,14 +142,22 @@ export default function ContestTracker() {
             onPrev={goPrev}
             onNext={goNext}
             loading={loading}
+            onDelete={handleDeleteContest}
           />
 
           {/* Upcoming sidebar fixed width */}
           <UpcomingSidebar
             contests={contests}
             loading={loading}
+            onDelete={handleDeleteContest}
           />
         </div>
+
+        <AddCustomContestModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onAdded={() => refetch()}
+        />
 
       </div>
     </div>
