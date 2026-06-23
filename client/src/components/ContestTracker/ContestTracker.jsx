@@ -1,7 +1,8 @@
 // ContestTracker.jsx — main page: calendar (left) + upcoming sidebar (right)
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AlertTriangle, RefreshCcw, Plus } from 'lucide-react';
 import axios from 'axios';
+import { API_BASE } from '../../api';
 
 import { useContestData } from '../../hooks/useContestData';
 import CalendarGrid      from './CalendarGrid';
@@ -17,6 +18,14 @@ function todayYM() {
 export default function ContestTracker() {
   const { contests, loading, error, refetch } = useContestData();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/api/auth/verify`, { credentials: 'include' })
+      .then(res => res.json())
+      .then(data => setIsAuthenticated(!!data.authenticated))
+      .catch(() => setIsAuthenticated(false));
+  }, []);
 
   // Separate state for which month the calendar is showing
   const [{ year, month }, setYM] = useState(todayYM);
@@ -24,9 +33,11 @@ export default function ContestTracker() {
   const handleDeleteContest = async (id) => {
     try {
       await axios.delete(`/api/contests/custom/${id}`, { withCredentials: true });
-      refetch();
     } catch (err) {
       console.error('Failed to delete custom contest:', err);
+    } finally {
+      // Always sync with the server to clear phantom cached contests
+      refetch();
     }
   };
 
@@ -106,13 +117,15 @@ export default function ContestTracker() {
 
           {/* Auto-update info chip — no manual refresh needed */}
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm shadow-emerald-500/20 text-xs font-medium transition-colors"
-            >
-              <Plus size={14} />
-              Add Custom
-            </button>
+            {isAuthenticated && (
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm shadow-emerald-500/20 text-xs font-medium transition-colors"
+              >
+                <Plus size={14} />
+                Add Custom
+              </button>
+            )}
             <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.06]">
               <RefreshCcw size={11} className="text-gray-400 dark:text-gray-500 shrink-0" />
               <span className="text-[10px] font-medium text-gray-400 dark:text-gray-500 whitespace-nowrap">

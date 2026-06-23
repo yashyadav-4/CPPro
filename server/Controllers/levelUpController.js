@@ -3,12 +3,25 @@ const LevelUpData = require('../Model/LevelUpData');
 const User = require('../Model/User');
 const { recalculateLevelUpData } = require('../Services/levelUpRecalculationService');
 
-const getLevelUpDataSafe = async (userId) => {
+const STALE_THRESHOLD_MS = 30 * 60 * 1000; // 30 minutes
+
+const getLevelUpDataSafe = async (userId, force = false) => {
     let data = await LevelUpData.findOne({ userId }).lean();
     if (!data) {
-        // First time, calculate on the fly
+        // First time — calculate synchronously so caller gets real data
         await recalculateLevelUpData(userId);
         data = await LevelUpData.findOne({ userId }).lean();
+    } else {
+        // Check staleness — if stale, fire background recalc (Lean Nexus pattern)
+        const age = data.lastRecalculatedAt
+            ? Date.now() - new Date(data.lastRecalculatedAt).getTime()
+            : Infinity;
+        if (force || age > STALE_THRESHOLD_MS) {
+            // Fire-and-forget: serve cached data now, fresh data arrives on next request
+            recalculateLevelUpData(userId).catch(err =>
+                console.error('[LevelUp] Background recalc failed:', err)
+            );
+        }
     }
     return data || { upsolveQueue: [], performanceStats: {}, recommendations: null };
 };

@@ -9,11 +9,28 @@ const User = require('../Model/User');
 const LevelUpData = require('../Model/LevelUpData');
 const { getUpsolveRecommendations } = require('./upsolveRecommendationService');
 
+/**
+ * Converts an LC contest title to the tag slug stored in LCProblem.tags
+ * by syncLCContestTags (which uses contest.titleSlug directly).
+ * "Weekly Contest 400"    → "weekly-contest-400"
+ * "Biweekly Contest 130"  → "biweekly-contest-130"
+ *
+ * NOTE: The old "leetcode-weekly-contest-N" format in topicTags was from
+ * the raw LC problem catalog (topicTags). The syncLCContestTags endpoint
+ * stores contest.titleSlug directly (no prefix), so we match that format.
+ */
+const lcContestTitleToTag = (title) => {
+    if (!title || typeof title !== 'string') return null;
+    // Lowercase + spaces to hyphens — matches LC's own titleSlug convention
+    return title.trim().toLowerCase().replace(/\s+/g, '-');
+};
+
 const calculateUpsolveQueue = async (userId) => {
     try {
-        const [cfPlatform, ccPlatform] = await Promise.all([
+        const [cfPlatform, ccPlatform, lcData] = await Promise.all([
             Platform.findOne({ userId, platform: 'codeforces' }).lean(),
             Platform.findOne({ userId, platform: 'codechef' }).lean(),
+            LeetCodeData.findOne({ userId }).lean(),
         ]);
 
         const cfRating = cfPlatform?.currentRating || 0;
@@ -189,6 +206,134 @@ const calculateUpsolveQueue = async (userId) => {
                         }
                         break;
                     }
+                }
+            }
+        }
+
+        // RULE 3: Unattempted LC Contest Problems (attended contests ONLY)
+        //
+        // Data sources for "has the user solved this problem?":
+        //   - Primary:    acKeys (built from Submissions collection — all platform AC verdicts)
+        //   - Supplement: lcAcSlugSet (from LeetCodeData.recentSubmissions — covers last 20/200 AC subs
+        //                 for users whose Submissions haven't been populated yet, e.g. new accounts)
+        //
+        // Contest→problem mapping: LCProblem.tags contains the contest titleSlug
+        // (e.g. "weekly-contest-400") added by POST /api/admin/sync/lc-contest-tags.
+        // If this admin sync hasn't run for a contest, the query returns 0 results → skipped gracefully.
+        if (lcData?.contestHistory?.length > 0) {
+
+            // ── Build supplementary LC AC slug set from recentSubmissions ────────
+            // acKeys (from Submissions collection) is the primary truth; this covers
+            // new users or users with LC but no session (limited to 20 public AC subs).
+            const lcAcSlugSet = new Set();
+            if (Array.isArray(lcData.recentSubmissions)) {
+                for (const sub of lcData.recentSubmissions) {
+                    if (!sub?.titleSlug) continue;
+                    // Public sync: statusDisplay is '' (all entries are from recentAcSubmissionList → AC)
+                    // Authenticated sync: statusDisplay is 'Accepted' for AC, other strings for non-AC
+                    if (sub.statusDisplay === '' || sub.statusDisplay === 'Accepted') {
+                        lcAcSlugSet.add(sub.titleSlug);
+                    }
+                }
+            }
+
+            // ── Build attended contest list, newest first ─────────────────────────
+            const attendedContests = lcData.contestHistory
+                .filter(c => c?.attended === true && c?.contestTitle)
+                .sort((a, b) => (b.contestStartTime || 0) - (a.contestStartTime || 0));
+
+            if (attendedContests.length === 0) {
+                console.log(`[Rule3-LC] userId=${userId} | no attended contests in history`);
+            } else {
+                // ── Derive contest tags and skip fully-solved contests early ──────
+                // contestHistory.problemsSolved tells us how many the user solved in the contest.
+                // If they solved all, there's nothing to upsolve — skip without a DB query.
+                const contestsToCheck = attendedContests.filter(c => {
+                    const allSolved = typeof c.problemsSolved === 'number'
+                        && typeof c.totalProblems === 'number'
+                        && c.totalProblems > 0
+                        && c.problemsSolved >= c.totalProblems;
+                    return !allSolved;
+                });
+
+                // Map contest title → tag slug (e.g. "Weekly Contest 400" → "weekly-contest-400")
+                const tagToContest = new Map(); // tag → contest entry
+                for (const c of contestsToCheck) {
+                    const tag = lcContestTitleToTag(c.contestTitle);
+                    if (tag && !tagToContest.has(tag)) {
+                        tagToContest.set(tag, c);
+                    }
+                }
+
+                const allTags = [...tagToContest.keys()];
+
+                console.log(`[Rule3-LC] userId=${userId} | attended=${attendedContests.length} | toCheck=${contestsToCheck.length} | tags=${allTags.length}`);
+
+                if (allTags.length > 0) {
+                    // ── SINGLE batched query: fetch all contest problems at once ──
+                    const allContestProblems = await LCProblem.find(
+                        { tags: { $in: allTags } },
+                        { problemId: 1, title: 1, difficulty: 1, tags: 1 }
+                    ).lean();
+
+                    // Group problems by contest tag
+                    // A problem can appear in multiple contest tags; we key by each matching tag
+                    const problemsByTag = new Map(); // tag → Problem[]
+                    for (const prob of allContestProblems) {
+                        for (const tag of (prob.tags || [])) {
+                            if (tagToContest.has(tag)) {
+                                if (!problemsByTag.has(tag)) problemsByTag.set(tag, []);
+                                problemsByTag.get(tag).push(prob);
+                            }
+                        }
+                    }
+
+                    let lcUnattemptedFound = 0;
+                    const LC_TARGET_UNATTEMPTED = 8;
+
+                    // Process in newest-first order (contestsToCheck is already sorted)
+                    for (const contest of contestsToCheck) {
+                        if (lcUnattemptedFound >= LC_TARGET_UNATTEMPTED) break;
+
+                        const tag = lcContestTitleToTag(contest.contestTitle);
+                        if (!tag) continue;
+
+                        const contestProblems = problemsByTag.get(tag);
+                        if (!contestProblems || contestProblems.length === 0) continue;
+
+                        // Find first unsolved problem.
+                        // Natural catalog order (inserted by questionId asc) = A→B→C→D within a contest.
+                        for (const cp of contestProblems) {
+                            const isAcedInSubmissions = acKeys.has(`leetcode-${cp.problemId}`);
+                            const isAcedInLcData = lcAcSlugSet.has(cp.problemId);
+
+                            if (!isAcedInSubmissions && !isAcedInLcData) {
+                                // Don't push the same problem twice (e.g. problem in two different contests)
+                                const alreadyIn = upsolveList.some(
+                                    u => u.platform === 'leetcode' && u.problemId === cp.problemId
+                                );
+                                if (!alreadyIn) {
+                                    upsolveList.push({
+                                        platform: 'leetcode',
+                                        problemId: cp.problemId,
+                                        title: cp.title,
+                                        rating: cp.difficulty,
+                                        failReason: 'Unattempted',
+                                        contestName: contest.contestTitle,
+                                        attempts: 0,
+                                        submittedAt: contest.contestStartTime
+                                            ? new Date(contest.contestStartTime * 1000).toISOString()
+                                            : new Date().toISOString(),
+                                    });
+                                    lcUnattemptedFound++;
+                                    console.log(`[Rule3-LC] ✓ "${cp.title}" from "${contest.contestTitle}"`);
+                                }
+                                break; // only first unsolved per contest
+                            }
+                        }
+                    }
+
+                    console.log(`[Rule3-LC] done — ${lcUnattemptedFound} LC contest items added`);
                 }
             }
         }

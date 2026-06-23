@@ -681,7 +681,7 @@ async function syncCFProblems(req, res) {
         try {
             console.log('[ADMIN] CF problem catalog sync started');
 
-            const response = await axios.get('https://codeforces.com/api/problemset.problems', { timeout: 20_000 });
+            const response = await axios.get('https://codeforces.com/api/problemset.problems?lang=en', { timeout: 20_000 });
             if (response.data?.status !== 'OK') throw new Error('CF API returned non-OK status');
 
             const { problems, problemStatistics } = response.data.result;
@@ -958,11 +958,11 @@ async function syncLCContestTags(req, res) {
     setImmediate(async () => {
         try {
             const LC_PAGE_SIZE = 10; // LC's actual enforced page size for pastContests
-            const MAX_CONTESTS = 30;  // fetch last 30 contests per run
+            const MAX_CONTESTS = 100;  // fetch last 100 contests per run
             const allContests  = [];
             let   pageNo       = 1;
 
-            console.log('[ADMIN] LC contest tag sync started — fetching last 30 contests');
+            console.log('[ADMIN] LC contest tag sync started — fetching last 100 contests');
 
             // Paginate until a page returns fewer results than PAGE_SIZE (end of list)
             while (true) {

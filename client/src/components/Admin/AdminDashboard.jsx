@@ -802,7 +802,7 @@ function ProblemCatalogPanel() {
             </div>
 
             <p className="text-[11px] text-gray-500 leading-relaxed">
-              Fetches the last 30 LC contests (Weekly + Biweekly) and appends each contest slug
+              Fetches the last 100 LC contests (Weekly + Biweekly) and appends each contest slug
               (e.g. <span className="text-gray-400 font-mono">weekly-contest-507</span>) to the matching
               problem&apos;s tags. Run this after syncing LC Problems to enable upsolve queue support.
             </p>

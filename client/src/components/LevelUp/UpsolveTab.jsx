@@ -36,10 +36,18 @@ export default function UpsolveTab() {
   const [activePlatform, setActivePlatform] = useState('all');
   const [sortBy, setSortBy] = useState('recent'); // 'rating' | 'recent'
   const [cfFilter, setCfFilter] = useState('all'); // 'all' | 'contest' | 'wrong_answer'
+  const [lcFilter, setLcFilter] = useState('all'); // 'all' | 'contest' | 'wrong_answer'
   const [problems, setProblems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lcSessionActive, setLcSessionActive] = useState(true);
+
+  // Clear stale upsolve cache on mount so recalculated data is always shown
+  useEffect(() => {
+    ['all', 'codeforces', 'leetcode', 'codechef'].forEach(p =>
+      localStorage.removeItem(`cppro_levelup_upsolve_${p}`)
+    );
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -72,14 +80,10 @@ export default function UpsolveTab() {
           const newProblems = res.data?.data || [];
           const newLcSessionActive = res.data?.lcSessionActive;
           
-          const newDataToCache = { problems: newProblems, lcSessionActive: newLcSessionActive };
-          const newCacheString = JSON.stringify(newDataToCache);
-          
-          if (newCacheString !== cached) {
-            setProblems(newProblems);
-            if (newLcSessionActive !== undefined) setLcSessionActive(newLcSessionActive);
-            localStorage.setItem(cacheKey, newCacheString);
-          }
+          // Always update state from fresh API response
+          setProblems(newProblems);
+          if (newLcSessionActive !== undefined) setLcSessionActive(newLcSessionActive);
+          localStorage.setItem(cacheKey, JSON.stringify({ problems: newProblems, lcSessionActive: newLcSessionActive }));
         }
       } catch (err) {
         if (isMounted && !localStorage.getItem(cacheKey)) {
@@ -103,6 +107,12 @@ export default function UpsolveTab() {
       } else if (cfFilter === 'wrong_answer') {
         filtered = problems.filter(p => p.failReason !== 'Unattempted');
       }
+    } else if (activePlatform === 'leetcode') {
+      if (lcFilter === 'contest') {
+        filtered = problems.filter(p => p.failReason === 'Unattempted');
+      } else if (lcFilter === 'wrong_answer') {
+        filtered = problems.filter(p => p.failReason !== 'Unattempted');
+      }
     }
 
     return [...filtered].sort((a, b) => {
@@ -122,7 +132,7 @@ export default function UpsolveTab() {
         return rA - rB; // lowest to highest
       }
     });
-  }, [problems, sortBy, activePlatform, cfFilter]);
+  }, [problems, sortBy, activePlatform, cfFilter, lcFilter]);
 
   const getHref = (p) => {
     if (p.platform === 'leetcode') return `https://leetcode.com/problems/${p.problemId}/`;
@@ -230,6 +240,38 @@ export default function UpsolveTab() {
                onClick={() => setCfFilter('contest')}
                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                  cfFilter === 'contest' ? 'bg-white dark:bg-[#252525] text-gray-900 dark:text-white shadow-sm ring-1 ring-gray-200 dark:ring-gray-700/50' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'
+               }`}
+             >
+               Upsolve from Last Contests
+             </button>
+           </div>
+        </div>
+      )}
+
+      {/* LeetCode Specific Filters */}
+      {activePlatform === 'leetcode' && (
+        <div className="flex justify-end mb-6 -mt-4">
+           <div className="flex items-center bg-gray-100/80 dark:bg-[#1a1a1a] p-1 rounded-xl border border-gray-200/50 dark:border-gray-800/50">
+             <button
+               onClick={() => setLcFilter('all')}
+               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                 lcFilter === 'all' ? 'bg-white dark:bg-[#252525] text-gray-900 dark:text-white shadow-sm ring-1 ring-gray-200 dark:ring-gray-700/50' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'
+               }`}
+             >
+               All
+             </button>
+             <button
+               onClick={() => setLcFilter('wrong_answer')}
+               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                 lcFilter === 'wrong_answer' ? 'bg-white dark:bg-[#252525] text-gray-900 dark:text-white shadow-sm ring-1 ring-gray-200 dark:ring-gray-700/50' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'
+               }`}
+             >
+               Wrong Answer
+             </button>
+             <button
+               onClick={() => setLcFilter('contest')}
+               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                 lcFilter === 'contest' ? 'bg-white dark:bg-[#252525] text-gray-900 dark:text-white shadow-sm ring-1 ring-gray-200 dark:ring-gray-700/50' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'
                }`}
              >
                Upsolve from Last Contests
