@@ -354,13 +354,25 @@ async function checkUpsolveProblemSolves(userId, platform, acProblemIds) {
     const acSet = new Set(acProblemIds.map(String));
     let changed = false;
 
+    // Fetch actual submission timestamps to reflect when the problem was solved
+    const recentAc = await Submission.find({
+        userId, platform, problemId: { $in: acProblemIds }, verdict: 'AC'
+    }, 'problemId submittedAt').lean();
+    
+    const acMap = new Map();
+    for (const sub of recentAc) {
+        if (!acMap.has(sub.problemId) || sub.submittedAt < acMap.get(sub.problemId)) {
+            acMap.set(sub.problemId, sub.submittedAt);
+        }
+    }
+
     for (const slotName of ['workout', 'challenge', 'bonus']) {
         const slotArray = recs[slotName] || [];
         for (const p of slotArray) {
             if (p.platform !== platform || p.isSolved) continue;
             if (acSet.has(p.problemId)) {
                 p.isSolved = true;
-                p.solvedAt = new Date();
+                p.solvedAt = acMap.get(p.problemId) || new Date();
                 changed = true;
             }
         }

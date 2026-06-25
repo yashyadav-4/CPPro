@@ -97,9 +97,9 @@ const getProfile = async (req, res) => {
 const updateProfile = async (req, res) => {
     try {
         const userId = req.user._id;
-        const { name, gender, age, profilePic, country, state, city, college, public: isPublic } = req.body;
+        const { name, gender, age, profilePic, country, state, city, college, public: isPublic, preferredLanguage } = req.body;
         const updatedUser = await settingsService.updateUserProfile(userId, {
-            name, gender, age, profilePic, country, state, city, college, public: isPublic
+            name, gender, age, profilePic, country, state, city, college, public: isPublic, preferredLanguage
         });
         return res.status(200).json({ success: true, message: 'Profile updated', user: updatedUser });
     } catch (error) {

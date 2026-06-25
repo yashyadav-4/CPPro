@@ -31,32 +31,28 @@ const HELP_DATA = [
     category: 'Dashboard',
     items: [
       {
-        q: 'What are the 6 stat cards on the Dashboard?',
-        a: 'The Dashboard shows: Total Solved (unique problems across all platforms), Total Submissions (all attempts including WA/TLE/etc., with CF/LC/CC breakdown chips), Active Days, Acceptance Rate, Total Contests, and CPScore. Each card pulls live data from your linked platforms.',
+        q: 'What do the main statistics cards track?',
+        a: 'Your Dashboard provides a unified view of your competitive programming journey. The top cards display your Total Solved problems (unique across all platforms), Total Submissions (including all WA/TLE attempts, with platform-specific breakdowns), Active Days, overall Acceptance Rate, Total Contests attended, and your CPScore. All data is pulled live from your linked Codeforces, LeetCode, and CodeChef accounts.',
       },
       {
-        q: 'How do I use the Activity Heatmap?',
-        a: 'The heatmap merges your Codeforces and LeetCode submission dates into a single calendar grid. Each cell shows the number of submissions on that day. CodeChef submissions are shown separately in the CC panel. No setup needed — data appears automatically once your platforms are linked.',
+        q: 'How does the Activity Heatmap work?',
+        a: 'The heatmap seamlessly merges your Codeforces and LeetCode submission history into a single, beautiful calendar grid. Each cell represents a day, with the color intensity matching your submission volume. CodeChef activity is tracked separately in its dedicated analytics panel. Once your accounts are linked, this populates automatically!',
       },
       {
-        q: 'What does the Rating Progression chart show?',
-        a: 'It plots your Codeforces and LeetCode rating history on a shared timeline, so you can see how both ratings moved over time relative to each other.',
+        q: 'What is the Rating Progression chart?',
+        a: 'It plots your Codeforces and LeetCode rating histories on a shared, interactive timeline. This allows you to directly visualize how your performance on both platforms has evolved relative to one another over time.',
       },
       {
-        q: 'What other sections are on the Dashboard?',
-        a: 'Difficulty Breakdown, Skill Gaps, Top Topics, Weekly Streak, Recent Contests, Achievements, and (when CodeChef is linked) CCQuickStats, CCLanguageChart, and CCVerdictBreakdown. Row 3 also embeds the DailyWidget — a compact daily problem card that links to /daily.',
+        q: 'What other analytics are available on the Dashboard?',
+        a: 'The Dashboard is packed with insights! You\'ll find your Difficulty Breakdown (Easy/Medium/Hard/CF Ratings), Skill Gaps & Top Topics radar charts, Weekly Streak tracker, Recent Contests log, and Earned Achievements. If you link a CodeChef account, you\'ll also unlock the CCQuickStats, CCLanguageChart, and CCVerdictBreakdown modules.',
       },
       {
-        q: 'When does the CodeChef panel appear?',
-        a: 'The CCQuickStats, CCLanguageChart, and CCVerdictBreakdown panels are only visible when you have a CodeChef account linked in Settings.',
+        q: 'How do I share my progress with others?',
+        a: 'Click the "Share" (camera) icon in the Dashboard header. CPPro will instantly generate a sleek, downloadable image card summarizing your key stats, current ratings, and CPScore — perfect for sharing on social media or your portfolio.',
       },
       {
-        q: 'How do I export my Dashboard as an image?',
-        a: 'Click the "Share" or camera icon in the Dashboard header. CPPro renders your stats into a downloadable shareable card image.',
-      },
-      {
-        q: 'How fresh is the data on the Dashboard?',
-        a: 'Codeforces data refreshes every 10 minutes; LeetCode every 15 minutes. The first request always returns currently cached data instantly — the sync runs in the background. Click "Refresh" in the Dashboard header to trigger an early update.',
+        q: 'Is my Dashboard data real-time?',
+        a: 'Codeforces syncs every 10 minutes, and LeetCode syncs every 15 minutes. To ensure the Dashboard loads instantly, we serve your cached data immediately while firing a background sync. You can force an early update anytime by clicking the "Refresh" button in the header.',
       },
     ],
   },
@@ -67,31 +63,31 @@ const HELP_DATA = [
     items: [
       {
         q: 'What are the Daily Problems?',
-        a: 'Every day (in IST) CPPro generates two problems for you: a Daily Workout (at or below your current level — comfortable and popular) and a Daily Challenger (above your current level, targeting your statistically weakest topic). Both are personalized to your current ratings and skill gaps.',
+        a: 'Every day (in IST), CPPro\'s recommendation engine curates two hyper-personalized problems for you: a Daily Workout (a comfortable, popular problem at or slightly below your current rating) and a Daily Challenger (a significantly harder problem specifically targeting your statistically weakest topic).',
       },
       {
-        q: 'How do I get my daily problems?',
-        a: 'Visit /daily (linked from the nav and the DailyWidget on your Dashboard). Problems are generated lazily on your first visit each day — there is no cron job. Steps:\n1. Link at least one platform (Codeforces, LeetCode, or CodeChef) in Settings.\n2. Visit /daily each day.\n3. Solve the problem on the platform.\n4. Sync your account — CPPro auto-detects if the problem is solved.\n5. If auto-detect misses it, click "Mark Solved" manually.',
+        q: 'How do I access and solve my daily problems?',
+        a: 'Navigate to /daily (or click the widget on your Dashboard). Problems are generated lazily on your first visit each day. Steps: 1. Link your Codeforces, LeetCode, or CodeChef account. 2. Visit /daily. 3. Solve the problem on the respective platform. 4. Click Refresh in CPPro—our auto-detect engine will securely verify your submission and update your streak!',
       },
       {
-        q: 'How are difficulty levels chosen?',
-        a: 'For Codeforces: Workout band = [rating−300, rating] with solvedCount ≥ 500; Challenger band = [rating+100, rating+350] with solvedCount ≥ 200. For LeetCode: rating ≥ 1900 → Hard, ≥ 1600 → Medium, else Easy. Challenger is one difficulty step harder. For CodeChef: similar rating-based bands.',
+        q: 'How are difficulty bands calculated?',
+        a: 'For Codeforces: Workout = [rating−300, rating]; Challenger = [rating+100, rating+350]. For LeetCode: Scales dynamically from Easy to Hard based on your estimated LC rating. For CodeChef: Custom rating-based bands. The Challenger is always designed to push you one step beyond your comfort zone.',
       },
       {
-        q: 'Which platform do problems come from?',
-        a: 'Platform priority (tried in order): LeetCode → Codeforces → CodeChef. If no suitable problem is found on one platform it falls back to the next.',
+        q: 'Which platforms do the daily problems pull from?',
+        a: 'Our recommendation engine evaluates platforms in a strict priority order: LeetCode → Codeforces → CodeChef. If no high-quality, unsolved problem matching your exact skill parameters is found on the first platform, it gracefully falls back to the next.',
       },
       {
-        q: 'How does auto-solve detection work?',
-        a: 'After every sync, CPPro checks your last 50 accepted submissions against today\'s daily problems. If a match is found, the problem is automatically marked solved and your streak is updated. You will also receive a notification.',
+        q: 'How does the auto-solve detection engine work?',
+        a: 'After every successful background sync, CPPro scans your last 50 accepted submissions. If an exact match with your daily problem is detected, it automatically marks the problem as solved, extends your streak, and dispatches an in-app notification.',
       },
       {
-        q: 'How does the daily streak work?',
-        a: 'Your daily streak (separate from your activity streak) is tracked in Settings → Profile. It counts consecutive days where you solved at least one daily problem. Milestones at 7, 14, 30, 60, and 100 days trigger in-app notifications.',
+        q: 'How does the daily streak system work?',
+        a: 'Your dedicated Daily Streak (visible in Settings) tracks consecutive days where you\'ve conquered at least one daily problem. Hitting major milestones (7, 14, 30, 60, and 100 days) unlocks special notifications and achievements.',
       },
       {
-        q: 'Where can I see the DailyWidget?',
-        a: 'The DailyWidget is embedded in Row 3 of the Dashboard (280px fixed column alongside the Activity Heatmap). It shows today\'s two problems and links to /daily for the full view.',
+        q: 'Where can I monitor my daily progress quickly?',
+        a: 'The DailyWidget is beautifully integrated directly into Row 3 of your main Dashboard. It provides a compact, at-a-glance view of today\'s Workout and Challenger, seamlessly linking you directly to the full /daily interface.',
       },
     ],
   },
@@ -102,19 +98,19 @@ const HELP_DATA = [
     items: [
       {
         q: 'How do I refresh my data?',
-        a: 'Click the "Refresh" button in the Dashboard header. This triggers a background sync for both Codeforces and LeetCode. Your current data is returned immediately; the update completes asynchronously.',
+        a: 'Simply click the "Refresh" button in the Dashboard header. This triggers an asynchronous background sync for Codeforces, LeetCode, and CodeChef. You never have to wait—your current data is shown instantly while the platform securely updates your records in the background.',
       },
       {
-        q: 'How often can I sync?',
-        a: 'Codeforces: 10-minute cooldown (10 seconds for admins). LeetCode: 15-minute cooldown (10 seconds for admins). Sync never blocks — you always get the current cached data while the update runs in the background.',
+        q: 'How often can I sync my accounts?',
+        a: 'To respect platform APIs, Codeforces has a 10-minute cooldown, and LeetCode has a 15-minute cooldown (Admins have a 10-second bypass). Thanks to our "Lean Nexus" architecture, syncing never blocks your workflow.',
       },
       {
-        q: 'Does sync work without an LC Session Token?',
-        a: 'Yes. Public sync always succeeds. Without an LC Session Token you get up to 100 most-recent accepted submissions (public API limit). With the LEETCODE_SESSION cookie saved in Settings, CPPro fetches up to 200 submissions with full status and language info.',
+        q: 'How does LeetCode sync work without a Session Token?',
+        a: 'Our public sync engine effortlessly fetches your 100 most-recent accepted submissions using LeetCode\'s public API. However, if you want deeper analytics, adding your LEETCODE_SESSION cookie in Settings allows CPPro to fetch up to 200 submissions including failed attempts, detailed statuses, and language information.',
       },
       {
-        q: 'How does Codeforces sync work?',
-        a: 'CPPro sends a sync job to the Codeforces API Server (port 3001), which fetches your rating history, all submissions, contest participation, and topic/difficulty breakdowns via Webshare proxies using BullMQ workers.',
+        q: 'How does the Codeforces backend sync work?',
+        a: 'CPPro utilizes a dedicated, high-performance API microserver (port 3001). It dispatches BullMQ background workers through rotating Webshare proxies to rapidly aggregate your entire rating history, submission logs, contest participation, and deep topic/difficulty analytics.',
       },
     ],
   },
@@ -124,20 +120,20 @@ const HELP_DATA = [
     category: 'Leaderboard',
     items: [
       {
-        q: 'What scopes does the Leaderboard support?',
-        a: 'Global, Country, and College. Country and College scopes only include users who have filled in those fields in Settings → Profile.',
+        q: 'How does the Global Leaderboard work?',
+        a: 'The Leaderboard ranks the top 100 users across the entire CPPro platform. You can toggle between different scopes: Global, Country, and College. (Note: Country and College scopes exclusively feature users who have completed those fields in their Profile Settings).',
       },
       {
-        q: 'What categories can I compare?',
-        a: 'CPScore, Total Questions, LeetCode Rating, and Codeforces Rating. The top 100 users are shown in each category.',
+        q: 'What metrics can I compete on?',
+        a: 'You can compete across four major categories: CPScore (our proprietary holistic rating), Total Questions Solved, LeetCode Rating, and Codeforces Rating.',
       },
       {
-        q: 'How is CPScore calculated?',
-        a: 'CPScore = (CF_Rating × 1.5) + (LC_Rating × 1.2) + (CF_Hard × 15) + (CF_Medium × 8) + (CF_Easy × 2) + (LC_Hard × 20) + (LC_Medium × 8) + (LC_Easy × 2) + (Contests × 10) + streak bonus (capped at 200).',
+        q: 'How is my CPScore calculated?',
+        a: 'CPScore is the ultimate measure of your competitive programming prowess. The formula is: (CF_Rating × 1.5) + (LC_Rating × 1.2) + (CF_Hard × 15) + (CF_Medium × 8) + (CF_Easy × 2) + (LC_Hard × 20) + (LC_Medium × 8) + (LC_Easy × 2) + (Contests × 10) + streak bonus (capped at 200).',
       },
       {
-        q: 'Why don\'t I appear on the Country or College leaderboard?',
-        a: 'Fill in your country and college in Settings → Profile and save. The scoped leaderboards only include users with those fields set.',
+        q: 'Why am I missing from the Country or College leaderboard?',
+        a: 'Simply head over to Settings → Profile, ensure your Country and College fields are accurately filled out, and save your changes. You will instantly be indexed in those scoped leaderboards!',
       },
     ],
   },
@@ -148,19 +144,19 @@ const HELP_DATA = [
     items: [
       {
         q: 'What is the Learning Tree?',
-        a: 'An interactive 3D visualization (powered by Three.js) of competitive programming topics. Each node represents a topic with 4 progression states: Not Started → Theory → Implemented → Mastered.',
+        a: 'The Learning Tree is a stunning, interactive 3D visualization (powered by Three.js) that maps out the vast landscape of competitive programming topics. Each node represents a distinct algorithmic concept with four interactive progression states: Not Started → Theory → Implemented → Mastered.',
       },
       {
-        q: 'How do I update my progress?',
-        a: 'Click a topic node to cycle it through the four states. Your progress is saved automatically.',
+        q: 'How do I track my progression?',
+        a: 'Simply click on any topic node within the 3D space to cycle it through its mastery states. The visual feedback makes it incredibly satisfying to watch your algorithmic knowledge tree bloom as you conquer new concepts.',
       },
       {
-        q: 'Where is my Learning Tree progress stored?',
-        a: 'Progress is stored in your browser\'s localStorage under the key cppro_tree_v2. Clearing browser data or switching browsers will erase your progress. MongoDB sync is planned for a future update.',
+        q: 'Where is my Learning Tree data saved?',
+        a: 'Currently, your Learning Tree progress is securely stored locally in your browser\'s localStorage under the key `cppro_tree_v2`. This ensures instant, offline-capable load times.',
       },
       {
-        q: 'WARNING: Will I lose my progress?',
-        a: 'Yes — if you clear browser localStorage (e.g. via DevTools, private browsing, or browser reset), all Learning Tree progress is lost. MongoDB sync is planned but not yet live. Export or note your progress before clearing browser data.',
+        q: 'WARNING: Will I lose my progress if I clear my browser data?',
+        a: 'Yes. Because data is stored locally, clearing your browser\'s cache/localStorage (or using incognito mode) will reset your Learning Tree. We highly recommend noting your progress before performing deep browser clears. Cloud-based MongoDB synchronization is actively in development and will arrive in a future update!',
       },
     ],
   },
@@ -171,23 +167,23 @@ const HELP_DATA = [
     items: [
       {
         q: 'What is the Code Templates feature?',
-        a: 'A personal snippet manager where you can create, read, update, and delete code templates. Accessible at /codesnippet (requires login).',
+        a: 'It serves as your personal snippet vault. You can create, store, securely manage, and quickly retrieve your most-used algorithmic templates and boilerplates. Accessible anytime via /codesnippet.',
       },
       {
-        q: 'What languages are supported?',
-        a: 'C++, Python, Java, and JavaScript.',
+        q: 'What languages are supported for snippets?',
+        a: 'We currently offer first-class syntax highlighting and formatting support for C++, Python, Java, and JavaScript.',
       },
       {
-        q: 'How do I organize my snippets?',
-        a: 'Each snippet supports tags and a public/private toggle. Use the language filter tabs (All / C++ / Python / Java / JavaScript) to filter the list. Snippets are paginated — 6 per page.',
+        q: 'How do I keep my templates organized?',
+        a: 'You can tag each snippet, assign it to a specific language, and seamlessly toggle its visibility (Public vs. Private). The interface features rapid language filter tabs (All / C++ / Python / Java / JavaScript) and smooth pagination to handle hundreds of templates effortlessly.',
       },
       {
-        q: 'How do I view or edit a snippet?',
-        a: 'Click any snippet card to open the SnippetDetailModal, which shows the full code with syntax context and edit/delete options.',
+        q: 'How do I view or edit a saved snippet?',
+        a: 'Clicking any snippet card launches the SnippetDetailModal—an expansive, distraction-free view that displays the full code with rich syntax highlighting, alongside intuitive controls for editing or deleting.',
       },
       {
-        q: 'Can other users see my snippets?',
-        a: 'Only snippets marked "Public" are visible to others. Private snippets are only visible to you.',
+        q: 'Can other competitive programmers see my snippets?',
+        a: 'Only if you want them to! Snippets marked "Public" contribute to the communal knowledge pool. Snippets marked "Private" remain strictly visible to you.',
       },
     ],
   },
@@ -198,19 +194,19 @@ const HELP_DATA = [
     items: [
       {
         q: 'What is the Community forum?',
-        a: 'A discussion board at /community where users can create posts (Blog, Discussion, Help), leave threaded comments, and upvote or downvote posts. Reading is public; posting requires a login.',
+        a: 'It is the beating heart of CPPro—a vibrant discussion board located at /community. Users can publish rich-text posts, engage in deeply threaded comments, and utilize an upvote/downvote system to surface the highest quality algorithmic discussions.',
       },
       {
-        q: 'What post types are available?',
-        a: 'Blog (long-form articles), Discussion (open topics), and Help (question & answer). Choose the type when creating a new post.',
+        q: 'What kind of content can I post?',
+        a: 'We support three tailored post formats: Blogs (for long-form editorials or tutorials), Discussions (for open-ended algorithmic debates), and Help (dedicated Q&A formatting for when you\'re stuck on a tricky test case).',
       },
       {
-        q: 'Can posts be pinned?',
-        a: 'Yes. Admins and moderators can pin posts so they appear at the top of the feed.',
+        q: 'Can important posts be pinned?',
+        a: 'Yes. Community moderators and admins possess the ability to pin highly valuable posts, cementing them at the top of the global feed for maximum visibility.',
       },
       {
-        q: 'Do I need an account to read posts?',
-        a: 'No. The community is publicly readable. You only need to be logged in to post, comment, or vote.',
+        q: 'Do I need to log in to browse the community?',
+        a: 'Not at all! The wealth of knowledge in the community is fully accessible to public readers. You only need to log in when you\'re ready to contribute—by posting, commenting, or casting votes.',
       },
     ],
   },
@@ -220,12 +216,12 @@ const HELP_DATA = [
     category: 'Contest Tracker',
     items: [
       {
-        q: 'What does the Contest Tracker show?',
-        a: 'Upcoming and past contests from Codeforces and LeetCode. Contest data is synced every 6 hours automatically.',
+        q: 'What does the Contest Tracker do?',
+        a: 'It acts as your central hub for competitive programming schedules, fetching and displaying upcoming and past contests from Codeforces and LeetCode. Our backend syncs contest data every 6 hours automatically, ensuring you never miss a match.',
       },
       {
-        q: 'Do I need to be logged in?',
-        a: 'No. The Contest Tracker at /contest-tracker is fully public.',
+        q: 'Do I need an account to view the schedule?',
+        a: 'Absolutely not! The Contest Tracker at /contest-tracker is a completely public utility available to everyone.',
       },
     ],
   },
@@ -235,20 +231,20 @@ const HELP_DATA = [
     category: 'Settings',
     items: [
       {
-        q: 'What can I configure in Settings?',
-        a: 'Profile info (name, age, gender, city/state/country, college, profile picture, public/private toggle), platform linking (Codeforces, LeetCode, CodeChef), LC Session Token, password change, and theme toggle (dark/light).',
+        q: 'What options can I customize in Settings?',
+        a: 'Settings is your command center. You can tailor your personal profile (avatar, demographics, college), manage your platform links (Codeforces, LeetCode, CodeChef), securely store your LC Session Token, toggle your Public/Private visibility status, and switch between Light/Dark themes.',
       },
       {
-        q: 'What is the LC Session Token and how do I add it?',
-        a: 'Without it CPPro can only see your 100 most recent accepted submissions. With your LEETCODE_SESSION cookie it fetches up to 200 submissions with full status and language. To add it: go to leetcode.com → DevTools (F12) → Application → Cookies → copy the value of LEETCODE_SESSION → paste it in Settings → LeetCode Session. The token is stored encrypted (AES-256-GCM) and never exposed.',
+        q: 'What is the LC Session Token and why is it important?',
+        a: 'By default, public APIs only allow CPPro to fetch your 100 most recent accepted submissions. Adding your LEETCODE_SESSION cookie dramatically upgrades this capability—allowing CPPro to securely fetch up to 200 submissions, encompassing full execution status (WA, TLE) and language specifics. To add it: Login to leetcode.com → DevTools (F12) → Application → Cookies → Copy the LEETCODE_SESSION value → Paste into Settings. Your token is protected with military-grade AES-256-GCM encryption.',
       },
       {
-        q: 'My LC session expired — what should I do?',
-        a: 'You will receive a notification when this happens. Go to Settings → LeetCode Session and re-paste your current LEETCODE_SESSION cookie. The old token is invalidated when LeetCode logs you out or after roughly one month.',
+        q: 'What should I do if my LeetCode session expires?',
+        a: 'LeetCode periodically rotates session cookies (usually every 30 days). When this happens, CPPro will smartly alert you via a notification. Simply grab your new cookie from LeetCode and update it in your Settings to resume deep syncs.',
       },
       {
-        q: 'What does the Public Profile toggle do?',
-        a: 'When enabled, your stats are viewable at /api/stats/public/:userId by anyone. When disabled, your profile is private.',
+        q: 'How does the Public Profile toggle work?',
+        a: 'When activated, your competitive stats are aggregated into a stunning public portfolio viewable at /api/stats/public/:userId, perfect for sharing with recruiters. Disabling it instantly makes your data private.',
       },
     ],
   },
@@ -258,12 +254,12 @@ const HELP_DATA = [
     category: 'Notifications',
     items: [
       {
-        q: 'How do notifications work?',
-        a: 'The bell icon in the header polls for new notifications every 60 seconds. The badge shows your unread count. Click the bell to open the notification dropdown.',
+        q: 'How is the notification system structured?',
+        a: 'The notification bell in the master navigation bar keeps you connected in real-time. It silently polls for updates every 60 seconds, utilizing a dynamic badge to display unread alerts. Clicking it unveils a sleek, actionable dropdown feed.',
       },
       {
-        q: 'What types of notifications will I receive?',
-        a: 'Sync complete, daily problem ready, streak milestone (7/14/30/60/100 days), LC session expired, admin broadcast, and post activity (replies/comments on your posts).',
+        q: 'What exact events trigger notifications?',
+        a: 'You are kept in the loop for critical events: Background Sync Completions, the arrival of your personalized Daily Problems, milestone achievements on your Daily Streak (7, 14, 30, 60, 100 days), LeetCode session expirations, global Admin broadcasts, and all social engagements (replies/comments) on your community posts.',
       },
     ],
   },
@@ -274,15 +270,19 @@ const HELP_DATA = [
     items: [
       {
         q: 'What is the Upsolve Queue?',
-        a: 'A list of problems from past contests that you attempted but did not solve (WA, TLE, RE, etc.). It helps you go back and solve problems you missed. Accessible from Dashboard → UpsolveQueue section and /level-up.',
+        a: 'A dynamic list of problems specifically curated for your growth. It includes problems you attempted but didn\'t solve (Wrong Answer, TLE, etc.) across Codeforces, LeetCode, and CodeChef. It also tracks your recently attended contests and adds any unattempted problems from those contests to help you complete the set! Accessible from Dashboard and /level-up.',
       },
       {
-        q: 'How does upsolve detection work for LeetCode?',
-        a: 'CPPro cross-checks problems against your last 200 submissions (with LC Session Token) or 100 accepted slugs (without). Problems solved outside this window may still appear as unsolved.',
+        q: 'How does upsolve detection work?',
+        a: 'For attempted problems, it cross-checks your failed submissions against your accepted ones. For LeetCode specifically, it uses your last 200 submissions (with LC Session Token) or your recent public history. For unattempted contest problems, CPPro tracks the contests you participated in and pulls the problems you missed.',
+      },
+      {
+        q: 'Why are there unattempted contest problems in my Upsolve Queue?',
+        a: 'CPPro automatically tracks your attended Codeforces and LeetCode contests. If you didn\'t finish all the problems in a contest you attended, the remaining unattempted problems are added to your Upsolve Queue to encourage you to finish the set.',
       },
       {
         q: 'What is the Growth Planner (NextTarget)?',
-        a: 'A 50-point CF rating sprint planner. It shows your next target rating and the types of problems you should solve to reach it. Accessible from the Dashboard and /level-up.',
+        a: 'A 50-point rating sprint planner. It shows your next target rating and the types of problems you should solve to reach it. Accessible from the Dashboard and /level-up.',
       },
       {
         q: 'Is the "Advanced Roadmaps" tab on /level-up available?',

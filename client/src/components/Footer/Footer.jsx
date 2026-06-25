@@ -1,7 +1,21 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Mail, Heart } from 'lucide-react';
+import { Mail, Heart, Check } from 'lucide-react';
 
 export default function Footer() {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyEmail = async (e) => {
+    e.preventDefault();
+    try {
+      await navigator.clipboard.writeText('support@cppro.dev');
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+    }
+  };
+
   return (
     <footer className="bg-white dark:bg-[#0a0a0a] border-t border-gray-200 dark:border-white/[0.05] py-16">
       <div className="max-w-[1120px] mx-auto px-6 md:px-12">
@@ -18,15 +32,42 @@ export default function Footer() {
               Track your progress, manage code snippets, and climb the global leaderboards with the ultimate toolkit for competitive programmers.
             </p>
             <div className="pt-2">
-              <a 
-                href="mailto:support@cppro.dev" 
-                className="inline-flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:text-emerald-500 transition-colors group"
+              <button 
+                onClick={handleCopyEmail}
+                className="inline-flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400 hover:text-emerald-500 transition-colors group"
+                aria-label="Copy support email"
               >
-                <div className="p-2 bg-gray-50 dark:bg-[#111111] border border-gray-200 dark:border-white/5 rounded-lg group-hover:border-emerald-500/30 transition-all">
-                  <Mail className="h-4 w-4" />
+                <div className={`p-2 rounded-lg transition-all duration-300 ${copied ? 'bg-emerald-500/10 border border-emerald-500/30' : 'bg-gray-50 dark:bg-[#111111] border border-gray-200 dark:border-white/5 group-hover:border-emerald-500/30'}`}>
+                  {copied ? (
+                    <Check className="h-4 w-4 text-emerald-500" />
+                  ) : (
+                    <Mail className="h-4 w-4" />
+                  )}
                 </div>
-                Contact Support
-              </a>
+                <div className="relative flex items-center h-5 w-[130px] overflow-hidden">
+                  <span 
+                    className={`absolute inset-0 flex items-center transition-all duration-300 ${
+                      copied ? 'opacity-0 -translate-y-full' : 'opacity-100 translate-y-0 group-hover:-translate-y-full group-hover:opacity-0'
+                    }`}
+                  >
+                    Contact Support
+                  </span>
+                  <span 
+                    className={`absolute inset-0 flex items-center transition-all duration-300 ${
+                      copied ? 'opacity-0 -translate-y-full' : 'opacity-0 translate-y-full group-hover:translate-y-0 group-hover:opacity-100'
+                    }`}
+                  >
+                    support@cppro.dev
+                  </span>
+                  <span 
+                    className={`absolute inset-0 flex items-center font-medium text-emerald-500 transition-all duration-300 ${
+                      copied ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-full'
+                    }`}
+                  >
+                    Email Copied!
+                  </span>
+                </div>
+              </button>
             </div>
           </div>
 

@@ -398,6 +398,12 @@ Also include one written reference site and one YouTube study video in study_res
                     const rawText = result.response.text();
                     try {
                         const parsed = parseJSON(rawText);
+                        
+                        // Reject lazy generation/placeholders
+                        if (parsed.topic === "..." || !parsed.article || parsed.article.length < 50) {
+                            throw new Error("Model generated placeholder content");
+                        }
+                        
                         // Success! Return the parsed result directly
                         return parsed;
                     } catch (parseErr) {
