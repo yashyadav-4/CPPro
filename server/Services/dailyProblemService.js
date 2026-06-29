@@ -513,7 +513,10 @@ async function checkDailyProblemSolves(userId, platform, acProblemIds) {
         if (!acSet.has(p.problemId)) continue;
 
         p.isSolved = true;
-        p.solvedAt = acMap.get(p.problemId) || new Date();
+        const solveTime = acMap.get(p.problemId);
+        if (solveTime && solveTime.getTime() > 0) {
+            p.solvedAt = solveTime;
+        }
         changed = true;
 
         const msg = slot === 'challenger'

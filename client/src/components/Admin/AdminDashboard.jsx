@@ -372,7 +372,7 @@ function ErrorTerminal() {
 
       {/* Terminal body */}
       <div className={`overflow-y-auto font-mono text-[11px] leading-relaxed px-4 py-3 space-y-0.5 transition-all ${
-        expanded ? 'max-h-[500px]' : 'max-h-[200px]'
+        expanded ? 'max-h-[800px]' : 'max-h-[400px]'
       }`}>
         {loading && logs.length === 0 ? (
           <div className="text-gray-600 py-4 text-center">Loading logs…</div>

@@ -29,7 +29,11 @@ router.get('/', optionalAuth, async (req, res) => {
                 .select('-__v -createdAt -updatedAt')
                 .lean();
 
-            // Deduplicate contests with the same URL
+            // 1. Filter out AtCoder contests with Japanese/Chinese/CJK characters in name
+            const CJK_RE = /[\u3000-\u9fff\uac00-\ud7af\uf900-\ufaff]/;
+            contests = contests.filter(c => c.platform !== 'atcoder' || !CJK_RE.test(c.name));
+
+            // 2. Deduplicate contests with the same URL
             const uniqueContests = [];
             const seenUrls = new Set();
             for (const c of contests) {
@@ -38,10 +42,6 @@ router.get('/', optionalAuth, async (req, res) => {
                 uniqueContests.push(c);
             }
             contests = uniqueContests;
-
-            // Filter out AtCoder contests with Japanese/Chinese/CJK characters in name
-            const CJK_RE = /[\u3000-\u9fff\uac00-\ud7af\uf900-\ufaff]/;
-            contests = contests.filter(c => c.platform !== 'atcoder' || !CJK_RE.test(c.name));
 
             // Deduplicate AtCoder division contests (Div.1/Div.2/Div.3 etc. same start time)
             const AC_DIV_RE = /[\s\-–]*(div(ision)?\.?\s*\d+)$/i;

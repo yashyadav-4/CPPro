@@ -1,6 +1,7 @@
 const axios = require('axios');
 const User = require('../Model/User');
 const Submission = require('../Model/Submissions');
+const ErrorLog = require('../Model/ErrorLog');
 const { checkDailyProblemSolves } = require('./dailyProblemService');
 const { checkUpsolveProblemSolves } = require('./upsolveRecommendationService');
 const { recalculateLevelUpData } = require('./levelUpRecalculationService');
@@ -49,6 +50,12 @@ const getCodeforcesData = async (userId, handle, role = 'user') => {
         .then(() => console.log(`[LEAN-NEXUS] >> ${handle} | Background update dispatched`))
         .catch(async (err) => {
             console.error(`[LEAN-NEXUS] >> ${handle} | Background update failed:`, err.message);
+            // Log to ErrorLog so admin page shows the failure
+            ErrorLog.create({
+                source: 'CF-Sync-Service',
+                level: 'error',
+                message: `[CF_SYNC_DISPATCH_FAILED] handle=${handle} | userId=${userId} | reason=${err.message}`,
+            }).catch(() => {});
             // rollback the timestamp so the user can retry
             await User.findByIdAndUpdate(userId, { $set: { lastCfUpdate: user.lastCfUpdate || null } });
         });

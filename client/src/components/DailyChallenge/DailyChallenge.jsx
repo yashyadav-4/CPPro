@@ -67,6 +67,19 @@ export default function DailyChallenge() {
     const dateStr = new Date().toISOString().substring(0, 10);
     const cacheKey = `daily_problems_${dateStr}`;
 
+    useEffect(() => {
+        try {
+            const keysToRemove = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith('daily_problems_') && key !== cacheKey) {
+                    keysToRemove.push(key);
+                }
+            }
+            keysToRemove.forEach(k => localStorage.removeItem(k));
+        } catch (e) {}
+    }, [cacheKey]);
+
     const fetcher = useCallback(async () => {
         const res = await axios.get(`${API_BASE}/api/daily`, { withCredentials: true });
         return res.data;

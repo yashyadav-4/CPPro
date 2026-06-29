@@ -1,6 +1,7 @@
 const axios = require('axios');
 const User = require('../Model/User');
 const Submission = require('../Model/Submissions');
+const ErrorLog = require('../Model/ErrorLog');
 const { checkDailyProblemSolves } = require('./dailyProblemService');
 const { checkUpsolveProblemSolves } = require('./upsolveRecommendationService');
 
@@ -52,6 +53,11 @@ const getCodeChefData = async (userId, handle, role = 'user') => {
         .then(() => console.log(`[CC-SYNC] >> ${handle} | CC sync complete`))
         .catch(async (err) => {
             console.error(`[CC-SYNC] >> ${handle} | CC sync failed:`, err.message);
+            ErrorLog.create({
+                source: 'CC-Sync-Service',
+                level: 'error',
+                message: `[CC_SYNC_FAILED] handle=${handle} | userId=${userId} | platform=codechef | reason=${err.message}`,
+            }).catch(() => {});
             await User.findByIdAndUpdate(userId, {
                 $set: { lastCcUpdate: user.lastCcUpdate || null },
             });
@@ -83,6 +89,11 @@ const syncCodeChefProfile = async (userId, handle, opts = {}) => {
         } else {
             msg = err.message || err.code || 'unknown error';
         }
+        ErrorLog.create({
+            source: 'CC-Sync-Service',
+            level: 'error',
+            message: `[CC_ENQUEUE_FAILED] handle=${handle} | userId=${userId} | platform=codechef | reason=${msg}`,
+        }).catch(() => {});
         throw new Error(`CC enqueue failed: ${msg}`);
     }
 
@@ -130,14 +141,30 @@ const syncCodeChefProfile = async (userId, handle, opts = {}) => {
         if (state === 'failed') {
             const reason = failedReason || 'unknown';
             if (/USER_NOT_FOUND|HANDLE_NOT_FOUND/i.test(reason)) {
+                ErrorLog.create({
+                    source: 'CC-Sync-Service',
+                    level: 'error',
+                    message: `[CC_HANDLE_NOT_FOUND] handle=${handle} | userId=${userId} | platform=codechef | reason=CodeChef account not found — handle may be wrong`,
+                }).catch(() => {});
                 throw new Error('invalid codechef handle');
             }
+            ErrorLog.create({
+                source: 'CC-Sync-Service',
+                level: 'error',
+                message: `[CC_JOB_FAILED] handle=${handle} | userId=${userId} | platform=codechef | jobId=${jobId} | reason=${reason}`,
+            }).catch(() => {});
             throw new Error(`CC job failed: ${reason}`);
         }
     }
 
+    ErrorLog.create({
+        source: 'CC-Sync-Service',
+        level: 'error',
+        message: `[CC_POLL_TIMEOUT] handle=${handle} | userId=${userId} | platform=codechef | jobId=${jobId} | reason=Job did not complete within poll window — CC server may be overloaded`,
+    }).catch(() => {});
     throw new Error(`CC job ${jobId} did not complete within the poll window`);
 };
+
 
 // ══════════════════════════════════════════════════════════════════════════
 // Health-check: ping GET /data on CC server.

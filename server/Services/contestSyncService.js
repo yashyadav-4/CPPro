@@ -3,6 +3,7 @@
 // and deletes any contest that ended more than 1 day ago.
 const axios   = require('axios');
 const Contest = require('../Model/Contest');
+const ErrorLog = require('../Model/ErrorLog');
 
 // ── Shared axios instance ─────────────────────────────────────────────────────
 const http = axios.create({
@@ -236,10 +237,22 @@ async function syncContests() {
     // 1. Fetch from all APIs in parallel (partial failure is OK)
     const [cfRes, lcRes, ccRes, acRes] = await Promise.allSettled([fetchCF(), fetchLC(), fetchCC(), fetchAC()]);
 
-    if (cfRes.status === 'rejected') console.error('[contestSync] CF failed:', cfRes.reason?.message);
-    if (lcRes.status === 'rejected') console.error('[contestSync] LC failed:', lcRes.reason?.message);
-    if (ccRes.status === 'rejected') console.error('[contestSync] CC failed:', ccRes.reason?.message);
-    if (acRes.status === 'rejected') console.error('[contestSync] AC failed:', acRes.reason?.message);
+    const logFailure = (platform, res) => {
+        if (res.status === 'rejected') {
+            const reason = res.reason?.message || 'Unknown error';
+            console.error(`[contestSync] ${platform} failed:`, reason);
+            ErrorLog.create({
+                source: 'contestSyncService',
+                level: 'error',
+                message: `[CONTEST_SYNC_FAILED] platform=${platform} | reason=${reason}`
+            }).catch(() => {});
+        }
+    };
+
+    logFailure('codeforces', cfRes);
+    logFailure('leetcode', lcRes);
+    logFailure('codechef', ccRes);
+    logFailure('atcoder', acRes);
 
     const contests = [
         ...(cfRes.status === 'fulfilled' ? cfRes.value : []),

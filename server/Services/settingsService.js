@@ -1,6 +1,7 @@
 const axios = require('axios');
 const { Yaxios } = require('../Utils/nexusProxy');
 const { bouncer } = require('../Utils/bouncer');
+const ErrorLog = require('../Model/ErrorLog');
 const crypto = require('crypto');
 const User = require('../Model/User');
 const Notification = require('../Model/Notification');
@@ -58,7 +59,14 @@ const verifyAndLinkCodeforces = async(userId ,handle)=>{
     const syncService = require('./cfSyncService');
     syncService.syncCodeforcesProfile(userId, cleanHandle, { syncDepth: 'hard' })
         .then(() => console.log(`[VERIFY] initial hard sync complete for ${cleanHandle}`))
-        .catch(err => console.error(`[VERIFY] initial hard sync failed for ${cleanHandle}:`, err.message));
+        .catch(err => {
+            console.error(`[VERIFY] initial hard sync failed for ${cleanHandle}:`, err.message);
+            ErrorLog.create({
+                source: 'settingsService',
+                level: 'error',
+                message: `[CF_INITIAL_SYNC_FAILED] handle=${cleanHandle} | userId=${userId} | reason=${err.message}`
+            }).catch(() => {});
+        });
 
     return {message: `linking codeforces account successful: ${cleanHandle}`};
 };
@@ -138,7 +146,14 @@ const verifyAndLinkCodechef = async (userId, handle) => {
     const ccSyncService = require('./ccSyncService');
     ccSyncService.syncCodeChefProfile(userId, cleanHandle, { syncDepth: 'hard' })
         .then(() => console.log(`[VERIFY-CC] initial hard sync complete for ${cleanHandle}`))
-        .catch(err => console.error(`[VERIFY-CC] initial hard sync failed for ${cleanHandle}:`, err.message));
+        .catch(err => {
+            console.error(`[VERIFY-CC] initial hard sync failed for ${cleanHandle}:`, err.message);
+            ErrorLog.create({
+                source: 'settingsService',
+                level: 'error',
+                message: `[CC_INITIAL_SYNC_FAILED] handle=${cleanHandle} | userId=${userId} | reason=${err.message}`
+            }).catch(() => {});
+        });
 
     return { message: `linking CodeChef account successful: ${cleanHandle}` };
 };
@@ -231,7 +246,14 @@ const verifyAndLinkLeetcode = async (userId, handle) => {
     const lcSyncService = require('./lcSyncService');
     lcSyncService.syncLeetcodeProfile(userId, cleanHandle, null, { syncDepth: 'hard' })
         .then(() => console.log(`[VERIFY-LC] initial hard sync complete for ${cleanHandle}`))
-        .catch(err => console.error(`[VERIFY-LC] initial hard sync failed for ${cleanHandle}:`, err.message));
+        .catch(err => {
+            console.error(`[VERIFY-LC] initial hard sync failed for ${cleanHandle}:`, err.message);
+            ErrorLog.create({
+                source: 'settingsService',
+                level: 'error',
+                message: `[LC_INITIAL_SYNC_FAILED] handle=${cleanHandle} | userId=${userId} | reason=${err.message}`
+            }).catch(() => {});
+        });
 
     return {message: `linking LeetCode account successful: ${cleanHandle}`};
 };

@@ -7,6 +7,7 @@ const CCProblem = require('../Model/CCProblem');
 const LCProblem = require('../Model/LCProblem');
 const User = require('../Model/User');
 const LevelUpData = require('../Model/LevelUpData');
+const ErrorLog = require('../Model/ErrorLog');
 const { getUpsolveRecommendations } = require('./upsolveRecommendationService');
 
 /**
@@ -341,6 +342,11 @@ const calculateUpsolveQueue = async (userId) => {
         return upsolveList;
     } catch (err) {
         console.error('Error calculating upsolve queue:', err);
+        ErrorLog.create({
+            source: 'LevelUp-Recalc',
+            level: 'error',
+            message: `[UPSOLVE_CALC_FAILED] userId=${userId} | reason=${err.message}`
+        }).catch(() => {});
         return [];
     }
 };
@@ -833,6 +839,11 @@ const calculatePerformanceStats = async (userId) => {
 
     } catch (err) {
         console.error('Error calculating performance stats:', err);
+        ErrorLog.create({
+            source: 'LevelUp-Recalc',
+            level: 'error',
+            message: `[PERF_STATS_FAILED] userId=${userId} | reason=${err.message}`
+        }).catch(() => {});
         return {};
     }
 };
@@ -861,6 +872,11 @@ const recalculateLevelUpData = async (userId) => {
         console.log(`[LevelUp-Recalc] Completed successfully for user ${userId}`);
     } catch (err) {
         console.error(`[LevelUp-Recalc] Error for user ${userId}:`, err);
+        ErrorLog.create({
+            source: 'LevelUp-Recalc',
+            level: 'error',
+            message: `[RECALC_FAILED] userId=${userId} | reason=${err.message}`
+        }).catch(() => {});
     }
 };
 

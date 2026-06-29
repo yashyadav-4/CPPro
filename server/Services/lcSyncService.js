@@ -3,6 +3,7 @@ const User = require('../Model/User');
 const Notification = require('../Model/Notification');
 const LeetCodeData = require('../Model/LeetCodeData');
 const Submission = require('../Model/Submissions');
+const ErrorLog = require('../Model/ErrorLog');
 const { checkDailyProblemSolves } = require('./dailyProblemService');
 const { checkUpsolveProblemSolves } = require('./upsolveRecommendationService');
 
@@ -76,6 +77,12 @@ const getLeetcodeData = async (userId, handle, role = 'user') => {
         .then(() => console.log(`[LC-SYNC] >> ${handle} | NexusLC sync complete (depth=${autoSyncDepth})`))
         .catch(async (err) => {
             console.error(`[LC-SYNC] >> ${handle} | NexusLC sync failed:`, err.message);
+            // Log to ErrorLog so admin page shows this failure with full context
+            ErrorLog.create({
+                source: 'LC-Sync-Service',
+                level: 'error',
+                message: `[LC_SYNC_FAILED] handle=${handle} | userId=${userId} | platform=leetcode | reason=${err.message}`,
+            }).catch(() => {});
             // Roll back timestamp so user can retry.
             await User.findByIdAndUpdate(userId, {
                 $set: { lastLcUpdate: user.lastLcUpdate || null },
@@ -110,6 +117,11 @@ const syncLeetcodeProfile = async (userId, handle, sessionToken = null, opts = {
         console.log(`[LC-SYNC] >> ${handle} | job queued: ${jobId} (syncDepth=${syncDepth})`);
     } catch (err) {
         const msg = err.response ? JSON.stringify(err.response.data) : err.message;
+        ErrorLog.create({
+            source: 'LC-Sync-Service',
+            level: 'error',
+            message: `[LC_ENQUEUE_FAILED] handle=${handle} | userId=${userId} | platform=leetcode | reason=${msg}`,
+        }).catch(() => {});
         throw new Error(`NexusLC enqueue failed: ${msg}`);
     }
 
@@ -201,25 +213,37 @@ const syncLeetcodeProfile = async (userId, handle, sessionToken = null, opts = {
                     // Persist unique AC slugs to Submissions — one doc per slug, fake date
                     // of epoch+slug-hash avoids the unique(userId,problemId,submittedAt) conflict
                     // while still deduplicating naturally across syncs.
+                    const recentMap = new Map();
+                    (lcData?.recentSubmissions || []).forEach(s => {
+                        if (s.statusDisplay === 'Accepted' && s.timestamp) {
+                            if (!recentMap.has(s.titleSlug) || Number(s.timestamp) > Number(recentMap.get(s.titleSlug))) {
+                                recentMap.set(s.titleSlug, s.timestamp);
+                            }
+                        }
+                    });
+
                     const uniqueSlugs = [...new Set(acIds.filter(Boolean))];
-                    const LC_PLACEHOLDER_DATE = new Date(0);
-                    const ops = uniqueSlugs.map(slug => ({
-                        updateOne: {
-                            filter: { userId, problemId: slug, platform: 'leetcode', submittedAt: LC_PLACEHOLDER_DATE },
-                            update: {
-                                $setOnInsert: {
-                                    userId,
-                                    problemId: slug,
-                                    problemTitle: slug,
-                                    platform: 'leetcode',
-                                    verdict: 'AC',
-                                    submittedAt: LC_PLACEHOLDER_DATE,
-                                    difficulty: '0',
+                    const ops = uniqueSlugs.map(slug => {
+                        const ts = recentMap.get(slug);
+                        const date = ts ? new Date(Number(ts) * 1000) : new Date(0);
+                        return {
+                            updateOne: {
+                                filter: { userId, problemId: slug, platform: 'leetcode', submittedAt: date },
+                                update: {
+                                    $setOnInsert: {
+                                        userId,
+                                        problemId: slug,
+                                        problemTitle: slug,
+                                        platform: 'leetcode',
+                                        verdict: 'AC',
+                                        submittedAt: date,
+                                        difficulty: '0',
+                                    },
                                 },
+                                upsert: true,
                             },
-                            upsert: true,
-                        },
-                    }));
+                        };
+                    });
 
                     // Also persist failed attempts from recentSubmissions so they appear in Upsolve Queue
                     const failedSubs = (lcData?.recentSubmissions || []).filter(s => s.statusDisplay !== 'Accepted');
@@ -272,6 +296,11 @@ const syncLeetcodeProfile = async (userId, handle, sessionToken = null, opts = {
             const reason = failedReason || 'unknown';
 
             if (/USER_NOT_FOUND/i.test(reason)) {
+                ErrorLog.create({
+                    source: 'LC-Sync-Service',
+                    level: 'error',
+                    message: `[LC_USER_NOT_FOUND] handle=${handle} | userId=${userId} | platform=leetcode | reason=LeetCode account not found — handle may be wrong`,
+                }).catch(() => {});
                 throw new Error('invalid leetcode handle');
             }
 
@@ -280,10 +309,7 @@ const syncLeetcodeProfile = async (userId, handle, sessionToken = null, opts = {
                 try {
                     const freshUser = await User.findById(userId, 'lcSession').lean();
                     const alreadyMarked = freshUser?.lcSession?.status === 'expired';
-                    // Always stamp expired so the UI reflects current reality.
                     await User.findByIdAndUpdate(userId, { $set: { 'lcSession.status': 'expired' } });
-                    // Only create the notification the FIRST time expiry is detected,
-                    // not every 15 min when the probing sync re-confirms it.
                     if (!alreadyMarked) {
                         await Notification.create({
                             userId,
@@ -292,6 +318,11 @@ const syncLeetcodeProfile = async (userId, handle, sessionToken = null, opts = {
                             message:   'Your LeetCode session has expired. Go to Settings → LeetCode Session to update it.',
                             actionUrl: '/settings',
                         });
+                        ErrorLog.create({
+                            source: 'LC-Sync-Service',
+                            level: 'warn',
+                            message: `[LC_SESSION_EXPIRED] handle=${handle} | userId=${userId} | platform=leetcode | action=User notified, ask them to update session in Settings`,
+                        }).catch(() => {});
                         console.warn(`[LC-SYNC] >> session expired for ${userId} — notification sent`);
                     }
                 } catch (notifErr) {
@@ -300,12 +331,23 @@ const syncLeetcodeProfile = async (userId, handle, sessionToken = null, opts = {
                 throw new Error('LC_SESSION_EXPIRED');
             }
 
+            ErrorLog.create({
+                source: 'LC-Sync-Service',
+                level: 'error',
+                message: `[LC_JOB_FAILED] handle=${handle} | userId=${userId} | platform=leetcode | jobId=${jobId} | reason=${reason}`,
+            }).catch(() => {});
             throw new Error(`NexusLC job failed: ${reason}`);
         }
     }
 
+    ErrorLog.create({
+        source: 'LC-Sync-Service',
+        level: 'error',
+        message: `[LC_POLL_TIMEOUT] handle=${handle} | userId=${userId} | platform=leetcode | jobId=${jobId} | reason=Job did not complete within poll window (~100s) — NexusLC may be overloaded`,
+    }).catch(() => {});
     throw new Error(`NexusLC job ${jobId} did not complete within the poll window`);
 };
+
 
 // ══════════════════════════════════════════════════════════════════════════
 // Health-check: ping GET /health on NexusLC (no auth required).
