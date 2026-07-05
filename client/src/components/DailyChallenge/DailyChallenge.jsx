@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
-import { Clock, RefreshCw, LinkIcon, Brain, Swords, ChevronDown, ChevronUp, AlertTriangle, X } from 'lucide-react';
+import { Clock, RefreshCw, LinkIcon, Brain, Swords, ChevronDown, ChevronUp, AlertTriangle, X, Zap } from 'lucide-react';
 import { API_BASE } from '../../api';
 import { useSwrCache } from '../../hooks/useSwrCache';
 import ProblemCard from './ProblemCard';
@@ -88,7 +88,7 @@ export default function DailyChallenge() {
     const { data: rawData, loading: swrLoading, error: swrError, revalidate } = useSwrCache(cacheKey, fetcher);
 
     useEffect(() => {
-        if (rawData) {
+            if (rawData) {
             if (rawData.status === 'no_account_linked') {
                 setData({ noAccount: true });
             } else {
@@ -186,7 +186,23 @@ export default function DailyChallenge() {
             {/* ── Mission header ── */}
             <div className="flex items-start justify-between mb-2">
                 <div>
-                    <h1 className="text-xl font-bold text-white tracking-tight">Today's Missions</h1>
+                    <div className="flex items-center gap-2">
+                        <h1 className="text-xl font-bold text-white tracking-tight">Today's Missions</h1>
+                        {/* Mode badge */}
+                        {!loading && data && !data.noAccount && (
+                            <span
+                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ${
+                                    data.dailyMode === 'training'
+                                        ? 'bg-violet-500/15 text-violet-400 border border-violet-500/25'
+                                        : 'bg-white/[0.06] text-gray-500 border border-white/[0.08]'
+                                }`}
+                                title={data.dailyMode === 'training' ? 'Problems calibrated from your submission history' : 'Problems calibrated from your contest rating'}
+                            >
+                                {data.dailyMode === 'training' ? <Brain size={9} /> : <Zap size={9} />}
+                                {data.dailyMode === 'training' ? 'Training' : 'Rating'}
+                            </span>
+                        )}
+                    </div>
                     <p className="text-[12px] text-gray-600 mt-0.5">{today}</p>
                 </div>
                 <div className="flex items-center gap-1.5 text-[11px] text-gray-600 mt-1">

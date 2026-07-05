@@ -78,6 +78,7 @@ const userSchema = new mongoose.Schema({
             default:true,
         },
         preferredLanguage: { type: String, enum: ['cpp', 'java', 'python', 'javascript'], default: 'cpp' },
+        dailyMode: { type: String, enum: ['rating', 'training'], default: 'rating' },
     },
     verificationCode:{ //changed later: needed for platform verification
         type:String,

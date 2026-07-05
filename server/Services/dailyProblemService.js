@@ -18,6 +18,7 @@ const {
     pickPopularCFChallenger,
 } = require('./popularSheetsService');
 const { getTodayIST, getNDaysAgoIST } = require('../Utils/dateUtils');
+const { computeTrainingLevel } = require('./trainingModeService');
 
 // ── Utility ──────────────────────────────────────────────────────────────────
 
@@ -87,8 +88,9 @@ function getCCChallengerBand(rating) {
 async function buildAttemptedSet(userId, linkedPlatforms) {
     const [submissions, recentDaily] = await Promise.all([
         // All AC submissions — permanent block (solved problems never re-appear).
+        // Include both 'AC' (LC/CC) and 'OK' (Codeforces) as solved verdicts.
         Submission.find(
-            { userId, platform: { $in: linkedPlatforms }, verdict: 'AC' },
+            { userId, platform: { $in: linkedPlatforms }, verdict: { $in: ['AC', 'OK'] } },
             { problemId: 1, platform: 1, _id: 0 }
         ).lean(),
         // Block workout/challenger shown in last 60 days.
@@ -166,7 +168,9 @@ async function pickCFChallenger(cfRating, weakTopics, attemptedSet) {
         const bRel = weakTopics.length ? b.tags.filter(t => weakTopics.includes(t)).length : 0;
         return bRel !== aRel ? bRel - aRel : b.solvedCount - a.solvedCount;
     });
-    const picked = sorted[0];
+    // Pick randomly from top 10 by relevance (same fix as pickLCChallenger)
+    const pool = sorted.slice(0, 10);
+    const picked = weightedRandomPick(pool, p => p.solvedCount);
     return { ...picked, weakTag: picked.tags.find(t => weakTopics.includes(t)) || picked.tags[0] || null };
 }
 
@@ -189,12 +193,15 @@ async function pickLCChallenger(difficulty, weakTags, attemptedSet) {
         candidates = all.filter(p => !attemptedSet.has(`leetcode::${p.problemId}`));
     }
     if (!candidates.length) return null;
+    // Sort by weak-tag relevance first, then pick randomly from the top pool
+    // (previously always took sorted[0] which gave the same problem every day)
     const sorted = candidates.sort((a, b) => {
         const aRel = a.tags?.filter(t => weakTags.includes(t)).length || 0;
         const bRel = b.tags?.filter(t => weakTags.includes(t)).length || 0;
         return bRel !== aRel ? bRel - aRel : (b.solvedCount || 0) - (a.solvedCount || 0);
     });
-    const picked = sorted[0];
+    const pool = sorted.slice(0, 10); // top 10 by relevance, then weighted random
+    const picked = weightedRandomPick(pool, p => p.solvedCount || 1);
     return { ...picked, weakTag: picked.tags?.find(t => weakTags.includes(t)) || null };
 }
 
@@ -316,9 +323,9 @@ async function pickBonus(workoutPlatform, challengerPlatform, { cfRating, ccRati
 
 // ── Main generation ───────────────────────────────────────────────────────────
 
-async function generateDailyProblems(userId) {
-    const [user, cfPlatform, ccPlatform, lcData] = await Promise.all([
-        User.findById(userId, 'linkedAccounts dailyStreak').lean(),
+// Original rating-based generation (renamed — logic unchanged)
+async function generateDailyProblemsRatingMode(userId, user) {
+    const [cfPlatform, ccPlatform, lcData] = await Promise.all([
         Platform.findOne({ userId, platform: 'codeforces' }, 'currentRating solvedByTopics').lean(),
         Platform.findOne({ userId, platform: 'codechef' },   'currentRating solvedByTopics').lean(),
         LeetCodeData.findOne({ userId }, 'skillStats contestHistory profile').lean(),
@@ -481,6 +488,252 @@ async function generateDailyProblems(userId) {
     // NOTE: Notification is now sent by dailyWarmup middleware (combined with topic)
 
     return doc;
+}
+
+// ── Training Mode: problem scoring ───────────────────────────────────────────
+// Prefers LOW solvedCount (newer/more recent problems within band) over high
+// solvedCount (old popular problems). This directly counters rating inflation:
+// recent problems at a given difficulty ARE harder than old ones.
+
+function trainingModeScore(problem) {
+    // Inverse log of solvedCount — low solvedCount → higher score
+    return 1 / Math.log10((problem.solvedCount || 1) + 10);
+}
+
+// ── Training Mode: CF problem selection ──────────────────────────────────────
+
+async function pickCFWorkoutTraining(level, attemptedSet) {
+    const all = await getCFProblems();
+    const candidates = all.filter(p =>
+        p.difficulty >= level.workoutMin &&
+        p.difficulty <= level.workoutMax &&
+        !attemptedSet.has(`codeforces::${p.problemId}`)
+    );
+    if (!candidates.length) return null;
+    return weightedRandomPick(candidates.slice(0, 50), trainingModeScore);
+}
+
+async function pickCFChallengerTraining(level, weakTopics, attemptedSet) {
+    const all = await getCFProblems();
+    let candidates = all.filter(p =>
+        p.difficulty >= level.challengerMin &&
+        p.difficulty <= level.challengerMax &&
+        p.tags.some(t => weakTopics.includes(t)) &&
+        !attemptedSet.has(`codeforces::${p.problemId}`)
+    );
+    if (!candidates.length) {
+        candidates = all.filter(p =>
+            p.difficulty >= level.challengerMin &&
+            p.difficulty <= level.challengerMax &&
+            !attemptedSet.has(`codeforces::${p.problemId}`)
+        );
+    }
+    if (!candidates.length) return null;
+    const sorted = candidates.sort((a, b) => {
+        const aRel = weakTopics.length ? a.tags.filter(t => weakTopics.includes(t)).length : 0;
+        const bRel = weakTopics.length ? b.tags.filter(t => weakTopics.includes(t)).length : 0;
+        return bRel !== aRel ? bRel - aRel : trainingModeScore(b) - trainingModeScore(a);
+    });
+    const pool   = sorted.slice(0, 10);
+    const picked = weightedRandomPick(pool, trainingModeScore);
+    return { ...picked, weakTag: picked.tags.find(t => weakTopics.includes(t)) || picked.tags[0] || null };
+}
+
+// ── Training Mode: LC problem selection ──────────────────────────────────────
+
+async function pickLCWorkoutTraining(difficulty, attemptedSet) {
+    const all = await getLCProblems(difficulty);
+    const candidates = all.filter(p => !attemptedSet.has(`leetcode::${p.problemId}`));
+    if (!candidates.length) return null;
+    // Low acRate = harder within tier = more representative of current LC standards
+    const sorted = [...candidates].sort((a, b) => (a.solvedCount || 0) - (b.solvedCount || 0));
+    return weightedRandomPick(sorted.slice(0, 50), p => 1 / Math.log10((p.solvedCount || 1) + 10));
+}
+
+async function pickLCChallengerTraining(difficulty, weakTags, attemptedSet) {
+    const all = await getLCProblems(difficulty);
+    let candidates = all.filter(p =>
+        p.tags?.some(t => weakTags.includes(t)) &&
+        !attemptedSet.has(`leetcode::${p.problemId}`)
+    );
+    if (!candidates.length) candidates = all.filter(p => !attemptedSet.has(`leetcode::${p.problemId}`));
+    if (!candidates.length) return null;
+    const sorted = candidates.sort((a, b) => {
+        const aRel = a.tags?.filter(t => weakTags.includes(t)).length || 0;
+        const bRel = b.tags?.filter(t => weakTags.includes(t)).length || 0;
+        return bRel !== aRel ? bRel - aRel : (a.solvedCount || 0) - (b.solvedCount || 0);
+    });
+    const pool   = sorted.slice(0, 10);
+    const picked = weightedRandomPick(pool, p => 1 / Math.log10((p.solvedCount || 1) + 10));
+    return { ...picked, weakTag: picked.tags?.find(t => weakTags.includes(t)) || null };
+}
+
+// ── Training Mode: CC problem selection ──────────────────────────────────────
+
+async function pickCCWorkoutTraining(level, attemptedSet) {
+    const all = await getCCProblems(level.workoutMin, level.workoutMax);
+    const candidates = all.filter(p => !attemptedSet.has(`codechef::${p.problemId}`));
+    if (!candidates.length) return null;
+    return weightedRandomPick(candidates.slice(0, 50), trainingModeScore);
+}
+
+async function pickCCChallengerTraining(level, weakTopics, attemptedSet) {
+    const all = await getCCProblems(level.challengerMin, level.challengerMax);
+    let candidates = all.filter(p =>
+        p.tags?.some(t => weakTopics.includes(t)) &&
+        !attemptedSet.has(`codechef::${p.problemId}`)
+    );
+    if (!candidates.length) candidates = all.filter(p => !attemptedSet.has(`codechef::${p.problemId}`));
+    if (!candidates.length) return null;
+    const sorted = candidates.sort((a, b) => {
+        const aRel = a.tags?.filter(t => weakTopics.includes(t)).length || 0;
+        const bRel = b.tags?.filter(t => weakTopics.includes(t)).length || 0;
+        return bRel !== aRel ? bRel - aRel : trainingModeScore(b) - trainingModeScore(a);
+    });
+    const pool   = sorted.slice(0, 10);
+    const picked = weightedRandomPick(pool, trainingModeScore);
+    return { ...picked, weakTag: picked.tags?.find(t => weakTopics.includes(t)) || null };
+}
+
+// ── Training Mode generation ──────────────────────────────────────────────────
+
+async function generateDailyProblemsTrainingMode(userId, user) {
+    const cfLinked = !!(user?.linkedAccounts?.codeforces);
+    const ccLinked = !!(user?.linkedAccounts?.codechef);
+    const lcLinked = !!(user?.linkedAccounts?.leetcode);
+
+    if (!cfLinked && !ccLinked && !lcLinked) return { status: 'no_account_linked' };
+
+    const linkedPlatforms = [
+        cfLinked && 'codeforces',
+        ccLinked && 'codechef',
+        lcLinked && 'leetcode',
+    ].filter(Boolean);
+
+    // Fetch platform data first so ratings can be passed as floor hints to
+    // computeTrainingLevel — this prevents Training Mode from ever producing
+    // problems easier than what Rating Mode would give.
+    const [cfPlatform, ccPlatform, lcData] = await Promise.all([
+        cfLinked ? Platform.findOne({ userId, platform: 'codeforces' }, 'currentRating solvedByTopics').lean() : null,
+        ccLinked ? Platform.findOne({ userId, platform: 'codechef' },   'currentRating solvedByTopics').lean() : null,
+        lcLinked ? LeetCodeData.findOne({ userId }, 'skillStats contestHistory profile').lean() : null,
+    ]);
+
+    const cfRatingHint = cfPlatform?.currentRating || null;
+    const ccRatingHint = ccPlatform?.currentRating || null;
+
+    // Compute training levels using rating hints as floors
+    const [cfLevel, lcLevel, ccLevel] = await Promise.all([
+        cfLinked ? computeTrainingLevel(userId, 'codeforces', cfRatingHint).catch(() => null) : null,
+        lcLinked ? computeTrainingLevel(userId, 'leetcode').catch(() => null)                 : null,
+        ccLinked ? computeTrainingLevel(userId, 'codechef', ccRatingHint).catch(() => null)  : null,
+    ]);
+
+    const { full: attemptedSet, solvedSet } = await buildAttemptedSet(userId, linkedPlatforms);
+
+    // Rating fallbacks (used when training level is null for a platform)
+    const cfRating = cfPlatform?.currentRating || 1200;
+    const ccRating = ccPlatform?.currentRating || 1400;
+    const lcDiff   = getLCDifficultyForUser(lcData);
+    const lcChDiff = getLCChallengerDifficulty(lcData);
+    const cfWeak   = cfLinked ? getCFWeakTopics(cfPlatform) : [];
+    const lcWeak   = lcLinked ? getLCWeakTags(lcData) : [];
+
+    // ── WORKOUT ──────────────────────────────────────────────────────────────
+    let workout = null;
+    const workoutOrder = (() => {
+        if (linkedPlatforms.length === 1) return [linkedPlatforms[0] === 'codeforces' ? 'cf' : linkedPlatforms[0] === 'leetcode' ? 'lc' : 'cc'];
+        return pickPlatformOrder(lcLinked, cfLinked);
+    })();
+
+    for (const platform of workoutOrder) {
+        if (platform === 'lc') {
+            if (lcLevel) workout = await pickLCWorkoutTraining(lcLevel.workoutDiff, attemptedSet).catch(() => null);
+            // else: no LC training data — skip this platform
+        } else if (platform === 'cf') {
+            if (cfLevel) workout = await pickCFWorkoutTraining(cfLevel, attemptedSet).catch(() => null);
+            // else: no CF training data — skip this platform
+        } else if (platform === 'cc') {
+            if (ccLevel) workout = await pickCCWorkoutTraining(ccLevel, attemptedSet).catch(() => null);
+            // else: no CC training data — skip this platform
+        }
+        if (workout) break;
+    }
+
+    const challengerAttemptedSet = new Set(attemptedSet);
+    if (workout?.problemId && workout?.platform) {
+        challengerAttemptedSet.add(`${workout.platform}::${workout.problemId}`);
+    }
+
+    // ── CHALLENGER ───────────────────────────────────────────────────────────
+    let challenger = null;
+    const challengerOrder = (() => {
+        if (linkedPlatforms.length === 1) return workoutOrder;
+        return pickPlatformOrder(lcLinked, cfLinked);
+    })();
+
+    for (const platform of challengerOrder) {
+        if (platform === 'lc') {
+            if (lcLevel) challenger = await pickLCChallengerTraining(lcLevel.challengerDiff, lcWeak, challengerAttemptedSet).catch(() => null);
+            // else: skip
+        } else if (platform === 'cf') {
+            if (cfLevel) challenger = await pickCFChallengerTraining(cfLevel, cfWeak, challengerAttemptedSet).catch(() => null);
+            // else: skip
+        } else if (platform === 'cc') {
+            if (ccLevel) {
+                const ccWeak = getCCWeakTopics(ccPlatform);
+                challenger = await pickCCChallengerTraining(ccLevel, ccWeak, challengerAttemptedSet).catch(() => null);
+            }
+            // else: skip
+        }
+        if (challenger) break;
+    }
+
+    // ── BONUS: same logic as rating mode but use training levels for CF/CC bands ─
+    const bonusAttemptedSet = new Set(solvedSet);
+    if (workout?.problemId   && workout?.platform)    bonusAttemptedSet.add(`${workout.platform}::${workout.problemId}`);
+    if (challenger?.problemId && challenger?.platform) bonusAttemptedSet.add(`${challenger.platform}::${challenger.problemId}`);
+
+    // Use training-calibrated ratings for bonus if available, else fall back
+    const bonusCfRating = cfLevel ? cfLevel.workoutLevel : cfRating;
+    const bonusCcRating = ccLevel ? ccLevel.workoutLevel : ccRating;
+
+    let bonus = null;
+    if (linkedPlatforms.length > 1) {
+        bonus = await pickBonus(
+            workout?.platform    || null,
+            challenger?.platform || null,
+            { cfRating: bonusCfRating, ccRating: bonusCcRating, lcData, cfLinked, lcLinked, ccLinked, attemptedSet: bonusAttemptedSet }
+        ).catch(err => {
+            console.warn('[DAILY/TRAINING] bonus failed:', err.message);
+            ErrorLog.create({ source: 'DailyProblemService:trainingMode:bonus', level: 'error', message: err.message || String(err) }).catch(() => {});
+            return null;
+        });
+    }
+
+    const today = getTodayIST();
+    const doc = await DailyProblem.findOneAndUpdate(
+        { userId, date: today },
+        { $setOnInsert: { userId, date: today, workout, challenger, bonus, generatedAt: new Date() } },
+        { upsert: true, new: true }
+    );
+
+    return doc;
+}
+
+// ── Public entry point ────────────────────────────────────────────────────────
+
+async function generateDailyProblems(userId) {
+    // Load user with preferences so we can branch on dailyMode
+    const user = await User.findById(userId, 'linkedAccounts dailyStreak preferences').lean();
+    if (!user) return { status: 'no_account_linked' };
+
+    const mode = user?.preferences?.dailyMode || 'rating';
+
+    if (mode === 'training') {
+        return generateDailyProblemsTrainingMode(userId, user);
+    }
+    return generateDailyProblemsRatingMode(userId, user);
 }
 
 // ── Auto-solve detection (called after each sync) ─────────────────────────────

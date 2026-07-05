@@ -884,8 +884,8 @@ export default function AdminDashboard() {
   const [error, setError] = useState(null);
   const [days, setDays] = useState(7);
   const [lastRefresh, setLastRefresh] = useState(null);
-  const [forcing, setForcing] = useState({ contests: false, leaderboard: false, stats: false, daily: false, 'daily-me': false, topics: false, 'daily-topic-me': false, all: false });
-  const [forceMsg, setForceMsg] = useState({ contests: null, leaderboard: null, stats: null, daily: null, 'daily-me': null, topics: null, 'daily-topic-me': null, all: null });
+  const [forcing, setForcing] = useState({ contests: false, leaderboard: false, stats: false, daily: false, 'daily-me': false, topics: false, 'daily-topic-me': false, 'training-mode-me': false, all: false });
+  const [forceMsg, setForceMsg] = useState({ contests: null, leaderboard: null, stats: null, daily: null, 'daily-me': null, topics: null, 'daily-topic-me': null, 'training-mode-me': null, all: null });
 
   const fetchStats = useCallback(async (d) => {
     setLoading(true);
@@ -1098,6 +1098,7 @@ export default function AdminDashboard() {
               </div>
             ))}
           </div>
+
         </div>
 
         {/* ── Send Notification ── */}

@@ -214,14 +214,22 @@ const getCollegeSuggestions = async (req, res) => {
 async function updatePreferences(req, res) {
     try {
         const userId = req.user._id;
-        const { preferredLanguage } = req.body;
+        const { preferredLanguage, dailyMode } = req.body;
         const validLangs = ['cpp', 'java', 'python', 'javascript'];
+        const validModes = ['rating', 'training'];
         if (preferredLanguage && !validLangs.includes(preferredLanguage)) {
             return res.status(400).json({ success: false, message: 'Invalid language' });
         }
-        await User.findByIdAndUpdate(userId, {
-            $set: { 'preferences.preferredLanguage': preferredLanguage || 'cpp' },
-        });
+        if (dailyMode && !validModes.includes(dailyMode)) {
+            return res.status(400).json({ success: false, message: 'Invalid daily mode' });
+        }
+        const updates = {};
+        if (preferredLanguage) updates['preferences.preferredLanguage'] = preferredLanguage;
+        if (dailyMode)         updates['preferences.dailyMode']          = dailyMode;
+        if (!Object.keys(updates).length) {
+            return res.status(400).json({ success: false, message: 'Nothing to update' });
+        }
+        await User.findByIdAndUpdate(userId, { $set: updates });
         return res.json({ success: true, message: 'Preferences updated' });
     } catch (err) {
         console.error('[Settings] updatePreferences error:', err.message);

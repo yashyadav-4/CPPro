@@ -3,7 +3,7 @@ import axios from 'axios';
 import { motion } from 'framer-motion';
 import {
   Settings as SettingsIcon, User, MapPin, GraduationCap, Eye, EyeOff,
-  Save, RefreshCw, CheckCircle, AlertTriangle, Link2, Shield, KeyRound, Trash2, Info, Zap, Code2
+  Save, RefreshCw, CheckCircle, AlertTriangle, Link2, Shield, KeyRound, Trash2, Info, Zap, Code2, Brain
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Country, State, City } from 'country-state-city';
@@ -25,6 +25,9 @@ export default function Settings() {
     country: '', state: '', city: '', college: '', public: true,
     preferredLanguage: 'cpp',
   });
+  const [dailyMode, setDailyMode]           = useState('rating');
+  const [dailyModeSaving, setDailyModeSaving] = useState(false);
+  const [dailyModeMsg, setDailyModeMsg]     = useState({ ok: null, text: '' });
   const [linked, setLinked] = useState({ codeforces: '', leetcode: '', codechef: '' });
   const [userRole, setUserRole] = useState('user');
 
@@ -73,6 +76,7 @@ export default function Settings() {
             public: u.preferences?.public ?? true,
             preferredLanguage: u.preferences?.preferredLanguage || 'cpp',
           });
+          setDailyMode(u.preferences?.dailyMode || 'rating');
           setLinked(u.linkedAccounts || { codeforces: '', leetcode: '' });
           setUserRole(u.role || 'user');
           setEmail(u.email || '');
@@ -236,6 +240,26 @@ export default function Settings() {
       setError(err.response?.data?.message || 'Failed to update profile');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDailyModeToggle = async (mode) => {
+    if (mode === dailyMode || dailyModeSaving) return;
+    setDailyModeSaving(true);
+    setDailyModeMsg({ ok: null, text: '' });
+    try {
+      const res = await axios.patch('/api/settings/preferences', { dailyMode: mode }, { withCredentials: true });
+      if (res.data.success) {
+        setDailyMode(mode);
+        setDailyModeMsg({ ok: true, text: `Switched to ${mode === 'training' ? 'Training' : 'Rating'} Mode. Your next daily problems will use this setting.` });
+      } else {
+        setDailyModeMsg({ ok: false, text: res.data.message || 'Failed to save' });
+      }
+    } catch (err) {
+      setDailyModeMsg({ ok: false, text: err.response?.data?.message || 'Failed to save' });
+    } finally {
+      setDailyModeSaving(false);
+      setTimeout(() => setDailyModeMsg({ ok: null, text: '' }), 6000);
     }
   };
 
@@ -829,6 +853,90 @@ export default function Settings() {
               )}
             </motion.div>
           )}
+
+          {/* ── Daily Problem Mode ── */}
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }} className={CARD_CLASS}>
+            <div className="flex items-center gap-2 mb-4">
+              <Brain size={18} className="text-violet-500" />
+              <div>
+                <h2 className="text-base font-semibold text-gray-900 dark:text-white">Daily Problem Mode</h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  Controls how today's workout and challenger difficulty is determined.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+              {/* Rating Mode */}
+              <button
+                id="btn-daily-mode-rating"
+                onClick={() => handleDailyModeToggle('rating')}
+                disabled={dailyModeSaving}
+                className={`text-left p-4 rounded-xl border transition-all ${
+                  dailyMode === 'rating'
+                    ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-400 dark:border-emerald-500/50'
+                    : 'bg-white dark:bg-white/[0.02] border-gray-200 dark:border-white/[0.08] hover:border-gray-300 dark:hover:border-white/20'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-semibold text-gray-900 dark:text-white">Rating Mode</span>
+                  {dailyMode === 'rating' && (
+                    <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-500/20 px-2 py-0.5 rounded-full">
+                      <CheckCircle size={9} /> Active
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                  Uses your contest rating (CF / LC / CC) to pick problems. Stable and predictable.
+                  Best for active contest participants.
+                </p>
+              </button>
+
+              {/* Training Mode */}
+              <button
+                id="btn-daily-mode-training"
+                onClick={() => handleDailyModeToggle('training')}
+                disabled={dailyModeSaving}
+                className={`text-left p-4 rounded-xl border transition-all ${
+                  dailyMode === 'training'
+                    ? 'bg-violet-50 dark:bg-violet-500/10 border-violet-400 dark:border-violet-500/50'
+                    : 'bg-white dark:bg-white/[0.02] border-gray-200 dark:border-white/[0.08] hover:border-gray-300 dark:hover:border-white/20'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-semibold text-gray-900 dark:text-white">Training Mode</span>
+                  {dailyMode === 'training' && (
+                    <span className="flex items-center gap-1 text-[10px] font-bold text-violet-600 dark:text-violet-400 bg-violet-100 dark:bg-violet-500/20 px-2 py-0.5 rounded-full">
+                      <CheckCircle size={9} /> Active
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                  Analyzes your submission history across all difficulty levels. Adapts to your
+                  actual practice zone regardless of contest rating. Best for archive grinders.
+                </p>
+              </button>
+            </div>
+
+            {dailyModeSaving && (
+              <p className="text-xs text-gray-400 flex items-center gap-1.5">
+                <RefreshCw size={11} className="animate-spin" /> Saving…
+              </p>
+            )}
+            {dailyModeMsg.text && (
+              <p className={`text-xs flex items-center gap-1.5 ${
+                dailyModeMsg.ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'
+              }`}>
+                {dailyModeMsg.ok ? <CheckCircle size={11} /> : <AlertTriangle size={11} />}
+                {dailyModeMsg.text}
+              </p>
+            )}
+
+            <p className="text-[11px] text-gray-400 dark:text-gray-600 mt-3">
+              Training Mode requires 15+ accepted submissions on at least one platform to calibrate.
+              If insufficient data is found, it falls back to Rating Mode automatically.
+            </p>
+          </motion.div>
 
           {/* ── Section 5: Privacy ── */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }} className={CARD_CLASS}>

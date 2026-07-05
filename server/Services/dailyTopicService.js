@@ -804,7 +804,7 @@ async function _doGenerate(userId, today, language) {
             $setOnInsert: {
                 userId,
                 date: today,
-                topic: topicName,
+                topic: weakTopic,
                 language,
                 content: {
                     article:            content.article            || '',

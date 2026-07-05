@@ -40,7 +40,7 @@ async function getToday(req, res) {
             daily = result?.toObject ? result.toObject() : result;
         }
 
-        const user = await User.findById(userId, 'dailyStreak linkedAccounts lcSession').lean();
+        const user = await User.findById(userId, 'dailyStreak linkedAccounts lcSession preferences').lean();
         const ds   = user?.dailyStreak;
 
         // Warn the frontend when LC is linked but no working session is set.
@@ -60,6 +60,7 @@ async function getToday(req, res) {
                     current: effectiveCurrentStreak(ds),
                     longest: ds?.longest || 0,
                 },
+                dailyMode: user?.preferences?.dailyMode || 'rating',
             },
             sessionWarning,
             sessionStatus,
