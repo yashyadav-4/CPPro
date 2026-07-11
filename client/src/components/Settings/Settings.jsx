@@ -3,7 +3,7 @@ import axios from 'axios';
 import { motion } from 'framer-motion';
 import {
   Settings as SettingsIcon, User, MapPin, GraduationCap, Eye, EyeOff,
-  Save, RefreshCw, CheckCircle, AlertTriangle, Link2, Shield, KeyRound, Trash2, Info, Zap, Code2, Brain
+  Save, RefreshCw, CheckCircle, AlertTriangle, Link2, Shield, KeyRound, Trash2, Info, Zap, Code2, Brain, Filter
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Country, State, City } from 'country-state-city';
@@ -28,6 +28,9 @@ export default function Settings() {
   const [dailyMode, setDailyMode]           = useState('rating');
   const [dailyModeSaving, setDailyModeSaving] = useState(false);
   const [dailyModeMsg, setDailyModeMsg]     = useState({ ok: null, text: '' });
+  const [dailyPlatforms, setDailyPlatforms]   = useState([]);
+  const [platformSaving, setPlatformSaving]   = useState(false);
+  const [platformMsg, setPlatformMsg]         = useState({ ok: null, text: '' });
   const [linked, setLinked] = useState({ codeforces: '', leetcode: '', codechef: '' });
   const [userRole, setUserRole] = useState('user');
 
@@ -77,6 +80,7 @@ export default function Settings() {
             preferredLanguage: u.preferences?.preferredLanguage || 'cpp',
           });
           setDailyMode(u.preferences?.dailyMode || 'rating');
+          setDailyPlatforms(u.preferences?.dailyPlatforms || []);
           setLinked(u.linkedAccounts || { codeforces: '', leetcode: '' });
           setUserRole(u.role || 'user');
           setEmail(u.email || '');
@@ -260,6 +264,31 @@ export default function Settings() {
     } finally {
       setDailyModeSaving(false);
       setTimeout(() => setDailyModeMsg({ ok: null, text: '' }), 6000);
+    }
+  };
+
+  const handlePlatformToggle = async (platform) => {
+    if (platformSaving) return;
+    // Toggle: add if absent, remove if present
+    const next = dailyPlatforms.includes(platform)
+      ? dailyPlatforms.filter(p => p !== platform)
+      : [...dailyPlatforms, platform];
+    setPlatformSaving(true);
+    setPlatformMsg({ ok: null, text: '' });
+    try {
+      const res = await axios.patch('/api/settings/preferences', { dailyPlatforms: next }, { withCredentials: true });
+      if (res.data.success) {
+        setDailyPlatforms(next);
+        const label = next.length === 0 ? 'All linked platforms will be used.' : 'Platform sources updated.';
+        setPlatformMsg({ ok: true, text: label });
+      } else {
+        setPlatformMsg({ ok: false, text: res.data.message || 'Failed to save' });
+      }
+    } catch (err) {
+      setPlatformMsg({ ok: false, text: err.response?.data?.message || 'Failed to save' });
+    } finally {
+      setPlatformSaving(false);
+      setTimeout(() => setPlatformMsg({ ok: null, text: '' }), 5000);
     }
   };
 
@@ -937,6 +966,83 @@ export default function Settings() {
               If insufficient data is found, it falls back to Rating Mode automatically.
             </p>
           </motion.div>
+
+          {/* ── Daily Problem Sources ── */}
+          {/* Only rendered when at least one platform is linked */}
+          {(linked.codeforces || linked.leetcode || linked.codechef) && (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.24 }} className={CARD_CLASS}>
+              <div className="flex items-center gap-2 mb-1">
+                <Filter size={18} className="text-sky-500" />
+                <div>
+                  <h2 className="text-base font-semibold text-gray-900 dark:text-white">Daily Problem Sources</h2>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    Choose which platforms can appear in your daily workout, challenger, and bonus slots.
+                  </p>
+                </div>
+              </div>
+
+              {/* Platform toggles — only show linked platforms */}
+              <div className="flex flex-wrap gap-2.5 mt-4 mb-3">
+                {[
+                  { key: 'codeforces', label: 'Codeforces', short: 'CF',
+                    active: 'bg-blue-50 dark:bg-blue-500/10 border-blue-400 dark:border-blue-500/60 text-blue-700 dark:text-blue-300',
+                    inactive: 'bg-white dark:bg-white/[0.02] border-gray-200 dark:border-white/[0.08] text-gray-500 dark:text-gray-400 hover:border-blue-300 dark:hover:border-blue-500/30',
+                    dot: 'bg-blue-500' },
+                  { key: 'leetcode',   label: 'LeetCode',   short: 'LC',
+                    active: 'bg-amber-50 dark:bg-amber-500/10 border-amber-400 dark:border-amber-500/60 text-amber-700 dark:text-amber-300',
+                    inactive: 'bg-white dark:bg-white/[0.02] border-gray-200 dark:border-white/[0.08] text-gray-500 dark:text-gray-400 hover:border-amber-300 dark:hover:border-amber-500/30',
+                    dot: 'bg-amber-500' },
+                  { key: 'codechef',   label: 'CodeChef',   short: 'CC',
+                    active: 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-400 dark:border-emerald-500/60 text-emerald-700 dark:text-emerald-300',
+                    inactive: 'bg-white dark:bg-white/[0.02] border-gray-200 dark:border-white/[0.08] text-gray-500 dark:text-gray-400 hover:border-emerald-300 dark:hover:border-emerald-500/30',
+                    dot: 'bg-emerald-500' },
+                ]
+                  .filter(p => !!linked[p.key])   /* show only linked platforms */
+                  .map(p => {
+                    const isActive = dailyPlatforms.includes(p.key);
+                    return (
+                      <button
+                        key={p.key}
+                        id={`btn-daily-platform-${p.key}`}
+                        onClick={() => handlePlatformToggle(p.key)}
+                        disabled={platformSaving}
+                        className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-medium transition-all disabled:opacity-60 ${
+                          isActive ? p.active : p.inactive
+                        }`}
+                      >
+                        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                          isActive ? p.dot : 'bg-gray-300 dark:bg-gray-600'
+                        }`} />
+                        {p.label}
+                        {isActive && <CheckCircle size={13} className="ml-0.5" />}
+                      </button>
+                    );
+                  })}
+              </div>
+
+              {/* Status line */}
+              {platformSaving && (
+                <p className="text-xs text-gray-400 flex items-center gap-1.5 mb-1">
+                  <RefreshCw size={11} className="animate-spin" /> Saving…
+                </p>
+              )}
+              {platformMsg.text && (
+                <p className={`text-xs flex items-center gap-1.5 mb-1 ${
+                  platformMsg.ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'
+                }`}>
+                  {platformMsg.ok ? <CheckCircle size={11} /> : <AlertTriangle size={11} />}
+                  {platformMsg.text}
+                </p>
+              )}
+
+              <p className="text-[11px] text-gray-400 dark:text-gray-600 mt-2">
+                {dailyPlatforms.length === 0
+                  ? 'No filter active — problems can come from any of your linked platforms.'
+                  : `Only ${dailyPlatforms.map(p => p === 'codeforces' ? 'Codeforces' : p === 'leetcode' ? 'LeetCode' : 'CodeChef').join(' & ')} problems will be assigned.`
+                }{' '}Changes take effect from tomorrow&apos;s problems.
+              </p>
+            </motion.div>
+          )}
 
           {/* ── Section 5: Privacy ── */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }} className={CARD_CLASS}>

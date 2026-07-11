@@ -214,18 +214,31 @@ const getCollegeSuggestions = async (req, res) => {
 async function updatePreferences(req, res) {
     try {
         const userId = req.user._id;
-        const { preferredLanguage, dailyMode } = req.body;
-        const validLangs = ['cpp', 'java', 'python', 'javascript'];
-        const validModes = ['rating', 'training'];
+        const { preferredLanguage, dailyMode, dailyPlatforms } = req.body;
+        const validLangs     = ['cpp', 'java', 'python', 'javascript'];
+        const validModes     = ['rating', 'training'];
+        const validPlatforms = ['codeforces', 'leetcode', 'codechef'];
+
         if (preferredLanguage && !validLangs.includes(preferredLanguage)) {
             return res.status(400).json({ success: false, message: 'Invalid language' });
         }
         if (dailyMode && !validModes.includes(dailyMode)) {
             return res.status(400).json({ success: false, message: 'Invalid daily mode' });
         }
+        if (dailyPlatforms !== undefined) {
+            if (
+                !Array.isArray(dailyPlatforms) ||
+                !dailyPlatforms.every(p => validPlatforms.includes(p))
+            ) {
+                return res.status(400).json({ success: false, message: 'Invalid dailyPlatforms value' });
+            }
+        }
+
         const updates = {};
-        if (preferredLanguage) updates['preferences.preferredLanguage'] = preferredLanguage;
-        if (dailyMode)         updates['preferences.dailyMode']          = dailyMode;
+        if (preferredLanguage)          updates['preferences.preferredLanguage'] = preferredLanguage;
+        if (dailyMode)                  updates['preferences.dailyMode']          = dailyMode;
+        if (dailyPlatforms !== undefined) updates['preferences.dailyPlatforms']   = dailyPlatforms;
+
         if (!Object.keys(updates).length) {
             return res.status(400).json({ success: false, message: 'Nothing to update' });
         }

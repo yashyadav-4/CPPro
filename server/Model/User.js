@@ -79,6 +79,13 @@ const userSchema = new mongoose.Schema({
         },
         preferredLanguage: { type: String, enum: ['cpp', 'java', 'python', 'javascript'], default: 'cpp' },
         dailyMode: { type: String, enum: ['rating', 'training'], default: 'rating' },
+        // [] = no restriction (all linked platforms allowed — default, backward-compatible).
+        // Non-empty = only these platforms can appear in daily workout/challenger/bonus slots.
+        dailyPlatforms: {
+            type: [String],
+            enum: ['codeforces', 'leetcode', 'codechef'],
+            default: [],
+        },
     },
     verificationCode:{ //changed later: needed for platform verification
         type:String,
