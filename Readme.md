@@ -1,301 +1,397 @@
-# CPPro: Unified Competitive Programming Analytics Platform
+<p align="center">
+  <img src="https://img.shields.io/badge/CPPro-Competitive%20Programming%20Analytics-6C63FF?style=for-the-badge" alt="CPPro">
+</p>
 
-CPPro is a self-hosted, SaaS-style analytics dashboard for competitive programmers. It unifies data from Codeforces, LeetCode, and CodeChef into a single product: ratings, heatmaps, contest history, skill gaps, upsolve queues, leaderboards, learning curriculum, code templates, daily challenges, and community forums.
+<h1 align="center">CPPro — Unified Competitive Programming Analytics</h1>
 
-This workspace contains the main CPPro app plus three dedicated data-sync services. The architecture is designed to keep the user experience fast and resilient even when upstream platforms are rate-limited or blocked.
+<p align="center">
+  One dashboard. Three platforms. Zero context switching.
+</p>
+
+<p align="center">
+  <a href="https://cppro.dev" target="_blank"><img src="https://img.shields.io/badge/Live%20Demo-cppro.dev-6C63FF?style=flat-square" alt="Live Demo"></a>
+  <img src="https://img.shields.io/badge/Node.js-v18+-339933?style=flat-square&logo=nodedotjs" alt="Node.js">
+  <img src="https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react" alt="React">
+  <img src="https://img.shields.io/badge/MongoDB-Atlas-47A248?style=flat-square&logo=mongodb" alt="MongoDB">
+  <img src="https://img.shields.io/badge/Redis-BullMQ-DC382D?style=flat-square&logo=redis" alt="Redis">
+  <img src="https://img.shields.io/badge/License-ISC-blue?style=flat-square" alt="License">
+</p>
 
 ---
 
-## Architecture overview
+## What is CPPro?
+
+CPPro is a self-hosted, SaaS-style analytics platform for competitive programmers. It unifies your **Codeforces**, **LeetCode**, and **CodeChef** data into a single, beautiful dashboard — ratings, submission heatmaps, contest history, skill-gap analysis, upsolve queues, a global leaderboard, daily personalized problems, code templates, and a community forum.
+
+Built as a **four-service microarchitecture** — each platform gets its own dedicated sync engine with a BullMQ worker, Webshare proxy rotation, and Redis-backed slot management — so the main app stays fast even when upstream platforms are rate-limited or blocked by Cloudflare.
+
+---
+
+## ✨ Features
+
+### 📊 Unified Dashboard
+- **Codeforces** — Rating progression, contest history, topic-level skill breakdown, difficulty distribution, recent submissions, activity heatmap, upsolve queue
+- **LeetCode** — Rating, skill tags (fundamental / intermediate / advanced), badge stats, calendar heatmap, contest history
+- **CodeChef** — Star rating, contest history parsed from embedded profile data (bypasses Cloudflare-blocked API), heatmap, language breakdown, verdict distribution
+- Combined **CPScore** across all three platforms
+- Shareable dashboard card — export as an image
+
+### 🔥 Daily Problems
+Two personalized problems generated every IST day per user:
+- **Daily Workout** — At or slightly below your current level; high solve-count; consistency-focused
+- **Daily Challenger** — Slightly above your level; targets your weakest topic tag
+
+Includes daily streak tracking, dashboard widget, and auto-solve detection that notifies you when a submitted problem counts.
+
+### 🏆 Leaderboard
+Global, country-level, and college-level leaderboards across CPScore and individual platform rating categories. Recomputed every 15 minutes by a background worker.
+
+### 🧠 Learning Tree
+A 3D interactive knowledge graph (Three.js) covering competitive programming topics from basics to advanced. Track your progress per node.
+
+### 📅 Contest Tracker
+Upcoming contests from CF, LC, and CC synced every 6 hours. View in a calendar or upcoming sidebar. Supports custom contest entries.
+
+### 📝 Code Templates
+Personal code snippet manager — create, tag, search, and view templates with full syntax highlighting.
+
+### 💬 Community Forum
+Threaded posts and comments with upvoting, pinning, and full-text search.
+
+### 🔔 Notifications
+In-app notification bell with unread count. Alerts for daily problem solves, streak milestones, sync completions, and admin broadcasts.
+
+### 🛡️ Admin Dashboard
+User analytics, broadcast notifications, error log viewer — all double-gated behind admin role checks.
+
+### 🔗 Account Linking & Verification
+- **Codeforces** — Generate a verification code → set it as your CF Real Name → CPPro confirms via proxy scrape
+- **LeetCode** — Verified via NexusLC `/verify/:username` (checks realName field)
+- **CodeChef** — Verified via CC server `/verify/:handle`
+
+---
+
+## 🏗️ Architecture
+
+```
+┌─────────────────────────────────────────────────────┐
+│                   Browser (React)                   │
+│     Vite · React 19 · Tailwind v4 · Three.js        │
+└────────────────────┬────────────────────────────────┘
+                     │ HTTPS
+┌────────────────────▼────────────────────────────────┐
+│           CPPro Main (Express v5)   :5000           │
+│  Auth · Dashboard · Leaderboard · Community · Daily │
+└──────┬──────────────────┬──────────────────┬────────┘
+       │ HTTP             │ HTTP             │ HTTP
+       ▼                  ▼                  ▼
+┌─────────────┐  ┌───────────────┐  ┌───────────────┐
+│ Codeforces  │  │ NexusLC (LC)  │  │  CodeChef     │
+│ API Server  │  │   API Server  │  │  API Server   │
+│  :3001      │  │    :4001      │  │   :5001       │
+│  BullMQ     │  │  BullMQ       │  │  BullMQ       │
+│  Proxies    │  │  GraphQL      │  │  Cheerio      │
+└──────┬──────┘  └───────┬───────┘  └───────┬───────┘
+       │                 │                   │
+       └────────┬────────┘                   │
+                ▼                            ▼
+        ┌──────────────┐             ┌──────────────┐
+        │ MongoDB Atlas│             │  Redis       │
+        │  (shared)    │             │  (BullMQ +   │
+        └──────────────┘             │  slot locks) │
+                                     └──────────────┘
+```
 
 | Service | Folder | Port | Purpose |
-| --- | --- | --- | --- |
-| CPPro Main App | CPPro/ | 5000 (API) + 5173 (Vite) | React frontend + Express backend |
-| Codeforces API Server | Codeforces-Api Server/ | 3001 | BullMQ worker: syncs CF data via Webshare proxies |
-| LeetCode API Server (NexusLC) | Leetcode-Api Server/ | 4001 | BullMQ worker: syncs LC data via GraphQL + proxies |
-| CodeChef API Server | CodeChef-Api Server/ | 5001 | BullMQ worker: syncs CC data via HTML scraping + proxies |
+|---|---|---|---|
+| CPPro Main App | `CPPro/` | 5000 + 5173 | React frontend + Express backend |
+| Codeforces API Server | `Codeforces-Api Server/` | 3001 | BullMQ worker — CF data via Webshare proxies |
+| LeetCode API Server (NexusLC) | `Leetcode-Api Server/` | 4001 | BullMQ worker — LC data via GraphQL + proxies |
+| CodeChef API Server | `CodeChef-Api Server/` | 5001 | BullMQ worker — CC HTML scraping + proxies |
 
-All four services share one MongoDB Atlas cluster. The CF and LC servers share a Redis instance (namespaced keys). The CC server uses its own Redis instance.
-
----
-
-## End-to-end data flow (Lean Nexus)
-
-CPPro never blocks the user on third-party calls.
-
-1. User requests dashboard data.
-2. CPPro checks freshness (per-platform cooldown).
-3. If fresh, return data immediately.
-4. If stale:
-     - Stamp the last update timestamp to prevent races.
-     - Return current DB data immediately.
-     - Trigger background sync via the relevant API server.
-     - The user sees updated data on the next refresh.
-
-Cooldown defaults: Codeforces 10 minutes (admins 10 seconds), LeetCode 15 minutes (admins 10 seconds).
+All four services share one MongoDB Atlas cluster. CF and LC servers share a Redis instance (key-namespaced). CC server uses its own Redis instance.
 
 ---
 
-## Proxy, rate limiting, and resiliency
+## ⚡ Data Flow — Lean Nexus Pattern
 
-- Webshare proxies are rotated and re-probed on a schedule (full refresh every 10 minutes; pool sync every 30 seconds).
-- Codeforces server uses a 26-User-Agent pool and endpoint-specific proxy selection.
-- NexusLC uses a slot system: each slot is a proxy + deterministic User-Agent derived from sha256(proxy).
-- Slot locks use Redis SET NX PX (1s residential, 2s datacenter). Two hard failures mark IP_DEAD and trigger alerts.
-- CPPro has a Bottleneck singleton (maxConcurrent=1, minTime=250ms) that serializes all CF proxy calls.
-- All API servers expose /health; all non-health routes require Authorization: Bearer <API_SECRET>.
+CPPro **never blocks the user** on third-party API calls.
 
----
+```
+User visits dashboard
+        │
+        ▼
+Check freshness (per-platform TTL)
+        │
+   ┌────┴────┐
+   │  Fresh? │
+   └────┬────┘
+        │ YES → Return DB data immediately ✅
+        │
+        │ NO  → Stamp timestamp (prevents race conditions)
+              → Return current DB data immediately ✅
+              → Trigger background sync job
+              → User sees updated data on next visit
+```
 
-## Daily Problem system
-
-Two problems are generated per user per IST day:
-- Daily Workout: at or slightly below current level; high solvedCount; consistency-focused.
-- Daily Challenger: slightly above level; targets the weakest topic tag.
-
-Key design details:
-- Lazy generation on the first GET /api/daily (no cron).
-- Platform priority for both slots: LC -> CF -> CC (fallback if a source fails or is blocked).
-- Attempted-set protection uses both submissions and the last 14 days of assigned daily problems.
-- In-memory catalog cache with Promise coalescing (1 API call per cold cache even with 1000 parallel requests).
-- Auto-solve detection runs after each sync job and updates streaks plus notifications.
-- CC Cloudflare challenge is detected; CC is skipped silently if blocked.
+**Freshness TTLs:** CF — 10 min (admins: 10 s) · LC — 15 min (admins: 10 s)
 
 ---
 
-## Verification and account linking
+## 🔒 Proxy & Resiliency
 
-- Codeforces: generate 8-char hex code -> user sets it as Real Name -> CPPro verifies via proxy scrape.
-- LeetCode: CPPro calls NexusLC /verify/:username to confirm realName.
-- CodeChef: CPPro calls CC server /verify/:handle to link the handle.
-
----
-
-## LeetCode session sync (optional)
-
-- Settings can store an encrypted LEETCODE_SESSION cookie (AES-256-GCM).
-- Encrypted format: iv:authTag:ciphertext (hex-joined).
-- If session expires, NexusLC returns SESSION_EXPIRED and CPPro marks the token expired and notifies the user.
-- Public sync still works without a session; authenticated sync adds statusDisplay and language for recent submissions.
+- **Webshare proxies** rotated across all three sync servers; full pool re-probe every 10 min, in-memory slot refresh every 30 s
+- **CF server** — 26-User-Agent fingerprint pool; endpoint-specific proxy selection; Bottleneck singleton (`maxConcurrent=1`, `minTime=250ms`)
+- **NexusLC** — Slot system: each slot = one proxy + deterministic UA derived from `sha256(proxy)`. Redis `SET NX PX` slot locks (1 s residential, 2 s datacenter). Two hard failures → `IP_DEAD` + email alert
+- **CC server** — Cloudflare challenge detected and handled; CC silently skipped if blocked
+- All API servers expose `/health`; all non-health routes require `Authorization: Bearer <API_SECRET>`
 
 ---
 
-## CodeChef specifics
-
-- Ratings API is blocked by Cloudflare; contest history is parsed from embedded profile script data.
-- Rank labels use the star system (1-7 stars) based on rating.
-- Submission timestamps are normalized to IST to keep streaks and heatmaps consistent.
-- Duplicate submissions are deduped using a two-layer approach (write-time pruning of the last 14 days + read-time day bucket dedup).
-
----
-
-## Feature set (current)
-
-### Built and working
-- JWT auth (signup/login/logout/change-password)
-- CF + LC + CC account linking (verification code flow)
-- CF data sync (BullMQ + Webshare proxies)
-- LC data sync (GraphQL + NexusLC slot proxy system)
-- CC dashboard aggregate (heatmap, streaks, verdicts, languages, contest history, AC list)
-- Daily Problems (Workout + Challenger), daily streak, dashboard widget, /daily page
-- Dashboard analytics: heatmap, rating progression, difficulty breakdown, skill gaps, topics, contests, achievements, streaks
-- Total submissions stat with per-platform chips (CF/LC/CC)
-- Leaderboard: global/country/college across CPScore and rating-based categories
-- NextTarget growth planner and upsolve queue
-- Code template manager (CRUD, tags, pagination, modal details)
-- Community forum with threaded comments, votes, and pinned posts
-- Learning Tree (3D) with client-side progress
-- Contest tracker (6h sync worker + TTL cleanup)
-- Notification system (bell dropdown, unread count, daily/problem/streak alerts)
-- Admin dashboard with analytics and broadcast notifications (double-gated admin checks)
-- Shareable dashboard export as image
-
-### Partial or in progress
-- Learning Tree MongoDB sync (model ready; frontend still uses localStorage)
-
-### Planned or not built
-- Advanced roadmap feature (Level-Up placeholder)
-- React Query migration
-- Per-section dashboard error boundaries
-- Leaderboard search by username
-- Code splitting for heavy routes
-- Admin user management (ban/unban/role changes)
-
----
-
-## CPScore formula
+## 📐 CPScore Formula
 
 ```
 CPScore = floor(
-    (CF_Rating * 1.5) + (LC_Rating * 1.2) +
-    (CF_Hard * 15) + (CF_Medium * 8) + (CF_Easy * 2) +
-    (LC_Hard * 20) + (LC_Medium * 8) + (LC_Easy * 2) +
-    (Total_Contests * 10) +
-    max(0, (CF_MaxRating - CF_CurrentRating) * 0.5) +
-    min(max(CF_Streak, LC_Streak) * 2, 200)
+    (CF_Rating × 1.5)  + (LC_Rating × 1.2)  +
+    (CF_Hard × 15)     + (CF_Medium × 8)     + (CF_Easy × 2)  +
+    (LC_Hard × 20)     + (LC_Medium × 8)     + (LC_Easy × 2)  +
+    (Total_Contests × 10) +
+    max(0, (CF_MaxRating − CF_CurrentRating) × 0.5) +
+    min(max(CF_Streak, LC_Streak) × 2, 200)
 )
 ```
 
 ---
 
-## Data model highlights
+## 🛠️ Tech Stack
 
-- User: auth, roles, preferences, linked accounts, verificationCode, streaks, freshness timestamps
-- LeetCodeData: profile, skill stats, calendar, contest history, session token (encrypted)
-- Platform: Codeforces/CodeChef rating history, ranks, contest stats, solved distributions
-- DailyProblem: per-user daily workout/challenger with solve tracking
-- Submissions: unified CF/LC/CC submissions, used for heatmaps and upsolve
-- Contest: scheduled contests with TTL cleanup
-- Community: Post + Comment with votes and moderation metadata
+### Frontend
+| Library | Version | Use |
+|---|---|---|
+| React | 19 | UI framework |
+| Vite | 7 | Build tool & dev server |
+| React Router | v7 | Client-side routing |
+| Tailwind CSS | v4 | Styling |
+| Framer Motion | 12 | Animations |
+| Three.js + R3F | latest | 3D Learning Tree |
+| Recharts | 3 | Charts & graphs |
+| Lucide React | latest | Icons |
+| Axios | 1.x | API calls |
 
----
+### Backend (CPPro Main)
+| Library | Version | Use |
+|---|---|---|
+| Express | v5.2.1 | HTTP server |
+| Mongoose | v9.1.5 | MongoDB ORM |
+| jsonwebtoken + bcryptjs | latest | Auth |
+| Bottleneck | 2.x | CF API rate limiting |
+| Helmet | 8.x | Security headers |
+| @google/generative-ai | 0.24 | Gemini AI integration |
+| @upstash/redis | 1.x | Redis client |
 
-## API surface summary (CPPro main)
-
-- Auth: login, signup, logout, verify, change password
-- Sync: refresh CF/LC, health checks
-- Dashboards: CF/LC/CC profile analytics
-- Leaderboard: global/country/college scopes
-- Settings: verification flows, profile CRUD, LC session management
-- Daily Problems: fetch, streak, history, mark solved
-- Community: posts, comments, votes
-- Templates: CRUD for code templates
-
-The CF/LC/CC API servers expose /health, /sync, /sync/status, /verify (LC/CC), /problems (CF/LC/CC), and diagnostics endpoints; all non-health routes require an API secret.
-
----
-
-## Inter-service communication
-
-CPPro triggers sync jobs and polls status; the API servers write directly to MongoDB.
-
-- POST {CF_SYNC_API}/sync {userId, cfHandle}
-- GET  {CF_SYNC_API}/sync/status/:jobId
-- POST {LC_SYNC_API}/sync {userId, lcUsername, force?, sessionToken?}
-- GET  {LC_SYNC_API}/sync/status/:jobId
-- GET  {LC_SYNC_API}/verify/:username
-- GET  {CC_SYNC_API}/verify/:handle
+### Sync Servers
+| Tech | Use |
+|---|---|
+| BullMQ + ioredis | Job queues for all 3 sync servers |
+| Cheerio | CodeChef HTML scraping |
+| Raw GraphQL (axios) | LeetCode API — no Apollo overhead |
+| Nodemailer | Email alerts for dead proxies |
+| https-proxy-agent | Webshare proxy routing |
 
 ---
 
-## Current repository structure
-
-```text
-Workspace root
-├── CPPro/                     Main app (this folder)
-│   ├── client/
-│   │   └── src/
-│   │       ├── App.jsx / AppRouter.jsx / Layout.jsx / main.jsx
-│   │       ├── context/
-│   │       │   ├── ThemeContext.jsx
-│   │       │   └── NotificationContext.jsx
-│   │       ├── hooks/
-│   │       │   └── useDashboardData.js
-│   │       ├── components/
-│   │       │   ├── Admin/                 AdminDashboard.jsx
-│   │       │   ├── AuthPage/
-│   │       │   ├── Community Page/
-│   │       │   ├── CodeTemplate/          CodeTemplate.jsx, List, Card, SnippetDetailModal
-│   │       │   ├── ContestTracker/
-│   │       │   ├── DailyChallenge/        DailyChallenge.jsx, ProblemCard.jsx, DailyStreak.jsx
-│   │       │   ├── Dashboard/             CCQuickStats, CCLanguageChart, CCVerdictBreakdown, DailyWidget
-│   │       │   ├── Header/ Footer/ Home/
-│   │       │   ├── HelpSupport/
-│   │       │   ├── LearningTree/
-│   │       │   ├── Leaderboard/
-│   │       │   ├── LevelUp/
-│   │       │   ├── Notifications/         NotificationBell.jsx
-│   │       │   ├── Settings/
-│   │       │   ├── Shareable/
-│   │       │   ├── VerifyCodeforces/
-│   │       │   ├── common/                SkeletonCard, RankBadge, ErrorBoundary
-│   │       │   ├── MeteorShower.jsx
-│   │       │   ├── ProtectedRoute.jsx
-│   │       │   └── AdminRoute.jsx
-│   │       └── assets/
-│   ├── server/
-│   │   ├── index.js
-│   │   ├── Controllers/          auth, sync, dashboard, lcDashboard, ccDashboard, admin, leaderboard,
-│   │   │                         settings, codeTemplate, post, comment, learning, contest, daily
-│   │   ├── Middlewares/          auth.js, adminAuth.js
-│   │   ├── Model/                User, LeetCodeData, Platform, Submissions, DailyProblem, Notification, Contest
-│   │   ├── Routes/               adminRoutes, ccDashboardRoutes, dailyRoutes, others
-│   │   ├── Services/             cfSyncService, lcSyncService, ccSyncService, dailyProblemService,
-│   │   │                         cfProblemsService, lcProblemsService, ccProblemsService, weaknessService
-│   │   ├── Repositories/         lcSyncRepository, cfAggregateRepository
-│   │   ├── Utils/                bouncer, nexusProxy, dateUtils, setUser/getUser
-│   │   └── Workers/              contestSyncWorker
-│   └── docs/
-├── Codeforces-Api Server/
-├── Leetcode-Api Server/
-└── CodeChef-Api Server/
-```
-
----
-
-## Environment variables (CPPro server)
-
-```env
-PORT=5000
-MongoUrl=YOUR_MONGODB_URI
-JWT_SECRET=YOUR_JWT_SECRET
-Secret=YOUR_JWT_SECRET
-
-CF_SYNC_API=http://localhost:3001
-CF_SYNC_SECRET=YOUR_SYNC_SECRET
-
-LC_SYNC_API=http://localhost:4001
-LC_SYNC_SECRET=YOUR_SYNC_SECRET
-
-CC_SYNC_API=http://localhost:5001
-CC_SYNC_SECRET=YOUR_SYNC_SECRET
-
-ENCRYPTION_KEY=YOUR_64_HEX_CHARS
-ALLOWED_ORIGIN=http://localhost:5173
-```
-
-See each server's README/info.md for its own env list.
-
----
-
-## Getting started
+## 🚀 Getting Started
 
 ### Prerequisites
-- Node.js (v18+)
-- MongoDB (local or Atlas)
+- **Node.js** v18+
+- **MongoDB** (local or Atlas)
+- **Redis** (local, Upstash, or RedisLabs)
 
-### Rapid installation
+### 1. Clone & Install
+
 ```bash
-git clone https://github.com/your-repo/cppro.git && cd CPPro
+git clone https://github.com/yashyadav-4/cppro.git
+cd CPPro
+
+# Install root + client + server dependencies
 npm install
-cd client && npm install && cd ../server && npm install && cd ..
+cd client && npm install && cd ..
+cd server && npm install && cd ..
+```
+
+### 2. Configure Environment Variables
+
+```bash
+cp client/.env.example client/.env
+# Then create server/.env manually (no example committed for security)
+```
+
+**`server/.env`**
+```env
+PORT=5000
+NODE_ENV=development
+
+# MongoDB
+MongoUrl=mongodb+srv://<user>:<pass>@cluster.mongodb.net/cppro
+
+# JWT
+Secret=your-long-random-jwt-secret
+
+# Inter-service auth (must match each API server's API_SECRET)
+CF_SYNC_API=http://localhost:3001
+CF_SYNC_SECRET=your-cf-sync-secret
+
+LC_SYNC_API=http://localhost:4001
+LC_SYNC_SECRET=your-lc-sync-secret
+
+CC_SYNC_API=http://localhost:5001
+CC_SYNC_SECRET=your-cc-sync-secret
+
+# AES-256-GCM key for encrypting LC session tokens — generate with: openssl rand -hex 32
+ENCRYPTION_KEY=64-hex-chars
+
+# CORS — set to your frontend URL
+ALLOWED_ORIGIN=http://localhost:5173
+
+# Google OAuth (from Google Cloud Console)
+CLIENT_ID=your-google-oauth-client-id
+CLIENT_SECRET=your-google-oauth-client-secret
+
+# CLIST API key (for AtCoder contest data)
+CLIST_API_KEY=username:your-clist-api-key
+
+# Gemini API keys (comma-separated for round-robin rotation)
+GEMINI_API_KEYS=key1,key2,key3
+
+# Upstash Redis (for leaderboard caching)
+UPSTASH_REDIS_REST_URL=https://your-instance.upstash.io
+UPSTASH_REDIS_REST_TOKEN=your-upstash-token
+```
+
+**`client/.env`**
+```env
+VITE_API_BASE=http://localhost:5000
+VITE_GOOGLE_CLIENT_ID=your-google-oauth-client-id
+```
+
+> See each API server's `.env.example` for its specific variables (Redis host/password, MongoDB URL, Webshare proxy keys, email alert config).
+
+### 3. Run in Development
+
+```bash
+# From CPPro/ — starts client (Vite :5173) and server (:5000) concurrently
 npm start
 ```
 
----
+To run sync servers as well (required for full platform data):
 
-## Deployment summary
+```bash
+# Terminal 2
+cd "Codeforces-Api Server" && npm start
 
-| Service | Platform | Port | Health Path |
-| --- | --- | --- | --- |
-| CPPro Main | Render or self-hosted | 5000 | /health |
-| Codeforces API Server | Render | 3001 | /health |
-| NexusLC | Render | 4001 | /health |
-| CodeChef API Server | Render | 5001 | /health |
-| MongoDB | Atlas | - | - |
-| Redis | Upstash or RedisLabs | - | - |
+# Terminal 3
+cd "Leetcode-Api Server" && npm start
 
-Frontend can run via Vite dev server (5173) or be built for static hosting.
+# Terminal 4
+cd "CodeChef-Api Server" && npm start
+```
 
 ---
 
-## Known issues and notes
+## 📦 Repository Structure
 
-- Learning Tree still stores progress in localStorage (cppro_tree_v2).
-- Dashboard lacks per-section error boundaries.
-- Level-Up advanced roadmap is a placeholder (spinner).
-- LeetCode public data lacks statusDisplay and language in recent submissions (requires session).
+```
+Workspace root
+├── CPPro/                          ← Main app
+│   ├── client/                     ← React frontend (Vite)
+│   │   ├── src/
+│   │   │   ├── main.jsx
+│   │   │   ├── AppRouter.jsx
+│   │   │   ├── components/
+│   │   │   │   ├── Dashboard/      ← CF/LC/CC stats, heatmap, charts
+│   │   │   │   ├── DailyChallenge/ ← Daily Workout + Challenger
+│   │   │   │   ├── Leaderboard/    ← Global/country/college boards
+│   │   │   │   ├── LearningTree/   ← 3D Three.js topic tree
+│   │   │   │   ├── ContestTracker/ ← Calendar + upcoming list
+│   │   │   │   ├── CodeTemplate/   ← Snippet CRUD
+│   │   │   │   ├── Community Page/ ← Forum, posts, comments
+│   │   │   │   ├── LevelUp/        ← Growth planner + upsolve
+│   │   │   │   ├── Notifications/  ← Bell + dropdown
+│   │   │   │   ├── Settings/       ← Profile, account linking, LC session
+│   │   │   │   └── Admin/          ← Admin dashboard
+│   │   │   ├── context/            ← ThemeContext, NotificationContext
+│   │   │   └── hooks/              ← useDashboardData, useContestData
+│   │   └── .env.example
+│   │
+│   ├── server/                     ← Express v5 backend
+│   │   ├── index.js
+│   │   ├── Controllers/            ← Auth, dashboards, leaderboard, daily, admin
+│   │   ├── Services/               ← Sync logic, problem catalog, weakness detection
+│   │   ├── Repositories/           ← MongoDB aggregation pipelines
+│   │   ├── Model/                  ← Mongoose schemas
+│   │   ├── Routes/
+│   │   ├── Middlewares/            ← JWT auth, admin gate, daily warmup
+│   │   ├── Utils/                  ← Proxy client, encryption, date helpers
+│   │   └── Workers/                ← Contest sync, leaderboard recompute
+│   │
+│   ├── render.yaml
+│   └── package.json
+│
+├── Codeforces-Api Server/          ← CF BullMQ sync worker
+├── Leetcode-Api Server/            ← NexusLC BullMQ sync worker
+└── CodeChef-Api Server/            ← CC BullMQ sync worker
+```
 
 ---
 
-Built for the competitive programming community.
+## ☁️ Deployment
+
+| Service | Platform | Port | Health Endpoint |
+|---|---|---|---|
+| CPPro Main (API) | Render / Azure / Railway | 5000 | `GET /api/health` |
+| CPPro Frontend | Render Static / Netlify | — | — |
+| Codeforces API Server | Render | 3001 | `GET /health` |
+| NexusLC (LeetCode) | Render | 4001 | `GET /health` |
+| CodeChef API Server | Render | 5001 | `GET /health` |
+| MongoDB | Atlas (M0 free tier works) | — | — |
+| Redis | Upstash / RedisLabs | — | — |
+
+```bash
+# Build the React frontend
+cd client && npm run build
+```
+
+The `render.yaml` in the root handles static frontend deployment on Render automatically. Set all `.env` values as environment variables in your host's dashboard — never commit them.
+
+---
+
+## 🔐 Security
+
+- All `.env` files are gitignored — never committed to this repo
+- JWT tokens stored in `httpOnly` cookies
+- LeetCode session tokens encrypted with **AES-256-GCM** before storing in MongoDB
+- Helmet.js security headers on all Express backends
+- All inter-service API routes require `Authorization: Bearer <API_SECRET>`
+
+---
+
+## ⚠️ Known Limitations
+
+| Area | Status |
+|---|---|
+| Learning Tree sync | Progress currently in `localStorage` — MongoDB sync model is ready, not wired yet |
+| LeetCode public sync | No `statusDisplay`/language in recent submissions without a session token |
+| Dashboard error boundaries | Per-section error boundaries not yet implemented |
+| Level-Up advanced roadmap | Placeholder — full feature planned |
+| Leaderboard search | No search-by-username yet |
+
+---
+
+## 📄 License
+
+ISC
+
+---
+
+<p align="center">Built for the competitive programming community · <a href="https://cppro.dev">cppro.dev</a></p>
+
