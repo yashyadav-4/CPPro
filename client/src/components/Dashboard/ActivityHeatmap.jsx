@@ -8,11 +8,11 @@ const Skeleton = ({ className = '' }) => (
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 const getColor = (count) => {
-  if (count === 0) return 'bg-gray-100 dark:bg-white/5';
-  if (count <= 2) return 'bg-green-300/40 dark:bg-green-900/40';
-  if (count <= 4) return 'bg-green-400/60 dark:bg-green-700/60';
-  if (count <= 6) return 'bg-green-500/80 dark:bg-green-600/80';
-  return 'bg-green-500 dark:bg-green-500';
+  if (count === 0) return 'bg-gray-100 dark:bg-white/10';
+  if (count <= 2) return 'bg-green-300/60 dark:bg-green-800/70';
+  if (count <= 4) return 'bg-green-400/80 dark:bg-green-600/90';
+  if (count <= 6) return 'bg-green-500 dark:bg-green-500';
+  return 'bg-green-600 dark:bg-green-400';
 };
 
 /**
@@ -174,7 +174,7 @@ export default function ActivityHeatmap({ loading, heatmapData }) {
           {/* Legend */}
           <div className="flex items-center gap-1.5 mt-2 justify-end">
             <span className="text-[10px] text-gray-400 dark:text-gray-500 font-normal">Less</span>
-            {['bg-gray-100 dark:bg-white/5', 'bg-green-200 dark:bg-green-900/50', 'bg-green-300 dark:bg-green-700/60', 'bg-green-400 dark:bg-green-600', 'bg-green-500 dark:bg-green-500'].map((c, i) => (
+            {['bg-gray-100 dark:bg-white/10', 'bg-green-300/60 dark:bg-green-800/70', 'bg-green-400/80 dark:bg-green-600/90', 'bg-green-500 dark:bg-green-500', 'bg-green-600 dark:bg-green-400'].map((c, i) => (
               <div key={i} className={`w-3 h-3 rounded-sm ${c}`} />
             ))}
             <span className="text-[10px] text-gray-400 dark:text-gray-500 font-normal">More</span>
