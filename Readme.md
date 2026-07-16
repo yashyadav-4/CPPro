@@ -52,7 +52,7 @@ Built as a **four-service microarchitecture**: the main app plus one dedicated s
 Global, country-level, and college-level boards across CPScore and individual platform ratings, served from a periodically refreshed cache.
 
 ### 🧠 Learning Tree
-A 3D interactive knowledge graph (Three.js) covering CP topics from fundamentals to advanced, with per-node progress tracking.
+A 3D interactive knowledge graph (Three.js) covering CP topics from fundamentals to advanced. Per-node progress is persisted to MongoDB (with full history tracking) and synced across devices.
 
 ### 📅 Contest Tracker
 Upcoming contests across CF/LC/CC, synced periodically with automatic cleanup of stale entries.
@@ -342,10 +342,9 @@ MongoDB (Atlas) and Redis (Upstash/RedisLabs) are external managed services. Set
 
 | Area | Status |
 |---|---|
-| Learning Tree sync | Progress currently lives in `localStorage`; the MongoDB model is built but not yet wired to the frontend |
-| LeetCode public sync | Recent submissions lack status/language detail unless the user links a session token |
-| Dashboard error boundaries | Not yet implemented per-section — a single component failure can affect the page |
-| Level-Up advanced roadmap | Placeholder — not yet built |
+| LeetCode public sync | No `statusDisplay`/language in recent submissions without a session token |
+| Dashboard error boundaries | Per-section error boundaries not yet implemented |
+| Level-Up advanced roadmap | Placeholder — full feature planned |
 | Leaderboard search | No search-by-username yet |
 
 ---
