@@ -1,17 +1,14 @@
-// Workers/contestSyncWorker.js
-// Runs a global contest sync every 6 hours using a simple setInterval loop.
-// On startup it immediately checks the DB time, and repeats every 6h.
+// global automatic contest sync worker , works everyr 6 hours can manually sync too
 const { syncContests } = require('../Services/contestSyncService');
 const GlobalSyncState  = require('../Model/GlobalSyncState');
 const { delCache } = require('../Utils/redisClient');
 
-const INTERVAL_MS = 6 * 60 * 60 * 1000; // 6 hours
+const INTERVAL_MS = 6 * 60 * 60 * 1000;
 
 async function runOnce() {
-    try {
-        // 1. check database for last sync time
-        const state = await GlobalSyncState.findOne({ syncKey: 'contests' });
-        const now = Date.now();
+    try{
+        const state =await GlobalSyncState.findOne({syncKey: 'contests'});
+        const now= Date.now();
 
         if (state && state.lastSyncedAt) {
             const timeSinceLastSync = now - state.lastSyncedAt.getTime();
@@ -23,36 +20,28 @@ async function runOnce() {
             }
         }
 
-        // 2. Data is stale or it's our first time ever: perform the API sync
         const count = await syncContests();
         console.log(`[contestWorker] Sync done — ${count} contests in window.`);
 
-        // 3. Mark the current time in DB
         await GlobalSyncState.updateOne(
             { syncKey: 'contests' },
             { $set: { lastSyncedAt: new Date(now) } },
             { upsert: true }
         );
 
-        // 4. Clear the Redis cache so next request rebuilds it
-        await delCache('contests:list');
-
-    } catch (err) {
+        await delCache('contests:list');//previously i forgot to clear the cache and so it kept taking old one from redis
+    }catch(err){
         console.error('[contestWorker] Sync error:', err.message);
     }
 }
 
 function startContestSyncWorker() {
     console.log('[contestWorker] Starting — will sync every 6 hours.');
-
-    //fire immediately on startup so the DB is populated before any request
     runOnce();
-
-    //then repeat every 6 hours
     setInterval(runOnce, INTERVAL_MS);
 }
 
-async function forceSyncContests() {
+async function forceSyncContests(){ //for my admin panel
     const now = Date.now();
     const count = await syncContests();
     await GlobalSyncState.updateOne(
@@ -64,4 +53,4 @@ async function forceSyncContests() {
     return count;
 }
 
-module.exports = { startContestSyncWorker, forceSyncContests };
+module.exports = {startContestSyncWorker, forceSyncContests};

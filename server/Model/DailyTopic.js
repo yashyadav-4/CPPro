@@ -7,7 +7,7 @@ const dailyTopicSchema = new mongoose.Schema({
         required: true,
     },
     date: {
-        type: String,       // "YYYY-MM-DD" IST — same pattern as DailyProblem
+        type: String, 
         required: true,
     },
     topic: {

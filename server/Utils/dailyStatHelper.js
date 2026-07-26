@@ -9,12 +9,12 @@ function getTodayStr(dateObj = new Date()) {
     return date.toISOString().slice(0, 10);
 }
 
-async function incrementDailyStat(field, amount = 1) {
-    try {
+async function incrementDailyStat(field, amount = 1){
+    try{
         const today = getTodayStr();
         const update = { $inc: { [field]: amount } };
         await DailyStat.findOneAndUpdate({ date: today }, update, { upsert: true, new: true });
-    } catch (err) {
+    }catch(err){
         console.error(`Error incrementing ${field} in DailyStat:`, err.message);
     }
 }

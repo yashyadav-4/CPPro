@@ -1,27 +1,26 @@
 const mongoose = require('mongoose');
 
 const problemSlotSchema = new mongoose.Schema({
-    platform:        { type: String, enum: ['codeforces', 'leetcode', 'codechef'], required: true },
-    problemId:       { type: String, required: true },
-    title:           { type: String, required: true },
-    url:             { type: String, required: true },
-    difficulty:      { type: mongoose.Schema.Types.Mixed }, // Number for CF/CC, String for LC
-    tags:            [{ type: String }],
-    solvedCount:     { type: Number, default: 0 },
-    weakTag:         { type: String, default: null },   // challenger: the weakness this targets
-    isSolved:        { type: Boolean, default: false },
-    solvedAt:        { type: Date, default: null },
-    // Popular sheet metadata — present when problem came from a curated sheet
-    fromPopularSheet:{ type: Boolean, default: false },
-    sheets:          [{ type: String }],                // e.g. ['NeetCode 150', 'Blind 75']
+    platform: { type: String, enum: ['codeforces', 'leetcode', 'codechef'], required: true },
+    problemId: { type: String, required: true },
+    title: { type: String, required: true },
+    url: { type: String, required: true },
+    difficulty: { type: mongoose.Schema.Types.Mixed }, //number for cf/cc, string for lc
+    tags: [{ type: String }],
+    solvedCount: { type: Number, default: 0 },
+    weakTag: { type: String, default: null }, 
+    isSolved: { type: Boolean, default: false },
+    solvedAt: { type: Date, default: null },
+    fromPopularSheet: { type: Boolean, default: false },
+    sheets: [{ type: String }],
 }, { _id: false });
 
 const dailyProblemSchema = new mongoose.Schema({
-    userId:      { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    date:        { type: String, required: true }, // "YYYY-MM-DD" IST
-    workout:     { type: problemSlotSchema, default: null },
-    challenger:  { type: problemSlotSchema, default: null },
-    bonus:       { type: problemSlotSchema, default: null }, // from a 3rd platform, different from workout+challenger
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    date: { type: String, required: true },
+    workout: { type: problemSlotSchema, default: null },
+    challenger: { type: problemSlotSchema, default: null },
+    bonus: { type: problemSlotSchema, default: null },
     generatedAt: { type: Date, default: Date.now },
 }, { timestamps: true });
 

@@ -43,8 +43,6 @@ const compression = require('compression');
 app.use(compression());
 
 const helmet = require('helmet');
-// Security headers — helmet sets X-Content-Type-Options, X-Frame-Options,
-// Referrer-Policy, etc. CSP is off to avoid breaking external fonts/scripts.
 app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
 
 app.use(cors({
@@ -52,22 +50,22 @@ app.use(cors({
     credentials: true,
 }))
 
-// prebuilt middlewares
+//prebuilt middlewares
 app.use(express.json());
 app.use(express.urlencoded({ extended: false })); // for forms
 app.use(cookieParser());
 
-// Daily warmup — triggers background generation on first request of the day
-// Runs BEFORE routes. It reads the auth cookie to check if user is logged in.
-// Since verifyToken hasn't run yet, we need to inject a lightweight user check.
+// daily warmup problmes — triggers background generation on first request of the day
+// runs before routes ,it reads the auth cookie to check if user is logged in
+// since verifyToken hasnt run yet , we just need to inject a lightweight user check
 const { getUser } = require('./Services/auth');
 app.use((req, res, next) => {
-    // Lightweight: just decode the JWT cookie to get user._id
+    //not big deal its lightweiht to get user id
     const token = req.cookies?.token;
     if (token) {
         const payload = getUser(token);
         if (payload && payload._id) {
-            req.user = payload; // { _id, email, role }
+            req.user = payload; //{ _id, email, role }
             return dailyWarmup(req, res, next);
         }
     }
@@ -77,7 +75,6 @@ app.use((req, res, next) => {
 
 // public Routes
 app.use('/api/auth' , userRoute);
-
 
 // auth routes
 app.use('/api/codeTemplate' , codeTemplateRoutes );
@@ -103,7 +100,7 @@ app.get('/api/test', (req, res)=>{
     res.json({message :"backend is working"});
 })
 
-//health test for cron-jobs for keeping server active
+//health test for cron-jobs for keeping server active (i used to use this when backend was on render not anymore needed but okk to keep it as it is)
 app.get('/api/health',(req, res)=> {
     const dbState =mongoose.connection.readyState;
     const dbStatusMap= {
@@ -124,7 +121,7 @@ app.get('/api/health',(req, res)=> {
     });
 });
 
-// global error handler to catch unhandled errors and return JSON instead of HTML stack trace
+//global error handler to catch unhandled errors and return JSON instead of HTML stack trace
 app.use((err, req, res, next) => {
     console.error("[Express] unhandled error:", err.message);
     res.status(500).json({ success: false, message: "Internal server error" });
@@ -132,4 +129,4 @@ app.use((err, req, res, next) => {
 
 app.listen(port , ()=>{
     console.log('Server is live at : ' , port);
-})
+})

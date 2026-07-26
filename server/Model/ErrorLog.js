@@ -7,6 +7,6 @@ const errorLogSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 errorLogSchema.index({ createdAt: -1 });
-errorLogSchema.index({ createdAt: 1 }, { expireAfterSeconds: 30 * 24 * 60 * 60 }); // TTL: 30 days
+errorLogSchema.index({ createdAt: 1 }, { expireAfterSeconds: 30 * 24 * 60 * 60 }); 
 
 module.exports = mongoose.model('ErrorLog', errorLogSchema);

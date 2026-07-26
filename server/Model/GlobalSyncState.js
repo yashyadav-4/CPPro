@@ -1,5 +1,4 @@
-// Model/GlobalSyncState.js
-// Stores single-document states for global background workers (like API syncs)
+//for example , the last sync time for the global sync worker
 const mongoose = require('mongoose');
 
 const globalSyncStateSchema = new mongoose.Schema({

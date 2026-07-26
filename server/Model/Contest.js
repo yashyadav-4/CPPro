@@ -1,36 +1,35 @@
-// Model/Contest.js — shared contest collection (not per-user)
+// all contests collection
 const mongoose = require('mongoose');
 
 const contestSchema = new mongoose.Schema({
-    // stable unique key: platform + slugified name + startTime
-    contestId: {
-        type:     String,
-        required: true,
-        unique:   true,
-        index:    true,
+    contestId: { // platform + slugified name + start time
+        type: String,
+        required:true,
+        unique:true,
+        index:true,
     },
     platform: {
-        type:     String,
-        enum:     ['codeforces', 'leetcode', 'codechef', 'custom'],
+        type: String,
+        enum:['codeforces', 'leetcode', 'codechef', 'custom'],
         required: true,
         index:    true,
     },
     name: {
-        type:     String,
-        required: true,
-        trim:     true,
+        type: String,
+        required :true,
+        trim : true,
     },
     startTime: {
-        type:     Date,
-        required: true,
-        index:    true,
+        type: Date,
+        required:true,
+        index: true,
     },
     endTime: {
         type: Date,
         default: null,
     },
     duration: {
-        type: Number,      // minutes
+        type: Number,     
         default: null,
     },
     url: {
@@ -38,7 +37,7 @@ const contestSchema = new mongoose.Schema({
         default: null,
     },
     status: {
-        type: String,      // 'BEFORE' | 'CODING' | 'FINISHED' etc
+        type:String,     
         default: null,
     },
     creatorId: {
@@ -49,10 +48,9 @@ const contestSchema = new mongoose.Schema({
     },
 }, { timestamps: true });
 
-// TTL index: automatically remove documents where endTime is more than 180 days (6 months) old.
 contestSchema.index(
     { endTime: 1 },
-    { expireAfterSeconds: 180 * 24 * 3600 }   // 180 days after endTime
+    { expireAfterSeconds: 180 * 24 * 3600 } 
 );
 
 const Contest = mongoose.model('Contest', contestSchema);

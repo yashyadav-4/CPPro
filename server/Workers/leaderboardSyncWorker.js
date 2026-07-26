@@ -1,8 +1,8 @@
-const { getLeaderboardData } = require('../Repositories/leaderboardRepository');
+const {getLeaderboardData} = require('../Repositories/leaderboardRepository');
 const GlobalSyncState  = require('../Model/GlobalSyncState');
-const { getCache, setCache } = require('../Utils/redisClient');
+const {getCache, setCache} = require('../Utils/redisClient');
 
-const INTERVAL_MS  = 15 * 60 * 1000; // 15 minutes
+const INTERVAL_MS  = 15 * 60 * 1000; 
 const CATEGORIES   = ['cpscore', 'totalQuestions', 'leetcodeRating', 'codeforcesRating', 'codechefRating'];
 const SYNC_KEY     = 'leaderboard';
 
@@ -11,8 +11,7 @@ async function computeAndCache() {
     await Promise.all(
         CATEGORIES.map(async category => {
             const entries = await getLeaderboardData('global', null, category);
-            // Cache in Redis without TTL (will be overwritten next run)
-            await setCache(`leaderboard:global:${category}`, entries);
+            await setCache(`leaderboard:global:${category}`, entries, 1800);
         })
     );
     await GlobalSyncState.updateOne(
@@ -23,8 +22,8 @@ async function computeAndCache() {
     console.log(`[leaderboardWorker] Cache refreshed — ${CATEGORIES.length} categories.`);
 }
 
-async function runOnce() {
-    try {
+async function runOnce(){
+    try{
         const state = await GlobalSyncState.findOne({ syncKey: SYNC_KEY }).lean();
         const hasCache = await getCache(`leaderboard:global:cpscore`);
         
@@ -37,19 +36,19 @@ async function runOnce() {
             }
         }
         await computeAndCache();
-    } catch (err) {
+    }catch(err){
         console.error('[leaderboardWorker] Error:', err.message);
     }
 }
 
-function startLeaderboardSyncWorker() {
+function startLeaderboardSyncWorker(){
     console.log('[leaderboardWorker] Starting — will recompute every 15 minutes.');
     runOnce();
     setInterval(runOnce, INTERVAL_MS);
 }
 
-async function forceRefreshLeaderboard() {
+async function forceRefreshLeaderboard(){
     await computeAndCache();
 }
 
-module.exports = { startLeaderboardSyncWorker, forceRefreshLeaderboard };
+module.exports = {startLeaderboardSyncWorker, forceRefreshLeaderboard};
