@@ -1,19 +1,13 @@
+// if account is private than only the owner can access data or admin not anyone else (middleware for that)
 const User = require('../Model/User');
 
-/**
- * Middleware: allow the request if the caller is the data owner,
- * or if the target user's profile is public.
- * Expects `req.params.userId` and (optionally) `req.user` from optionalAuth.
- */
 async function checkPublicProfile(req, res, next) {
     const { userId } = req.params;
 
-    //owner can always see their own data
     if (req.user && req.user._id && req.user._id.toString() === userId) {
         return next();
     }
 
-    // admins can always access any profile
     if (req.user && req.user.role === 'admin') {
         return next();
     }

@@ -1,11 +1,13 @@
 const axios = require('axios');
-const { Yaxios } = require('../Utils/nexusProxy');
-const { bouncer } = require('../Utils/bouncer');
 const ErrorLog = require('../Model/ErrorLog');
 const crypto = require('crypto');
 const User = require('../Model/User');
 const Notification = require('../Model/Notification');
 const { encrypt, decrypt, isEnabled } = require('../Utils/encryption');
+
+// ── CF sync API connection (matches LC/CC verification pattern) ───────────────
+const CF_SYNC_API_SETTINGS    = (process.env.CF_SYNC_API || '').replace(/\/$/, '');
+const CF_SYNC_SECRET_SETTINGS = process.env.CF_SYNC_SECRET || '';
 
 const generateCode=async(userId)=>{
     const uniqueCode= `cppro-${crypto.randomBytes(3).toString('hex')}`;
@@ -25,19 +27,31 @@ const verifyAndLinkCodeforces = async(userId ,handle)=>{
         err.status=400;
         throw err;
     }
-    let cfProfile;
+    let firstName;
     try{
-        const response = await bouncer.schedule(() =>
-            Yaxios.get(`https://codeforces.com/api/user.info?handles=${cleanHandle}`)
+        if (!CF_SYNC_API_SETTINGS || !CF_SYNC_SECRET_SETTINGS) {
+            throw new Error('CF_SYNC_API / CF_SYNC_SECRET not configured');
+        }
+        const response = await axios.get(
+            `${CF_SYNC_API_SETTINGS}/verify/${encodeURIComponent(cleanHandle)}`,
+            {
+                headers: { Authorization: `Bearer ${CF_SYNC_SECRET_SETTINGS}` },
+                timeout: 15_000,
+            }
         );
-        cfProfile = response.data.result[0];
+        firstName = response.data?.firstName ?? '';
     }catch(error){
-        const err= new Error("Invalid codeforces handle");
-        err.status=400;
+        const errCode = error.response?.data?.error;
+        if (errCode === 'HANDLE_NOT_FOUND' || errCode === 'INVALID_CF_HANDLE') {
+            const err = new Error("Invalid codeforces handle");
+            err.status = 400;
+            throw err;
+        }
+        const err = new Error("Codeforces API unavailable — try again");
+        err.status = 502;
         throw err;
     }
 
-    const firstName= cfProfile.firstName || "";
     // const lastName= cfProfile.lastName || ""; //will use only firstname for verification for cf
     const code= user.verificationCode;
 

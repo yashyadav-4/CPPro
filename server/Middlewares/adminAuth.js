@@ -1,7 +1,6 @@
 const { getUser } = require('../Services/auth');
 const User = require('../Model/User');
 
-// Must be logged in AND role === 'admin'
 async function verifyAdmin(req, res, next) {
     const token = req.cookies?.token;
     if (!token) return res.status(401).json({ success: false, message: 'Login first' });

@@ -64,7 +64,6 @@ const platformSchema= new mongoose.Schema({
     },
     currentStreak:{ type:Number, default:0 },
     contestsParticipated:{ type:Number, default:0 },
-    // CodeChef-specific (unused by CF/LC, default 0)
     globalRank:{ type:Number, default:0 },
     countryRank:{ type:Number, default:0 }
 } , {timestamps:true});

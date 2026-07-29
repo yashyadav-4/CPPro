@@ -5,10 +5,10 @@ const problemSlotSchema = new mongoose.Schema({
     problemId:       { type: String, required: true },
     title:           { type: String, required: true },
     url:             { type: String, required: true },
-    difficulty:      { type: mongoose.Schema.Types.Mixed }, // Number for CF/CC, String for LC
+    difficulty:      { type: mongoose.Schema.Types.Mixed }, 
     tags:            [{ type: String }],
     solvedCount:     { type: Number, default: 0 },
-    weakTag:         { type: String, default: null },   // the weakness this targets
+    weakTag:         { type: String, default: null },  
     isSolved:        { type: Boolean, default: false },
     solvedAt:        { type: Date, default: null },
     fromPopularSheet:{ type: Boolean, default: false },
