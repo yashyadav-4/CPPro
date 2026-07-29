@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const User = require('../Model/User');
 const Platform = require('../Model/Platform');
+const DailyStat = require('../Model/DailyStat');
+const { getTodayStr } = require('../Utils/dailyStatHelper');
 
 let statsCache = {
     data: null,
@@ -26,17 +28,16 @@ router.get('/public/summary', async (req, res) => {
             });
         }
 
-        const [totalUsers, solvedAgg, syncTodayCounts] = await Promise.all([
+        const todayStr = getTodayStr();
+        const [totalUsers, solvedAgg, todayStat] = await Promise.all([
             User.countDocuments(),
             Platform.aggregate([
                 { $group: { _id: null, total: { $sum: "$totalSolved" } } }
             ]),
-            Platform.countDocuments({
-                lastSyncedAt: { 
-                    $gte: new Date(new Date().setHours(0,0,0,0)) 
-                }
-            })
+            DailyStat.findOne({ date: todayStr }).lean()
         ]);
+
+        const syncTodayCounts = todayStat ? (todayStat.syncs || 0) : 0;
 
         const totalSolved = solvedAgg.length > 0 ? solvedAgg[0].total : 0;
         

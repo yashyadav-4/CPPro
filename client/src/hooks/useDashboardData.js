@@ -42,13 +42,45 @@ export function useDashboardData() {
             const newLcData = lcRes.status === 'fulfilled' && lcRes.value?.data?.data ? lcRes.value.data.data : null;
             const newCcData = ccRes.status === 'fulfilled' && ccRes.value?.data?.data ? ccRes.value.data.data : null;
 
-            setCfData(newCfData);
-            setLcData(newLcData);
-            setCcData(newCcData);
+            // During a silent background revalidation, never wipe good data with null.
+            // A null result means the platform fetch failed transiently — keep the
+            // previously-displayed value so stats don't disappear mid-session.
+            if (silent) {
+                if (newCfData !== null) setCfData(newCfData);
+                if (newLcData !== null) setLcData(newLcData);
+                // CC: always upsert-merge — spread new fields on top of prev so no
+                // existing field is lost even on a successful partial response.
+                if (newCcData !== null) setCcData(prev => ({ ...(prev || {}), ...newCcData }));
+            } else {
+                setCfData(newCfData);
+                setLcData(newLcData);
+                // Non-silent (hard load): still merge CC so a re-fetch that omits a
+                // field doesn't blank out something the user was already seeing.
+                setCcData(prev => newCcData !== null ? { ...(prev || {}), ...newCcData } : prev);
+            }
 
-            try {
-                localStorage.setItem(cacheKey(uid), JSON.stringify({ cfData: newCfData, lcData: newLcData, ccData: newCcData }));
-            } catch {}
+            // Only update the localStorage cache if we have at least one real data
+            // payload — avoids caching a partial-null snapshot that would then be
+            // displayed as blank stats on the next page load.
+            const hasAnyData = newCfData || newLcData || newCcData;
+            if (hasAnyData) {
+                try {
+                    // Merge with any existing cached values so we never write nulls
+                    // over good data for platforms that returned nothing this cycle.
+                    // CC uses a deep merge — new fields spread on top of existing CC
+                    // object so previously-fetched fields aren't wiped by partial updates.
+                    let existing = null;
+                    try { existing = JSON.parse(localStorage.getItem(cacheKey(uid)) || 'null'); } catch {}
+                    const mergedCcData = newCcData !== null
+                        ? { ...(existing?.ccData || {}), ...newCcData }
+                        : (existing?.ccData ?? null);
+                    localStorage.setItem(cacheKey(uid), JSON.stringify({
+                        cfData: newCfData ?? existing?.cfData ?? null,
+                        lcData: newLcData ?? existing?.lcData ?? null,
+                        ccData: mergedCcData,
+                    }));
+                } catch {}
+            }
         } catch (err) {
             console.error('[useDashboardData] fetch error:', err);
             if (!silent) setError(err.message || 'Failed to load dashboard data');
