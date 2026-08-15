@@ -1,7 +1,8 @@
 import { useState } from "react"
 import { Code2, Copy, Check, ExternalLink, Pencil } from "lucide-react"
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import { vscDarkPlus, vs } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import { useTheme } from '../../hooks/useTheme'
 
 function timeAgo(dateStr) {
     if (!dateStr) return "recently"
@@ -25,6 +26,7 @@ const LANG_LABEL = { cpp: "C++", python: "Python", java: "Java", javascript: "Ja
 const LANG_COLOR = { cpp: "#00b4d8", python: "#ffd166", java: "#ef476f", javascript: "#06d6a0" }
 
 export default function CodeTemplateCard({ snippet, onViewSnippet, onEdit }) {
+    const { isDark } = useTheme()
     const [copied, setCopied] = useState(false)
     const { title, language, code, tags, createdAt, updatedAt } = snippet
     const hlLanguage = (language || 'cpp').toLowerCase()
@@ -83,9 +85,9 @@ export default function CodeTemplateCard({ snippet, onViewSnippet, onEdit }) {
                 </button>
             </div>
 
-            {/* Code preview — always dark, like a mini editor */}
+            {/* Code preview — theme aware */}
             {code && (
-                <div className="mx-5 rounded-xl overflow-hidden border border-gray-900/10 dark:border-white/[0.06] h-32 relative bg-[#1e1e1e]">
+                <div className="mx-5 rounded-xl overflow-hidden border border-gray-200 dark:border-white/[0.06] h-32 relative bg-slate-100/90 dark:bg-[#1e1e1e]">
                     <div className="absolute top-2 left-3 flex gap-1.5 z-10 opacity-50">
                         <div className="w-2 h-2 rounded-full bg-red-400" />
                         <div className="w-2 h-2 rounded-full bg-yellow-400" />
@@ -94,7 +96,7 @@ export default function CodeTemplateCard({ snippet, onViewSnippet, onEdit }) {
                     <div className="pointer-events-none h-full opacity-90">
                         <SyntaxHighlighter
                             language={hlLanguage}
-                            style={vscDarkPlus}
+                            style={isDark ? vscDarkPlus : vs}
                             customStyle={{
                                 margin: 0,
                                 padding: '1.25rem',
@@ -110,7 +112,7 @@ export default function CodeTemplateCard({ snippet, onViewSnippet, onEdit }) {
                             {code}
                         </SyntaxHighlighter>
                     </div>
-                    <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-[#1e1e1e] to-transparent pointer-events-none" />
+                    <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-slate-100 dark:from-[#1e1e1e] to-transparent pointer-events-none" />
                 </div>
             )}
 

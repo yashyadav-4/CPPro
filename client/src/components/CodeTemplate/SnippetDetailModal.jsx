@@ -1,7 +1,8 @@
 import { useState } from "react"
 import { X, Trash2, Copy, Check, Code2, Calendar, Pencil, Tag, Clock } from "lucide-react"
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import { vscDarkPlus, vs } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import { useTheme } from '../../hooks/useTheme'
 import DeleteConfirmModal from "../common/DeleteConfirmModal"
 
 const LANG_LABEL = {
@@ -37,6 +38,7 @@ function timeAgo(dateStr) {
 }
 
 export default function SnippetDetailModal({ snippet, onClose, onDelete, onEdit }) {
+    const { isDark } = useTheme()
     const [copied, setCopied] = useState(false)
     const [showDeleteModal, setShowDeleteModal] = useState(false)
 
@@ -61,13 +63,13 @@ export default function SnippetDetailModal({ snippet, onClose, onDelete, onEdit 
     const lineCount = (code || "").split("\n").length
 
     return (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={onClose}>
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 dark:bg-black/70 backdrop-blur-sm" onClick={onClose}>
             <div
-                className="bg-[#0d0d0d] border border-white/[0.08] rounded-2xl shadow-[0_0_80px_rgba(0,0,0,0.6)] w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden"
+                className="bg-white dark:bg-[#0d0d0d] border border-gray-200 dark:border-white/[0.08] rounded-2xl shadow-2xl dark:shadow-[0_0_80px_rgba(0,0,0,0.6)] w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden"
                 onClick={e => e.stopPropagation()}
             >
                 {/* ── Top bar ───────────────────────────────────────────── */}
-                <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/[0.06] bg-white/[0.015] shrink-0">
+                <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-200 dark:border-white/[0.06] bg-gray-50 dark:bg-white/[0.015] shrink-0">
                     {/* Traffic lights */}
                     <div className="flex items-center gap-2">
                         <button onClick={onClose} className="w-3 h-3 rounded-full bg-[#ff5f57] hover:brightness-110 transition-all" />
@@ -83,9 +85,9 @@ export default function SnippetDetailModal({ snippet, onClose, onDelete, onEdit 
                             onClick={handleCopy}
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all active:scale-95"
                             style={{
-                                background: copied ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.06)',
-                                color: copied ? '#10b981' : '#9ca3af',
-                                border: `1px solid ${copied ? 'rgba(16,185,129,0.3)' : 'rgba(255,255,255,0.08)'}`,
+                                background: copied ? 'rgba(16,185,129,0.15)' : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)'),
+                                color: copied ? '#10b981' : (isDark ? '#9ca3af' : '#4b5563'),
+                                border: `1px solid ${copied ? 'rgba(16,185,129,0.3)' : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.1)')}`,
                             }}
                         >
                             {copied ? <Check size={12} /> : <Copy size={12} />}
@@ -93,19 +95,19 @@ export default function SnippetDetailModal({ snippet, onClose, onDelete, onEdit 
                         </button>
                         <button
                             onClick={() => onEdit && onEdit(snippet)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 transition-all active:scale-95"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 transition-all active:scale-95"
                         >
                             <Pencil size={12} /> EDIT
                         </button>
                         <button
                             onClick={() => setShowDeleteModal(true)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-all active:scale-95"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-all active:scale-95"
                         >
                             <Trash2 size={12} />
                         </button>
                         <button
                             onClick={onClose}
-                            className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/[0.04] text-gray-500 hover:text-white border border-white/[0.06] transition-all hover:rotate-90"
+                            className="w-7 h-7 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-white/[0.04] text-gray-500 hover:text-gray-900 dark:hover:text-white border border-gray-200 dark:border-white/[0.06] transition-all hover:rotate-90"
                         >
                             <X size={14} />
                         </button>
@@ -115,16 +117,16 @@ export default function SnippetDetailModal({ snippet, onClose, onDelete, onEdit 
                 {/* ── Body: two-column layout ───────────────────────────── */}
                 <div className="flex flex-1 min-h-0 overflow-hidden">
                     {/* Left panel — metadata */}
-                    <div className="w-52 shrink-0 border-r border-white/[0.06] p-5 flex flex-col gap-5 overflow-y-auto bg-white/[0.01]">
+                    <div className="w-52 shrink-0 border-r border-gray-200 dark:border-white/[0.06] p-5 flex flex-col gap-5 overflow-y-auto bg-gray-50/50 dark:bg-white/[0.01]">
                         {/* Title */}
                         <div>
-                            <p className="text-[9px] font-bold text-gray-600 uppercase tracking-widest mb-1.5">Snippet</p>
-                            <h2 className="text-sm font-bold text-white leading-snug uppercase tracking-tight">{title}</h2>
+                            <p className="text-[9px] font-bold text-gray-500 dark:text-gray-600 uppercase tracking-widest mb-1.5">Snippet</p>
+                            <h2 className="text-sm font-bold text-gray-900 dark:text-white leading-snug uppercase tracking-tight">{title}</h2>
                         </div>
 
                         {/* Language badge */}
                         <div>
-                            <p className="text-[9px] font-bold text-gray-600 uppercase tracking-widest mb-1.5">Language</p>
+                            <p className="text-[9px] font-bold text-gray-500 dark:text-gray-600 uppercase tracking-widest mb-1.5">Language</p>
                             <span
                                 className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold"
                                 style={{ background: `${langColor}18`, color: langColor, border: `1px solid ${langColor}30` }}
@@ -136,19 +138,19 @@ export default function SnippetDetailModal({ snippet, onClose, onDelete, onEdit 
 
                         {/* Stats */}
                         <div className="space-y-2">
-                            <p className="text-[9px] font-bold text-gray-600 uppercase tracking-widest">Stats</p>
-                            <div className="flex items-center gap-2 text-[10px] text-gray-500">
+                            <p className="text-[9px] font-bold text-gray-500 dark:text-gray-600 uppercase tracking-widest">Stats</p>
+                            <div className="flex items-center gap-2 text-[10px] text-gray-600 dark:text-gray-500">
                                 <Clock size={10} className="shrink-0" />
                                 <span>{lineCount} lines</span>
                             </div>
                             {createdAt && (
-                                <div className="flex items-center gap-2 text-[10px] text-gray-500">
+                                <div className="flex items-center gap-2 text-[10px] text-gray-600 dark:text-gray-500">
                                     <Calendar size={10} className="shrink-0" />
                                     <span>{new Date(createdAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}</span>
                                 </div>
                             )}
                             {updatedAt && (
-                                <div className="flex items-center gap-2 text-[10px] text-gray-500">
+                                <div className="flex items-center gap-2 text-[10px] text-gray-600 dark:text-gray-500">
                                     <Clock size={10} className="shrink-0" />
                                     <span>Updated {timeAgo(updatedAt)}</span>
                                 </div>
@@ -158,12 +160,12 @@ export default function SnippetDetailModal({ snippet, onClose, onDelete, onEdit 
                         {/* Tags */}
                         {tags && tags.length > 0 && (
                             <div>
-                                <p className="text-[9px] font-bold text-gray-600 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                                <p className="text-[9px] font-bold text-gray-500 dark:text-gray-600 uppercase tracking-widest mb-2 flex items-center gap-1.5">
                                     <Tag size={9} /> Tags
                                 </p>
                                 <div className="flex flex-wrap gap-1.5">
                                     {tags.map((tag, i) => (
-                                        <span key={i} className="px-2 py-0.5 rounded text-[9px] font-bold bg-white/[0.04] text-gray-500 border border-white/[0.06] hover:text-emerald-400 hover:border-emerald-500/30 transition-all">
+                                        <span key={i} className="px-2 py-0.5 rounded text-[9px] font-bold bg-gray-100 dark:bg-white/[0.04] text-gray-600 dark:text-gray-500 border border-gray-200 dark:border-white/[0.06] hover:text-emerald-600 dark:hover:text-emerald-400 hover:border-emerald-500/30 transition-all">
                                             #{tag.toUpperCase()}
                                         </span>
                                     ))}
@@ -174,25 +176,25 @@ export default function SnippetDetailModal({ snippet, onClose, onDelete, onEdit 
                         {/* Description */}
                         {description && (
                             <div>
-                                <p className="text-[9px] font-bold text-gray-600 uppercase tracking-widest mb-1.5">Notes</p>
-                                <p className="text-[11px] text-gray-500 leading-relaxed">{description}</p>
+                                <p className="text-[9px] font-bold text-gray-500 dark:text-gray-600 uppercase tracking-widest mb-1.5">Notes</p>
+                                <p className="text-[11px] text-gray-600 dark:text-gray-500 leading-relaxed">{description}</p>
                             </div>
                         )}
                     </div>
 
                     {/* Right panel — code */}
-                    <div className="flex-1 min-w-0 overflow-y-auto bg-[#080808]">
+                    <div className="flex-1 min-w-0 overflow-y-auto bg-slate-50 dark:bg-[#080808]">
                         <SyntaxHighlighter
                             language={hlLanguage}
-                            style={vscDarkPlus}
+                            style={isDark ? vscDarkPlus : vs}
                             showLineNumbers
                             lineNumberStyle={{
                                 minWidth: '3em',
                                 paddingRight: '1em',
-                                color: 'rgba(255,255,255,0.15)',
+                                color: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.35)',
                                 textAlign: 'right',
                                 userSelect: 'none',
-                                borderRight: '1px solid rgba(255,255,255,0.05)',
+                                borderRight: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.08)',
                                 marginRight: '1em',
                                 fontSize: '0.75rem',
                             }}
