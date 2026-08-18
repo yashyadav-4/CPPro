@@ -532,7 +532,7 @@ export default function Dashboard() {
         </div>
 
         {/* Row 3: Daily widget + Activity heatmap */}
-        <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-3">
+        <div className="grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)] gap-3">
           <ErrorBoundary>
             <DailyWidget loading={loading} />
           </ErrorBoundary>

@@ -133,7 +133,7 @@ export default function ActivityHeatmap({ loading, heatmapData }) {
       : `Last ${Math.round(windowYears)} Years`;
 
   return (
-    <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4">
+    <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4 w-full min-w-0">
       <div className="flex items-center justify-between mb-3">
         <p className="text-xs text-gray-400 dark:text-[#9CA3AF] font-normal uppercase tracking-wide">Activity — {windowLabel}</p>
         <span className="text-xs text-gray-400 dark:text-[#9CA3AF] font-normal">{totalActive} active days</span>
