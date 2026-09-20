@@ -11,6 +11,7 @@ const {
     handleCfHardSync,
     handleLcHardSync,
     handleCcHardSync,
+    handleGfgManualRefresh,
 } = require('../Controllers/syncController');
 
 router.use(verifyToken);
@@ -18,6 +19,7 @@ router.use(verifyToken);
 router.post('/refresh', handleManualRefresh);
 router.post('/refresh-lc', handleLcManualRefresh);
 router.post('/refresh-cc', handleCcManualRefresh);
+router.post('/refresh-gfg', handleGfgManualRefresh);
 
 //deep sync
 router.post('/refresh-cf-hard', handleCfHardSync);

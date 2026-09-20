@@ -68,7 +68,7 @@ function StatCard({ meta, value, sub, extra }) {
 
 export default function StatCards({
   loading,
-  totalSolved, cfSolved, lcSolved, ccSolved, activeDays,
+  totalSolved, cfSolved, lcSolved, ccSolved, gfgSolved, activeDays,
   totalSubmissions, cfTotalSubmissions, lcTotalSubmissions, ccTotalSubmissions,
   currentStreak, bestStreak,
   acceptanceRate, cfAcceptanceRate, lcAcceptanceRate, ccAcceptanceRate,
@@ -82,11 +82,12 @@ export default function StatCards({
     );
   }
 
-  const platformBreakdown = (cf, lc, cc, suffix = '') => {
+  const platformBreakdown = (cf, lc, cc, gfg, suffix = '') => {
     const parts = [
       cf > 0 && `CF ${cf}${suffix}`,
       lc > 0 && `LC ${lc}${suffix}`,
       cc > 0 && `CC ${cc}${suffix}`,
+      gfg > 0 && `GFG ${gfg}${suffix}`,
     ].filter(Boolean);
     return parts.length ? parts : null;
   };
@@ -96,7 +97,7 @@ export default function StatCards({
       meta: CARDS_META[0],
       value: totalSolved ?? '—',
       sub: 'problems solved',
-      extra: platformBreakdown(cfSolved, lcSolved, ccSolved),
+      extra: platformBreakdown(cfSolved, lcSolved, ccSolved, gfgSolved),
     },
     {
       meta: CARDS_META[1],

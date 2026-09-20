@@ -31,7 +31,7 @@ export default function Settings() {
   const [dailyPlatforms, setDailyPlatforms]   = useState([]);
   const [platformSaving, setPlatformSaving]   = useState(false);
   const [platformMsg, setPlatformMsg]         = useState({ ok: null, text: '' });
-  const [linked, setLinked] = useState({ codeforces: '', leetcode: '', codechef: '' });
+  const [linked, setLinked] = useState({ codeforces: '', leetcode: '', codechef: '', geeksforgeeks: '' });
   const [userRole, setUserRole] = useState('user');
 
   // CC linking state
@@ -43,6 +43,8 @@ export default function Settings() {
 
   const [ccLinkError, setCcLinkError] = useState('');
   const [ccLinkSuccess, setCcLinkSuccess] = useState('');
+
+
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
 
@@ -225,6 +227,10 @@ export default function Settings() {
       setCcVerifying(false);
     }
   };
+
+
+
+
 
 
 
@@ -722,6 +728,48 @@ export default function Settings() {
                   {deepSyncMsg}
                 </p>
               )}
+
+
+              {/* ── GeeksforGeeks row ── */}
+              <div className="flex items-center justify-between p-3 bg-white dark:bg-[#0a0a0a] rounded-lg border border-gray-100 dark:border-white/[0.06]">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-md flex items-center justify-center" style={{ backgroundColor: '#2F8D46' }}>
+                    <span className="text-white text-[10px] font-black">GFG</span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">GeeksforGeeks</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {linked.geeksforgeeks ? linked.geeksforgeeks : 'Not linked'}
+                    </p>
+                  </div>
+                </div>
+                {linked.geeksforgeeks ? (
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 dark:bg-green-500/15 text-green-700 dark:text-green-400">
+                      <CheckCircle size={12} /> Verified
+                    </span>
+                    <button
+                      onClick={async () => {
+                        try {
+                          await axios.delete('/api/settings/unlink-gfg', { withCredentials: true });
+                          setLinked(prev => ({ ...prev, geeksforgeeks: '' }));
+                        } catch {
+                          // silently fail or show a generic error
+                        }
+                      }}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-medium bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/20 hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors"
+                    >
+                      Unlink
+                    </button>
+                  </div>
+                ) : (
+                  <Link to="/verification"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 text-white text-xs font-medium rounded-lg transition-colors"
+                    style={{ backgroundColor: '#2F8D46' }}>
+                    <Shield size={12} /> Link
+                  </Link>
+                )}
+              </div>
             </div>
           </motion.div>
 

@@ -24,6 +24,9 @@ import CFRatingDistribution from './CFRatingDistribution';
 import CCQuickStats from './CCQuickStats';
 import CCLanguageChart from './CCLanguageChart';
 import CCVerdictBreakdown from './CCVerdictBreakdown';
+import GFGQuickStats from './GFGQuickStats';
+import GFGStatCards from './GFGStatCards';
+import GFGInstitutionalCard from './GFGInstitutionalCard';
 import ShareModal from '../Shareable/ShareModal';
 import DailyWidget from './DailyWidget';
 
@@ -35,7 +38,7 @@ const USER_COOLDOWN_SECONDS = 15 * 60;
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { cfData, lcData, ccData, userId, userRole, userName, userUsername, linkedAccounts, lcSessionStatus, hardSyncTimestamps, loading, error, refetch } = useDashboardData();
+  const { cfData, lcData, ccData, gfgData, userId, userRole, userName, userUsername, linkedAccounts, lcSessionStatus, hardSyncTimestamps, loading, error, refetch } = useDashboardData();
 
   const [refreshing, setRefreshing] = useState(false);
   const [cooldown, setCooldown] = useState(0);
@@ -155,9 +158,10 @@ export default function Dashboard() {
     try {
       const config = { withCredentials: true };
       const tagged = [];
-      if (platformsToSync.has('cf') && linkedAccounts.codeforces) tagged.push({ platform: 'cf', promise: axios.post('/api/sync/refresh', {}, config) });
-      if (platformsToSync.has('lc') && linkedAccounts.leetcode)   tagged.push({ platform: 'lc', promise: axios.post('/api/sync/refresh-lc', {}, config) });
-      if (platformsToSync.has('cc') && linkedAccounts.codechef)   tagged.push({ platform: 'cc', promise: axios.post('/api/sync/refresh-cc', {}, config) });
+      if (platformsToSync.has('cf')  && linkedAccounts.codeforces)    tagged.push({ platform: 'cf',  promise: axios.post('/api/sync/refresh',     {}, config) });
+      if (platformsToSync.has('lc')  && linkedAccounts.leetcode)      tagged.push({ platform: 'lc',  promise: axios.post('/api/sync/refresh-lc',  {}, config) });
+      if (platformsToSync.has('cc')  && linkedAccounts.codechef)      tagged.push({ platform: 'cc',  promise: axios.post('/api/sync/refresh-cc',  {}, config) });
+      if (platformsToSync.has('gfg') && linkedAccounts.geeksforgeeks) tagged.push({ platform: 'gfg', promise: axios.post('/api/sync/refresh-gfg', {}, config) });
 
       if (tagged.length === 0) { setRefreshing(false); return; }
 
@@ -186,7 +190,7 @@ export default function Dashboard() {
   }, [cooldown, userId, linkedAccounts, refetch, applyCooldown, defaultCooldownSeconds, clearRefreshState]);
 
   // ── Not linked ──────────────────────────────────────────────────────────────
-  if (!loading && !linkedAccounts.codeforces && !linkedAccounts.leetcode && !linkedAccounts.codechef && !error) {
+  if (!loading && !linkedAccounts.codeforces && !linkedAccounts.leetcode && !linkedAccounts.codechef && !linkedAccounts.geeksforgeeks && !error) {
     return (
       <div className="min-h-screen bg-[#ffffff] dark:bg-[#0a0a0a] flex flex-col justify-center items-center p-6">
         <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] text-center rounded-xl p-8 max-w-md w-full">
@@ -226,21 +230,24 @@ export default function Dashboard() {
   }
 
   // ── Derive combined props ─────────────────────────────────────────────────
-  const cf = cfData || {};
-  const lc = lcData || {};
-  const cc = ccData || {};
+  const cf  = cfData  || {};
+  const lc  = lcData  || {};
+  const cc  = ccData  || {};
+  const gfg = gfgData || {};
 
   // Reset view if the selected platform gets unlinked
-  const effectiveView = (view === 'cf' && !linkedAccounts.codeforces)
+  const effectiveView = (view === 'cf'  && !linkedAccounts.codeforces)
     ? 'all'
     : (view === 'lc' && !linkedAccounts.leetcode)
       ? 'all'
       : (view === 'cc' && !linkedAccounts.codechef)
         ? 'all'
-        : view;
+        : (view === 'gfg' && !linkedAccounts.geeksforgeeks)
+          ? 'all'
+          : view;
 
   // StatCards - computed early where possible
-  const totalSolved = (cf.cfSolved ?? 0) + (lc.lcSolved ?? 0) + (cc.totalSolved ?? 0);
+  const totalSolved = (cf.cfSolved ?? 0) + (lc.lcSolved ?? 0) + (cc.totalSolved ?? 0) + (gfg.totalSolved ?? 0);
   const totalSubmissions = (cf.cfTotalSubmissions ?? 0) + (lc.lcTotalSubmissions ?? 0) + (cc.totalSubmissions ?? 0);
   const solvedThisMonth = (cf.cfSolvedThisMonth ?? 0) + (lc.lcSolvedThisMonth ?? 0) + (cc.ccSolvedThisMonth ?? 0);
   const solvedLastMonth = (cf.cfSolvedLastMonth ?? 0) + (lc.lcSolvedLastMonth ?? 0) + (cc.ccSolvedLastMonth ?? 0);
@@ -285,26 +292,38 @@ export default function Dashboard() {
 
   // Platform profiles
   const profileProps = {
-    cfHandle: cf.cfHandle || null,
-    cfRating: cf.cfRating || null,
+    cfHandle:  cf.cfHandle  || null,
+    cfRating:  cf.cfRating  || null,
     cfMaxRating: cf.cfMaxRating || null,
-    cfRank: cf.cfRank || null,
-    lcHandle: lc.lcHandle || null,
-    lcRating: lc.lcRating || null,
+    cfRank:    cf.cfRank    || null,
+    lcHandle:  lc.lcHandle  || null,
+    lcRating:  lc.lcRating  || null,
     lcMaxRating: lc.lcMaxRating || null,
-    lcRank: lc.lcRank || null,
-    ccHandle: cc.ccHandle || null,
-    ccRating: cc.currentRating || null,
+    lcRank:    lc.lcRank    || null,
+    ccHandle:  cc.ccHandle  || null,
+    ccRating:  cc.currentRating || null,
     ccMaxRating: cc.maxRating || null,
-    ccRank: cc.currentRank || null,
+    ccRank:    cc.currentRank || null,
+    gfgHandle:       gfg.gfgHandle       || null,
+    gfgCodingScore:  gfg.codingScore     ?? null,
+    gfgMonthlyScore: gfg.monthlyScore    ?? null,
+    gfgInstituteRank: gfg.instituteRank  ?? null,
+    gfgInstitution:  gfg.institution     || null,
   };
 
   // Difficulty breakdown
-  const cfBands = cf.cfDiffBands || [];
-  const lcBands = [
-    { label: 'Easy', count: lc.lcEasy ?? 0 },
+  const cfBands  = cf.cfDiffBands || [];
+  const lcBands  = [
+    { label: 'Easy',   count: lc.lcEasy   ?? 0 },
     { label: 'Medium', count: lc.lcMedium ?? 0 },
-    { label: 'Hard', count: lc.lcHard ?? 0 },
+    { label: 'Hard',   count: lc.lcHard   ?? 0 },
+  ];
+  const gfgBands = [
+    { label: 'School', count: gfg.solvedByDifficulty?.school ?? 0 },
+    { label: 'Basic',  count: gfg.solvedByDifficulty?.basic  ?? 0 },
+    { label: 'Easy',   count: gfg.solvedByDifficulty?.easy   ?? 0 },
+    { label: 'Medium', count: gfg.solvedByDifficulty?.medium ?? 0 },
+    { label: 'Hard',   count: gfg.solvedByDifficulty?.hard   ?? 0 },
   ];
 
   // Last 7 days (merge CF + LC + CC)
@@ -387,11 +406,16 @@ export default function Dashboard() {
             <h1 className="text-lg font-medium text-gray-900 dark:text-white">Dashboard</h1>
             <div className="flex items-center gap-3">
               <p className="text-xs text-gray-400 dark:text-gray-500 font-normal">
-                {[
-                  linkedAccounts.codeforces && 'Codeforces',
-                  linkedAccounts.leetcode && 'LeetCode',
-                  linkedAccounts.codechef && 'CodeChef',
-                ].filter(Boolean).join(' + ') || 'Dashboard'}
+                {effectiveView === 'cf' ? 'Codeforces'
+                  : effectiveView === 'lc' ? 'LeetCode'
+                  : effectiveView === 'cc' ? 'CodeChef'
+                  : effectiveView === 'gfg' ? 'GeeksforGeeks'
+                  : [
+                      linkedAccounts.codeforces    && 'Codeforces',
+                      linkedAccounts.leetcode      && 'LeetCode',
+                      linkedAccounts.codechef      && 'CodeChef',
+                      linkedAccounts.geeksforgeeks && 'GFG',
+                    ].filter(Boolean).join(' + ') || 'Dashboard'}
               </p>
               {userUsername && (
                 <Link
@@ -407,13 +431,14 @@ export default function Dashboard() {
           {/* Right side: filter tabs + action buttons — wrap on mobile */}
           <div className="flex flex-wrap items-center gap-2">
             {/* Platform Filter Tabs — show when 2+ platforms are linked */}
-            {[linkedAccounts.codeforces, linkedAccounts.leetcode, linkedAccounts.codechef].filter(Boolean).length >= 2 && (
+            {[linkedAccounts.codeforces, linkedAccounts.leetcode, linkedAccounts.codechef, linkedAccounts.geeksforgeeks].filter(Boolean).length >= 2 && (
               <div className="flex items-center gap-1 bg-gray-100 dark:bg-white/[0.04] rounded-lg p-1 border border-black/[0.05] dark:border-white/[0.06]">
                 {[
                   { key: 'all', label: 'All' },
                   linkedAccounts.codeforces && { key: 'cf', label: 'CF' },
                   linkedAccounts.leetcode && { key: 'lc', label: 'LC' },
                   linkedAccounts.codechef && { key: 'cc', label: 'CC' },
+                  linkedAccounts.geeksforgeeks && { key: 'gfg', label: 'GFG' },
                 ].filter(Boolean).map(tab => (
                   <button
                     key={tab.key}
@@ -493,6 +518,16 @@ export default function Dashboard() {
                           </svg>
                         ),
                       },
+                      linkedAccounts.geeksforgeeks && {
+                        key: 'gfg', label: 'GFG',
+                        selectedLight: 'border-[#2F8D46] bg-green-50/80 text-green-800 font-semibold shadow-sm',
+                        selectedDark:  'dark:border-[#4ade80]/60 dark:bg-green-500/15 dark:text-green-300 dark:ring-1 dark:ring-[#4ade80]/30',
+                        icon: (
+                          <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 shrink-0" fill="currentColor">
+                            <path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zm5.8 12.3c-.2.4-.6.8-1 1.1a4 4 0 0 1-2.8.9 4 4 0 0 1-2-.5 3.7 3.7 0 0 1-2 .5 4 4 0 0 1-2.8-.9c-.4-.3-.8-.7-1-1.1H4.5a5.5 5.5 0 0 0 1.6 2.5 6.1 6.1 0 0 0 3.9 1.3 6 6 0 0 0 2.8-.7 6 6 0 0 0 2.8.7 6.1 6.1 0 0 0 3.9-1.3 5.5 5.5 0 0 0 1.6-2.5H17.8z"/>
+                          </svg>
+                        ),
+                      },
                     ].filter(Boolean).map(({ key, label, selectedLight, selectedDark, icon }) => {
                       const isSelected = selectedPlatforms.has(key);
                       return (
@@ -548,180 +583,242 @@ export default function Dashboard() {
         </div>
 
         {/* Row 1: Stat Cards */}
-        <ErrorBoundary>
-          <StatCards
-            loading={loading}
-            totalSolved={
-              effectiveView === 'cf' ? (cf.cfSolved ?? 0)
-              : effectiveView === 'lc' ? (lc.lcSolved ?? 0)
-              : effectiveView === 'cc' ? (cc.totalSolved ?? 0)
-              : totalSolved
-            }
-            cfSolved={cf.cfSolved ?? 0}
-            lcSolved={lc.lcSolved ?? 0}
-            ccSolved={cc.totalSolved ?? 0}
-            activeDays={activeDays}
-            totalSubmissions={
-              effectiveView === 'cf' ? (cf.cfTotalSubmissions ?? 0)
-              : effectiveView === 'lc' ? (lc.lcTotalSubmissions ?? 0)
-              : effectiveView === 'cc' ? (cc.totalSubmissions ?? 0)
-              : totalSubmissions
-            }
-            cfTotalSubmissions={cf.cfTotalSubmissions ?? 0}
-            lcTotalSubmissions={lc.lcTotalSubmissions ?? 0}
-            ccTotalSubmissions={cc.totalSubmissions ?? 0}
-            currentStreak={currentStreak}
-            bestStreak={bestStreak}
-            acceptanceRate={effectiveView === 'cf' ? cfAR : effectiveView === 'lc' ? lcAR : effectiveView === 'cc' ? ccAR : acceptanceRate}
-            cfAcceptanceRate={cfAR}
-            lcAcceptanceRate={lcAR}
-            ccAcceptanceRate={ccAR}
-            solvedThisMonth={
-              effectiveView === 'cf' ? (cf.cfSolvedThisMonth ?? 0)
-              : effectiveView === 'lc' ? (lc.lcSolvedThisMonth ?? 0)
-              : effectiveView === 'cc' ? (cc.ccSolvedThisMonth ?? 0)
-              : solvedThisMonth
-            }
-            activeDaysThisMonth={activeDaysThisMonth}
-          />
-        </ErrorBoundary>
-
-        {/* Row 2: Platform info trio */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        {effectiveView === 'gfg' ? (
           <ErrorBoundary>
-            <PlatformProfiles
+            <GFGStatCards
               loading={loading}
-              cfHandle={effectiveView === 'lc' || effectiveView === 'cc' ? null : profileProps.cfHandle}
-              cfRating={effectiveView === 'lc' || effectiveView === 'cc' ? null : profileProps.cfRating}
-              cfMaxRating={effectiveView === 'lc' || effectiveView === 'cc' ? null : profileProps.cfMaxRating}
-              cfRank={effectiveView === 'lc' || effectiveView === 'cc' ? null : profileProps.cfRank}
-              lcHandle={effectiveView === 'cf' || effectiveView === 'cc' ? null : profileProps.lcHandle}
-              lcRating={effectiveView === 'cf' || effectiveView === 'cc' ? null : profileProps.lcRating}
-              lcMaxRating={effectiveView === 'cf' || effectiveView === 'cc' ? null : profileProps.lcMaxRating}
-              lcRank={effectiveView === 'cf' || effectiveView === 'cc' ? null : profileProps.lcRank}
-              ccHandle={effectiveView === 'cf' || effectiveView === 'lc' ? null : profileProps.ccHandle}
-              ccRating={effectiveView === 'cf' || effectiveView === 'lc' ? null : profileProps.ccRating}
-              ccMaxRating={effectiveView === 'cf' || effectiveView === 'lc' ? null : profileProps.ccMaxRating}
-              ccRank={effectiveView === 'cf' || effectiveView === 'lc' ? null : profileProps.ccRank}
+              totalSolved={gfg.totalSolved}
+              codingScore={gfg.codingScore}
+              monthlyScore={gfg.monthlyScore}
+              instituteRank={gfg.instituteRank}
+              institution={gfg.institution}
             />
           </ErrorBoundary>
+        ) : (
           <ErrorBoundary>
-            {effectiveView === 'cc' ? (
-              <CCQuickStats
-                loading={loading}
-                globalRank={cc.globalRank}
-                countryRank={cc.countryRank}
-                totalSolved={cc.totalSolved}
-                totalSubmissions={cc.totalSubmissions}
-                ccAcceptanceRate={cc.ccAcceptanceRate}
-                ccSolvedThisMonth={cc.ccSolvedThisMonth}
-                lastSyncedAt={cc.lastSyncedAt}
-              />
-            ) : (
-              <DifficultyBreakdown
-                loading={loading}
-                cfBands={effectiveView === 'lc' ? [] : cfBands}
-                lcBands={effectiveView === 'cf' ? [] : lcBands}
-              />
-            )}
-          </ErrorBoundary>
-          <ErrorBoundary>
-            <WeekStreak
+            <StatCards
               loading={loading}
+              totalSolved={
+                effectiveView === 'cf' ? (cf.cfSolved ?? 0)
+                : effectiveView === 'lc' ? (lc.lcSolved ?? 0)
+                : effectiveView === 'cc' ? (cc.totalSolved ?? 0)
+                : totalSolved
+              }
+              cfSolved={cf.cfSolved ?? 0}
+              lcSolved={lc.lcSolved ?? 0}
+              ccSolved={cc.totalSolved ?? 0}
+              gfgSolved={gfg.totalSolved ?? 0}
+              activeDays={activeDays}
+              totalSubmissions={
+                effectiveView === 'cf' ? (cf.cfTotalSubmissions ?? 0)
+                : effectiveView === 'lc' ? (lc.lcTotalSubmissions ?? 0)
+                : effectiveView === 'cc' ? (cc.totalSubmissions ?? 0)
+                : totalSubmissions
+              }
+              cfTotalSubmissions={cf.cfTotalSubmissions ?? 0}
+              lcTotalSubmissions={lc.lcTotalSubmissions ?? 0}
+              ccTotalSubmissions={cc.totalSubmissions ?? 0}
               currentStreak={currentStreak}
               bestStreak={bestStreak}
-              bestStreakPlatform={bestStreakPlatform}
-              last7Days={last7Days}
+              acceptanceRate={effectiveView === 'cf' ? cfAR : effectiveView === 'lc' ? lcAR : effectiveView === 'cc' ? ccAR : acceptanceRate}
+              cfAcceptanceRate={cfAR}
+              lcAcceptanceRate={lcAR}
+              ccAcceptanceRate={ccAR}
+              solvedThisMonth={
+                effectiveView === 'cf' ? (cf.cfSolvedThisMonth ?? 0)
+                : effectiveView === 'lc' ? (lc.lcSolvedThisMonth ?? 0)
+                : effectiveView === 'cc' ? (cc.ccSolvedThisMonth ?? 0)
+                : solvedThisMonth
+              }
               activeDaysThisMonth={activeDaysThisMonth}
-              activeDaysLastMonth={activeDaysLastMonth}
             />
           </ErrorBoundary>
-        </div>
+        )}
 
-        {/* Row 3: Daily widget + Activity heatmap */}
-        <div className="grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)] gap-3">
-          <ErrorBoundary>
-            <DailyWidget loading={loading} />
-          </ErrorBoundary>
-          <ErrorBoundary>
-            <ActivityHeatmap loading={loading} heatmapData={heatmapData} />
-          </ErrorBoundary>
-        </div>
-
-        {/* Row 4: Rating + Total Contests */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-          <ErrorBoundary>
-            <RatingProgression
-              loading={loading}
-              cfRatingHistory={effectiveView === 'lc' || effectiveView === 'cc' ? [] : cfRatingHistory}
-              lcRatingHistory={effectiveView === 'cf' || effectiveView === 'cc' ? [] : lcRatingHistory}
-              ccRatingHistory={effectiveView === 'cf' || effectiveView === 'lc' ? [] : ccRatingHistory}
-            />
-          </ErrorBoundary>
-          <ErrorBoundary>
-            <TotalContests
-              loading={loading}
-              cfContests={effectiveView === 'lc' || effectiveView === 'cc' ? 0 : cfContestCount}
-              lcContests={effectiveView === 'cf' || effectiveView === 'cc' ? 0 : lcContestCount}
-              ccContests={effectiveView === 'cf' || effectiveView === 'lc' ? 0 : ccContestCount}
-              cfBestRank={effectiveView === 'lc' || effectiveView === 'cc' ? null : finalCfBestRank}
-              lcBestRank={effectiveView === 'cf' || effectiveView === 'cc' ? null : finalLcBestRank}
-              ccBestRank={effectiveView === 'cf' || effectiveView === 'lc' ? null : finalCcBestRank}
-            />
-          </ErrorBoundary>
-        </div>
-
-        {/* Row 5: Recent Contests + (CC: language chart | others: top topics) */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-          <ErrorBoundary>
-            <RecentContests loading={loading} contests={contests} />
-          </ErrorBoundary>
-          <ErrorBoundary>
-            {effectiveView === 'cc' ? (
-              <CCLanguageChart loading={loading} languages={cc.languageDistribution} />
-            ) : (
-              <TopTopics loading={loading} topics={topics} />
-            )}
-          </ErrorBoundary>
-        </div>
-
-        {/* Row 6: Recent Submissions + contextual right panel */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-          <ErrorBoundary>
-            <RecentSubmissions
-              loading={loading}
-              cfSubmissions={effectiveView === 'lc' || effectiveView === 'cc' ? [] : cf.recentCfSubmissions}
-              lcSubmissions={effectiveView === 'cf' || effectiveView === 'cc' ? [] : lc.recentSubmissions}
-              ccSubmissions={effectiveView === 'cf' || effectiveView === 'lc' ? [] : cc.recentCcAcSubmissions}
-              view={effectiveView}
-            />
-          </ErrorBoundary>
-          <ErrorBoundary>
-            {effectiveView === 'lc' ? (
-              <LCSkillBreakdown
+        {/* Row 2: Platform info trio */}
+        {effectiveView === 'gfg' ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <ErrorBoundary>
+              <PlatformProfiles
                 loading={loading}
-                fundamental={lc.lcSkillFundamental}
-                intermediate={lc.lcSkillIntermediate}
-                advanced={lc.lcSkillAdvanced}
+                gfgHandle={profileProps.gfgHandle}
+                gfgCodingScore={profileProps.gfgCodingScore}
+                gfgMonthlyScore={profileProps.gfgMonthlyScore}
+                gfgInstituteRank={profileProps.gfgInstituteRank}
+                gfgInstitution={profileProps.gfgInstitution}
               />
-            ) : effectiveView === 'cf' ? (
-              <CFRatingDistribution loading={loading} cfDiffBands={cf.cfDiffBands} />
-            ) : effectiveView === 'cc' ? (
-              <CCVerdictBreakdown
+            </ErrorBoundary>
+            <ErrorBoundary>
+              <GFGQuickStats
                 loading={loading}
-                verdictBreakdown={cc.verdictBreakdown}
-                totalSubmissions={cc.totalSubmissions}
+                codingScore={gfg.codingScore}
+                monthlyScore={gfg.monthlyScore}
+                totalSolved={gfg.totalSolved}
+                instituteRank={gfg.instituteRank}
+                institution={gfg.institution}
+                lastSyncedAt={gfg.lastSyncedAt}
               />
-            ) : (
-              <SkillGaps loading={loading} skills={skills} />
-            )}
-          </ErrorBoundary>
-        </div>
+            </ErrorBoundary>
+            <ErrorBoundary>
+              <GFGInstitutionalCard
+                loading={loading}
+                institution={gfg.institution}
+                instituteRank={gfg.instituteRank}
+                codingScore={gfg.codingScore}
+                monthlyScore={gfg.monthlyScore}
+                handle={gfg.gfgHandle}
+              />
+            </ErrorBoundary>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <ErrorBoundary>
+              <PlatformProfiles
+                loading={loading}
+                cfHandle={effectiveView === 'lc' || effectiveView === 'cc' ? null : profileProps.cfHandle}
+                cfRating={effectiveView === 'lc' || effectiveView === 'cc' ? null : profileProps.cfRating}
+                cfMaxRating={effectiveView === 'lc' || effectiveView === 'cc' ? null : profileProps.cfMaxRating}
+                cfRank={effectiveView === 'lc' || effectiveView === 'cc' ? null : profileProps.cfRank}
+                lcHandle={effectiveView === 'cf' || effectiveView === 'cc' ? null : profileProps.lcHandle}
+                lcRating={effectiveView === 'cf' || effectiveView === 'cc' ? null : profileProps.lcRating}
+                lcMaxRating={effectiveView === 'cf' || effectiveView === 'cc' ? null : profileProps.lcMaxRating}
+                lcRank={effectiveView === 'cf' || effectiveView === 'cc' ? null : profileProps.lcRank}
+                ccHandle={effectiveView === 'cf' || effectiveView === 'lc' ? null : profileProps.ccHandle}
+                ccRating={effectiveView === 'cf' || effectiveView === 'lc' ? null : profileProps.ccRating}
+                ccMaxRating={effectiveView === 'cf' || effectiveView === 'lc' ? null : profileProps.ccMaxRating}
+                ccRank={effectiveView === 'cf' || effectiveView === 'lc' ? null : profileProps.ccRank}
+                gfgHandle={profileProps.gfgHandle}
+                gfgCodingScore={profileProps.gfgCodingScore}
+                gfgMonthlyScore={profileProps.gfgMonthlyScore}
+                gfgInstituteRank={profileProps.gfgInstituteRank}
+                gfgInstitution={profileProps.gfgInstitution}
+              />
+            </ErrorBoundary>
+            <ErrorBoundary>
+              {effectiveView === 'cc' ? (
+                <CCQuickStats
+                  loading={loading}
+                  globalRank={cc.globalRank}
+                  countryRank={cc.countryRank}
+                  totalSolved={cc.totalSolved}
+                  totalSubmissions={cc.totalSubmissions}
+                  ccAcceptanceRate={cc.ccAcceptanceRate}
+                  ccSolvedThisMonth={cc.ccSolvedThisMonth}
+                  lastSyncedAt={cc.lastSyncedAt}
+                />
+              ) : (
+                <DifficultyBreakdown
+                  loading={loading}
+                  cfBands={effectiveView === 'lc' ? [] : cfBands}
+                  lcBands={effectiveView === 'cf' ? [] : lcBands}
+                />
+              )}
+            </ErrorBoundary>
+            <ErrorBoundary>
+              <WeekStreak
+                loading={loading}
+                currentStreak={currentStreak}
+                bestStreak={bestStreak}
+                bestStreakPlatform={bestStreakPlatform}
+                last7Days={last7Days}
+                activeDaysThisMonth={activeDaysThisMonth}
+                activeDaysLastMonth={activeDaysLastMonth}
+              />
+            </ErrorBoundary>
+          </div>
+        )}
 
-        {/* Row 7: Achievements */}
-        <ErrorBoundary>
-          <Achievements loading={loading} achievements={achievements} lcLinked={!!linkedAccounts.leetcode} lcSessionStatus={lcSessionStatus} />
-        </ErrorBoundary>
+        {/* Rows 3-7: Only for views that have heatmap, streak, contest, or submission data */}
+        {effectiveView !== 'gfg' && (
+          <>
+            {/* Row 3: Daily widget + Activity heatmap */}
+            <div className="grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)] gap-3">
+              <ErrorBoundary>
+                <DailyWidget loading={loading} />
+              </ErrorBoundary>
+              <ErrorBoundary>
+                <ActivityHeatmap loading={loading} heatmapData={heatmapData} />
+              </ErrorBoundary>
+            </div>
+
+            {/* Row 4: Rating + Total Contests */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              <ErrorBoundary>
+                <RatingProgression
+                  loading={loading}
+                  cfRatingHistory={effectiveView === 'lc' || effectiveView === 'cc' ? [] : cfRatingHistory}
+                  lcRatingHistory={effectiveView === 'cf' || effectiveView === 'cc' ? [] : lcRatingHistory}
+                  ccRatingHistory={effectiveView === 'cf' || effectiveView === 'lc' ? [] : ccRatingHistory}
+                />
+              </ErrorBoundary>
+              <ErrorBoundary>
+                <TotalContests
+                  loading={loading}
+                  cfContests={effectiveView === 'lc' || effectiveView === 'cc' ? 0 : cfContestCount}
+                  lcContests={effectiveView === 'cf' || effectiveView === 'cc' ? 0 : lcContestCount}
+                  ccContests={effectiveView === 'cf' || effectiveView === 'lc' ? 0 : ccContestCount}
+                  cfBestRank={effectiveView === 'lc' || effectiveView === 'cc' ? null : finalCfBestRank}
+                  lcBestRank={effectiveView === 'cf' || effectiveView === 'cc' ? null : finalLcBestRank}
+                  ccBestRank={effectiveView === 'cf' || effectiveView === 'lc' ? null : finalCcBestRank}
+                />
+              </ErrorBoundary>
+            </div>
+
+            {/* Row 5: Recent Contests + (CC: language chart | others: top topics) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              <ErrorBoundary>
+                <RecentContests loading={loading} contests={contests} />
+              </ErrorBoundary>
+              <ErrorBoundary>
+                {effectiveView === 'cc' ? (
+                  <CCLanguageChart loading={loading} languages={cc.languageDistribution} />
+                ) : (
+                  <TopTopics loading={loading} topics={topics} />
+                )}
+              </ErrorBoundary>
+            </div>
+
+            {/* Row 6: Recent Submissions + contextual right panel */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              <ErrorBoundary>
+                <RecentSubmissions
+                  loading={loading}
+                  cfSubmissions={effectiveView === 'lc' || effectiveView === 'cc' ? [] : cf.recentCfSubmissions}
+                  lcSubmissions={effectiveView === 'cf' || effectiveView === 'cc' ? [] : lc.recentSubmissions}
+                  ccSubmissions={effectiveView === 'cf' || effectiveView === 'lc' ? [] : cc.recentCcAcSubmissions}
+                  view={effectiveView}
+                />
+              </ErrorBoundary>
+              <ErrorBoundary>
+                {effectiveView === 'lc' ? (
+                  <LCSkillBreakdown
+                    loading={loading}
+                    fundamental={lc.lcSkillFundamental}
+                    intermediate={lc.lcSkillIntermediate}
+                    advanced={lc.lcSkillAdvanced}
+                  />
+                ) : effectiveView === 'cf' ? (
+                  <CFRatingDistribution loading={loading} cfDiffBands={cf.cfDiffBands} />
+                ) : effectiveView === 'cc' ? (
+                  <CCVerdictBreakdown
+                    loading={loading}
+                    verdictBreakdown={cc.verdictBreakdown}
+                    totalSubmissions={cc.totalSubmissions}
+                  />
+                ) : (
+                  <SkillGaps loading={loading} skills={skills} />
+                )}
+              </ErrorBoundary>
+            </div>
+
+            {/* Row 7: Achievements */}
+            {(effectiveView === 'all' || effectiveView === 'lc') && (
+              <ErrorBoundary>
+                <Achievements loading={loading} achievements={achievements} lcLinked={!!linkedAccounts.leetcode} lcSessionStatus={lcSessionStatus} />
+              </ErrorBoundary>
+            )}
+          </>
+        )}
       </div>
 
       <ShareModal

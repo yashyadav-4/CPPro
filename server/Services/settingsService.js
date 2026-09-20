@@ -18,6 +18,19 @@ const generateCode=async(userId)=>{
     return uniqueCode;
 } 
 
+// GFG Name field only allows letters and spaces — no hyphens or numbers.
+// We generate a code like "cppro abcxyz" (letters only, space separator).
+const ALPHA = 'abcdefghijklmnopqrstuvwxyz';
+const generateGfgCode = async (userId) => {
+    const randomLetters = Array.from({ length: 6 }, () =>
+        ALPHA[crypto.randomInt(ALPHA.length)]
+    ).join('');
+    const uniqueCode = `cppro ${randomLetters}`;
+    await User.findByIdAndUpdate(userId, { $set: { verificationCode: uniqueCode } });
+    return uniqueCode;
+};
+
+
 const verifyAndLinkCodeforces = async(userId ,handle)=>{
     const cleanHandle= handle.trim();
     const user = await User.findById(userId);
@@ -444,14 +457,110 @@ const getDecryptedLcSession = async (userId, opts = {}) => {
     }
 };
 
+// ── GeeksforGeeks verification ───────────────────────────────────────────────
+// GFG relay is called directly with x-api-key header.
+// Verification checks that mentor.name (the GFG display Name field) includes
+// the cppro-XXXXXX verification code the user pasted there.
+const GFG_RELAY_URL_SETTINGS    = (process.env.GFG_RELAY_URL    || '').replace(/\/$/, '');
+const GFG_RELAY_SECRET_SETTINGS = process.env.GFG_RELAY_SECRET  || '';
+
+const verifyAndLinkGfg = async (userId, handle) => {
+    const cleanHandle = handle.trim();
+    const user = await User.findById(userId);
+
+    if (!user.verificationCode) {
+        const err = new Error('No verification code found. Please generate one first');
+        err.status = 400;
+        throw err;
+    }
+
+    if (!GFG_RELAY_URL_SETTINGS || !GFG_RELAY_SECRET_SETTINGS) {
+        const err = new Error('GFG relay not configured');
+        err.status = 503;
+        throw err;
+    }
+
+    let displayName;
+    try {
+        const res = await axios.get(`${GFG_RELAY_URL_SETTINGS}/api/gfg`, {
+            params:  { handle: cleanHandle, verify: '1' },
+            headers: { 'x-api-key': GFG_RELAY_SECRET_SETTINGS },
+            timeout: 20_000,
+        });
+        if (!res.data?.success) throw new Error('GFG relay returned no data');
+        displayName = res.data.data?.name ?? '';
+    } catch (error) {
+        const code = error.response?.data?.error;
+        if (code === 'USER_NOT_FOUND') {
+            const err = new Error('GFG handle not found');
+            err.status = 400;
+            throw err;
+        }
+        const err = new Error('GFG relay unavailable — try again');
+        err.status = 502;
+        throw err;
+    }
+
+    const code = user.verificationCode.trim().toLowerCase();
+    const cleanDisplayName = displayName.trim().toLowerCase();
+    if (!cleanDisplayName.includes(code)) {
+        const err = new Error("GFG handle verification failed. Make sure the verification code is in your GFG display Name field.");
+        err.status = 400;
+        throw err;
+    }
+
+    await User.findByIdAndUpdate(
+        userId,
+        {
+            $set: { 'linkedAccounts.geeksforgeeks': cleanHandle, lastGfgUpdate: null },
+            $unset: { verificationCode: '' },
+        },
+        { new: true }
+    );
+
+    // Fire initial sync in background so dashboard has data right away
+    const gfgSyncService = require('./gfgSyncService');
+    gfgSyncService.syncGfgProfile(userId, cleanHandle)
+        .then(() => console.log(`[VERIFY-GFG] initial sync complete for ${cleanHandle}`))
+        .catch(err => {
+            console.error(`[VERIFY-GFG] initial sync failed for ${cleanHandle}:`, err.message);
+            ErrorLog.create({
+                source: 'settingsService',
+                level:  'error',
+                message: `[GFG_INITIAL_SYNC_FAILED] handle=${cleanHandle} | userId=${userId} | reason=${err.message}`,
+            }).catch(() => {});
+        });
+
+    return { message: `linking GFG account successful: ${cleanHandle}` };
+};
+
+const unlinkGfg = async (userId) => {
+    const user = await User.findById(userId);
+    if (!user?.linkedAccounts?.geeksforgeeks) {
+        const err = new Error('No GFG account is linked');
+        err.status = 400;
+        throw err;
+    }
+    await User.findByIdAndUpdate(userId, {
+        $set: { 'linkedAccounts.geeksforgeeks': '', lastGfgUpdate: null },
+        $unset: { verificationCode: '' },
+    });
+    const GFGData = require('../Model/GFGData');
+    await GFGData.deleteOne({ userId });
+    return { message: 'GFG account unlinked successfully' };
+};
+
 module.exports ={
     generateCode,
+    generateGfgCode,
     verifyAndLinkCodeforces,
     unlinkCodeforces,
     verifyAndLinkLeetcode,
     unlinkLeetcode,
     verifyAndLinkCodechef,
     unlinkCodechef,
+    verifyAndLinkGfg,
+    unlinkGfg,
     getProfile,
     updateUserProfile,
     saveLcSession,

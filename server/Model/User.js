@@ -67,6 +67,7 @@ const userSchema = new mongoose.Schema({
         codeforces:{type:String , default:''},
         leetcode :{ type:String , default:''},
         codechef: {type:String , default:''},
+        geeksforgeeks: {type:String , default:''},
     },
     preferences:{
         theme:{
@@ -102,6 +103,10 @@ const userSchema = new mongoose.Schema({
         default:null
     },
     lastCcUpdate:{
+        type:Date,
+        default:null
+    },
+    lastGfgUpdate:{
         type:Date,
         default:null
     },

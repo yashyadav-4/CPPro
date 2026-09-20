@@ -3,8 +3,10 @@ const User = require('../Model/User');
 const syncService = require('../Services/cfSyncService');
 const lcSyncService = require('../Services/lcSyncService');
 const ccSyncService = require('../Services/ccSyncService');
+const gfgSyncService = require('../Services/gfgSyncService');
 const dashboardService = require('../Services/cfDashboardService');
 const LeetCodeData = require('../Model/LeetCodeData');
+const GFGData = require('../Model/GFGData');
 const Platform = require('../Model/Platform');
 const { getDecryptedLcSession } = require('../Services/settingsService');
 const { incrementDailyStat } = require('../Utils/dailyStatHelper');
@@ -421,6 +423,62 @@ async function handleCcHardSync(req, res) {
     }
 }
 
+async function handleGfgManualRefresh(req, res) {
+    try {
+        const userId = req.user._id;
+        const user = await User.findById(userId);
+
+        if (!user || !user.linkedAccounts || !user.linkedAccounts.geeksforgeeks) {
+            return res.status(400).json({ success: false, message: 'no geeksforgeeks account linked' });
+        }
+        const handle = user.linkedAccounts.geeksforgeeks;
+        const role = user.role || 'user';
+        const cooldown = role === 'admin' ? ADMIN_COOLDOWN : FIFTEEN_MINUTES;
+
+        const timeSinceUpdate = user.lastGfgUpdate
+            ? Date.now() - new Date(user.lastGfgUpdate).getTime()
+            : Infinity;
+
+        if (timeSinceUpdate < cooldown) {
+            const remainingSeconds = Math.ceil((cooldown - timeSinceUpdate) / 1000);
+            const gfgData = await GFGData.findOne({ userId }).lean();
+            return res.status(200).json({
+                success: true,
+                freshness: 'fresh',
+                remainingSeconds,
+                message: 'GFG data is up to date',
+                data: gfgData,
+            });
+        }
+
+        // Stamp timestamp first to prevent duplicate dispatches
+        await User.findByIdAndUpdate(userId, { $set: { lastGfgUpdate: new Date() } });
+
+        try {
+            await gfgSyncService.syncGfgProfile(userId, handle);
+        } catch (err) {
+            console.error('[GFG-SYNC] sync failed:', err.message);
+            // Roll back so user can retry
+            await User.findByIdAndUpdate(userId, { $set: { lastGfgUpdate: user.lastGfgUpdate || null } });
+            return res.status(500).json({ success: false, message: `Sync failed: ${err.message}` });
+        }
+
+        incrementDailyStat('syncs');
+
+        const gfgData = await GFGData.findOne({ userId }).lean();
+        return res.status(200).json({
+            success: true,
+            freshness: 'synced',
+            remainingSeconds: Math.ceil(cooldown / 1000),
+            message: 'GFG data synced successfully',
+            data: gfgData,
+        });
+    } catch (error) {
+        console.error('[GFG-SYNC] manual refresh error:', error);
+        return res.status(500).json({ success: false, message: 'internal server error during gfg sync' });
+    }
+}
+
 module.exports = {
     handleManualRefresh,
     handleLcManualRefresh,
@@ -431,4 +489,5 @@ module.exports = {
     handleCfHardSync,
     handleLcHardSync,
     handleCcHardSync,
+    handleGfgManualRefresh,
 };

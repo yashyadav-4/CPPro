@@ -345,9 +345,9 @@ export default function LeaderBoard() {
         )}
 
         {/* Score formula */}
-        <div className="mt-6 p-4 bg-gray-50 dark:bg-[#111111] rounded-lg border border-gray-200 dark:border-gray-200 dark:border-white/[0.08]">
-          <p className="text-xs text-gray-500 text-center">
-            <strong>Score Formula:</strong> (CF Rating × 1.5) + (LC Rating × 1.2) + (CC Rating × 1.1) + Difficulty Weighting + Contest Bonus + Max Rating Bonus + Streak Bonus
+        <div className="mt-6 p-4 bg-gray-50 dark:bg-[#111111] rounded-lg border border-gray-200 dark:border-white/[0.08]">
+          <p className="text-xs text-gray-500 text-center leading-relaxed">
+            <strong>Score Formula:</strong> (CF Rating × 1.5) + (LC Rating × 1.2) + (CC Rating × 1.1) + (GFG Score × 0.4) + Total Solved Questions Bonus + Difficulty Weighting + Contest Bonus + Max Rating Bonus + Streak Bonus
           </p>
         </div>
       </div>

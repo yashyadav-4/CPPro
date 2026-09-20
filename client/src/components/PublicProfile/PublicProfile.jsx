@@ -30,10 +30,11 @@ import CCVerdictBreakdown from '../Dashboard/CCVerdictBreakdown';
 const config = { withCredentials: true };
 
 // ── Profile Header ───────────────────────────────────────────────────────────
-function ProfileHeader({ profile, cfData, lcData, ccData }) {
+function ProfileHeader({ profile, cfData, lcData, ccData, gfgData }) {
   const cf = cfData || {};
   const lc = lcData || {};
   const cc = ccData || {};
+  const gfg = gfgData || {};
 
   const locationParts = [
     profile.location?.city,
@@ -119,6 +120,19 @@ function ProfileHeader({ profile, cfData, lcData, ccData }) {
               <ChefHat size={12} />
               {profile.linkedAccounts.codechef}
               {cc.currentRating ? <span className="text-[10px] opacity-70">({cc.currentRating})</span> : null}
+              <ExternalLink size={10} className="opacity-50" />
+            </a>
+          )}
+          {profile.linkedAccounts?.geeksforgeeks && (
+            <a
+              href={`https://www.geeksforgeeks.org/user/${encodeURIComponent(profile.linkedAccounts.geeksforgeeks)}/`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-green-50 dark:bg-green-500/10 text-[#2F8D46] dark:text-[#4ade80] border border-green-100 dark:border-green-500/20 hover:bg-green-100 dark:hover:bg-green-500/20 transition-colors"
+            >
+              <Code2 size={12} />
+              {profile.linkedAccounts.geeksforgeeks}
+              {gfg.codingScore ? <span className="text-[10px] opacity-70">({gfg.codingScore} pts)</span> : null}
               <ExternalLink size={10} className="opacity-50" />
             </a>
           )}
@@ -219,6 +233,7 @@ export default function PublicProfile() {
   const [cfData, setCfData] = useState(null);
   const [lcData, setLcData] = useState(null);
   const [ccData, setCcData] = useState(null);
+  const [gfgData, setGfgData] = useState(null);
   const [status, setStatus] = useState('loading'); // loading | ready | private | not_found | error
   const [dataLoading, setDataLoading] = useState(true);
 
@@ -229,6 +244,7 @@ export default function PublicProfile() {
     setCfData(null);
     setLcData(null);
     setCcData(null);
+    setGfgData(null);
 
     axios.get(`/api/users/${encodeURIComponent(username)}/profile`, config)
       .then(res => {
@@ -255,9 +271,10 @@ export default function PublicProfile() {
       codeforces: !!profile.linkedAccounts?.codeforces,
       leetcode: !!profile.linkedAccounts?.leetcode,
       codechef: !!profile.linkedAccounts?.codechef,
+      geeksforgeeks: !!profile.linkedAccounts?.geeksforgeeks,
     };
 
-    if (!linked.codeforces && !linked.leetcode && !linked.codechef) {
+    if (!linked.codeforces && !linked.leetcode && !linked.codechef && !linked.geeksforgeeks) {
       setDataLoading(false);
       return;
     }
@@ -274,11 +291,15 @@ export default function PublicProfile() {
     const ccPromise = linked.codechef
       ? axios.get(`/api/cc-dashboard/aggregate/${uid}`, config)
       : Promise.resolve(null);
+    const gfgPromise = linked.geeksforgeeks
+      ? axios.get(`/api/gfg-dashboard/aggregate/${uid}`, config)
+      : Promise.resolve(null);
 
-    Promise.allSettled([cfPromise, lcPromise, ccPromise]).then(([cfRes, lcRes, ccRes]) => {
+    Promise.allSettled([cfPromise, lcPromise, ccPromise, gfgPromise]).then(([cfRes, lcRes, ccRes, gfgRes]) => {
       setCfData(cfRes.status === 'fulfilled' && cfRes.value?.data?.data ? cfRes.value.data.data : null);
       setLcData(lcRes.status === 'fulfilled' && lcRes.value?.data?.data ? lcRes.value.data.data : null);
       setCcData(ccRes.status === 'fulfilled' && ccRes.value?.data?.data ? ccRes.value.data.data : null);
+      setGfgData(gfgRes.status === 'fulfilled' && gfgRes.value?.data?.data ? gfgRes.value.data.data : null);
       setDataLoading(false);
     });
   }, [status, profile]);
@@ -293,9 +314,10 @@ export default function PublicProfile() {
     codeforces: !!profile.linkedAccounts?.codeforces,
     leetcode: !!profile.linkedAccounts?.leetcode,
     codechef: !!profile.linkedAccounts?.codechef,
+    geeksforgeeks: !!profile.linkedAccounts?.geeksforgeeks,
   };
 
-  if (!linked.codeforces && !linked.leetcode && !linked.codechef) {
+  if (!linked.codeforces && !linked.leetcode && !linked.codechef && !linked.geeksforgeeks) {
     return <NoLinkedAccounts profile={profile} />;
   }
 
@@ -303,9 +325,10 @@ export default function PublicProfile() {
   const cf = cfData || {};
   const lc = lcData || {};
   const cc = ccData || {};
+  const gfg = gfgData || {};
   const loading = dataLoading;
 
-  const totalSolved = (cf.cfSolved ?? 0) + (lc.lcSolved ?? 0) + (cc.totalSolved ?? 0);
+  const totalSolved = (cf.cfSolved ?? 0) + (lc.lcSolved ?? 0) + (cc.totalSolved ?? 0) + (gfg.totalSolved ?? 0);
   const totalSubmissions = (cf.cfTotalSubmissions ?? 0) + (lc.lcTotalSubmissions ?? 0) + (cc.totalSubmissions ?? 0);
   const solvedThisMonth = (cf.cfSolvedThisMonth ?? 0) + (lc.lcSolvedThisMonth ?? 0) + (cc.ccSolvedThisMonth ?? 0);
 
@@ -338,6 +361,8 @@ export default function PublicProfile() {
     cfHandle: cf.cfHandle || null, cfRating: cf.cfRating || null, cfMaxRating: cf.cfMaxRating || null, cfRank: cf.cfRank || null,
     lcHandle: lc.lcHandle || null, lcRating: lc.lcRating || null, lcMaxRating: lc.lcMaxRating || null, lcRank: lc.lcRank || null,
     ccHandle: cc.ccHandle || null, ccRating: cc.currentRating || null, ccMaxRating: cc.maxRating || null, ccRank: cc.currentRank || null,
+    gfgHandle: gfg.gfgHandle || null, gfgCodingScore: gfg.codingScore ?? null, gfgMonthlyScore: gfg.monthlyScore ?? null,
+    gfgInstituteRank: gfg.instituteRank ?? null, gfgInstitution: gfg.institution || null,
   };
 
   const cfBands = cf.cfDiffBands || [];
@@ -345,6 +370,13 @@ export default function PublicProfile() {
     { label: 'Easy', count: lc.lcEasy ?? 0 },
     { label: 'Medium', count: lc.lcMedium ?? 0 },
     { label: 'Hard', count: lc.lcHard ?? 0 },
+  ];
+  const gfgBands = [
+    { label: 'School', count: gfg.solvedByDifficulty?.school ?? 0 },
+    { label: 'Basic',  count: gfg.solvedByDifficulty?.basic  ?? 0 },
+    { label: 'Easy',   count: gfg.solvedByDifficulty?.easy   ?? 0 },
+    { label: 'Medium', count: gfg.solvedByDifficulty?.medium ?? 0 },
+    { label: 'Hard',   count: gfg.solvedByDifficulty?.hard   ?? 0 },
   ];
 
   const last7Days = mergeLast7Days(cf.cfLast7Days, lc.lcLast7Days, cc.ccLast7Days);
@@ -371,16 +403,16 @@ export default function PublicProfile() {
   const achievements = lc.achievements || [];
 
   // Determine which single view to show when only 1 platform is linked
-  const linkedCount = [linked.codeforces, linked.leetcode, linked.codechef].filter(Boolean).length;
+  const linkedCount = [linked.codeforces, linked.leetcode, linked.codechef, linked.geeksforgeeks].filter(Boolean).length;
   const singleView = linkedCount === 1
-    ? (linked.codeforces ? 'cf' : linked.leetcode ? 'lc' : 'cc')
+    ? (linked.codeforces ? 'cf' : linked.leetcode ? 'lc' : linked.codechef ? 'cc' : 'gfg')
     : 'all';
 
   return (
     <div className="bg-[#ffffff] dark:bg-[#0a0a0a] px-6 py-6 min-h-screen">
       <div className="max-w-[1400px] mx-auto space-y-3">
         {/* Profile Header */}
-        <ProfileHeader profile={profile} cfData={cfData} lcData={lcData} ccData={ccData} />
+        <ProfileHeader profile={profile} cfData={cfData} lcData={lcData} ccData={ccData} gfgData={gfgData} />
 
         {/* Row 1: Stat Cards */}
         <ErrorBoundary>
@@ -390,6 +422,7 @@ export default function PublicProfile() {
             cfSolved={cf.cfSolved ?? 0}
             lcSolved={lc.lcSolved ?? 0}
             ccSolved={cc.totalSolved ?? 0}
+            gfgSolved={gfg.totalSolved ?? 0}
             activeDays={activeDays}
             totalSubmissions={totalSubmissions}
             cfTotalSubmissions={cf.cfTotalSubmissions ?? 0}
@@ -407,7 +440,7 @@ export default function PublicProfile() {
         </ErrorBoundary>
 
         {/* Row 2: Platform info trio */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           <ErrorBoundary>
             <PlatformProfiles loading={loading} {...profileProps} />
           </ErrorBoundary>
@@ -424,7 +457,7 @@ export default function PublicProfile() {
                 lastSyncedAt={cc.lastSyncedAt}
               />
             ) : (
-              <DifficultyBreakdown loading={loading} cfBands={cfBands} lcBands={lcBands} />
+              <DifficultyBreakdown loading={loading} cfBands={cfBands} lcBands={lcBands} gfgBands={gfgBands} />
             )}
           </ErrorBoundary>
           <ErrorBoundary>

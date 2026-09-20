@@ -1,4 +1,4 @@
-// DifficultyBreakdown.jsx — per-rating bars for CF, collapsed + hover-expand if many
+// DifficultyBreakdown.jsx — per-rating bars for CF, difficulty bars for LC and GFG
 import { useState } from 'react';
 
 const Skeleton = ({ className = '' }) => (
@@ -18,7 +18,8 @@ function ratingColor(rating) {
   return 'bg-red-700';
 }
 
-const LC_COLORS = ['bg-emerald-400', 'bg-amber-400', 'bg-rose-500'];
+const LC_COLORS  = ['bg-emerald-400', 'bg-amber-400', 'bg-rose-500'];
+const GFG_COLORS = ['bg-gray-400', 'bg-sky-400', 'bg-emerald-400', 'bg-amber-400', 'bg-rose-500'];
 
 function CfRow({ rating, count, maxCount }) {
   const pct = maxCount > 0 ? Math.round((count / maxCount) * 100) : 0;
@@ -67,15 +68,20 @@ export default function DifficultyBreakdown({ loading, cfBands, lcBands }) {
     );
   }
 
-  const cfRows = (cfBands || []).filter(b => b.count > 0);
-  const hasCf = cfRows.length > 0;
-  const hasLc = lcBands && lcBands.some(b => b.count > 0);
-  const activeTab = !hasCf ? 'lc' : !hasLc ? 'cf' : tab;
+  const cfRows  = (cfBands  || []).filter(b => b.count > 0);
+  const hasCf   = cfRows.length > 0;
+  const hasLc   = lcBands  && lcBands.some(b  => b.count > 0);
 
-  const isCfTab = activeTab === 'cf';
+  // Pick a sensible default tab
+  const fallbackTab = hasCf ? 'cf' : hasLc ? 'lc' : 'cf';
+  const activeTab = (!hasCf && tab === 'cf') ? fallbackTab
+                  : (!hasLc && tab === 'lc') ? fallbackTab
+                  : tab;
+
+  const isCfTab  = activeTab === 'cf';
   const rows = isCfTab ? cfRows : (lcBands || []);
   const maxCount = Math.max(...rows.map(r => r.count), 1);
-  const total = rows.reduce((s, r) => s + r.count, 0);
+  const total    = rows.reduce((s, r) => s + r.count, 0);
 
   return (
     <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4 flex flex-col h-full max-h-[400px]">
@@ -119,7 +125,8 @@ export default function DifficultyBreakdown({ loading, cfBands, lcBands }) {
           {rows.map((r, i) =>
             isCfTab
               ? <CfRow key={r.rating} rating={r.rating} count={r.count} maxCount={maxCount} />
-              : <LcRow key={i} label={r.label} count={r.count} maxCount={maxCount} colorClass={LC_COLORS[i] || 'bg-gray-400'} />
+              : <LcRow key={i} label={r.label} count={r.count} maxCount={maxCount}
+                  colorClass={isGfgTab ? (GFG_COLORS[i] || 'bg-gray-400') : (LC_COLORS[i] || 'bg-gray-400')} />
           )}
         </div>
       )}

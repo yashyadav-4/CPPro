@@ -8,11 +8,12 @@ export function useDashboardData() {
     const [cfData, setCfData] = useState(null);
     const [lcData, setLcData] = useState(null);
     const [ccData, setCcData] = useState(null);
+    const [gfgData, setGfgData] = useState(null);
     const [userId, setUserId] = useState(null);
     const [userRole, setUserRole] = useState('user');
     const [userName, setUserName] = useState('');
     const [userUsername, setUserUsername] = useState('');
-    const [linkedAccounts, setLinkedAccounts] = useState({ codeforces: false, leetcode: false, codechef: false });
+    const [linkedAccounts, setLinkedAccounts] = useState({ codeforces: false, leetcode: false, codechef: false, geeksforgeeks: false });
     const [lcSessionStatus, setLcSessionStatus] = useState('not_set');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -20,7 +21,7 @@ export function useDashboardData() {
 
     // Refs so refetch() always has current values without stale closures
     const uidRef = useRef(null);
-    const linkedRef = useRef({ codeforces: false, leetcode: false, codechef: false });
+    const linkedRef = useRef({ codeforces: false, leetcode: false, codechef: false, geeksforgeeks: false });
 
     const fetchPlatformData = useCallback(async (uid, linked, silent = false) => {
         if (!silent) setLoading(true);
@@ -35,12 +36,16 @@ export function useDashboardData() {
             const ccPromise = linked.codechef
                 ? axios.get(`/api/cc-dashboard/aggregate/${uid}`, config)
                 : Promise.resolve(null);
+            const gfgPromise = linked.geeksforgeeks
+                ? axios.get(`/api/gfg-dashboard/aggregate/${uid}`, config)
+                : Promise.resolve(null);
 
-            const [cfRes, lcRes, ccRes] = await Promise.allSettled([cfPromise, lcPromise, ccPromise]);
+            const [cfRes, lcRes, ccRes, gfgRes] = await Promise.allSettled([cfPromise, lcPromise, ccPromise, gfgPromise]);
 
             const newCfData = cfRes.status === 'fulfilled' && cfRes.value?.data?.data ? cfRes.value.data.data : null;
             const newLcData = lcRes.status === 'fulfilled' && lcRes.value?.data?.data ? lcRes.value.data.data : null;
             const newCcData = ccRes.status === 'fulfilled' && ccRes.value?.data?.data ? ccRes.value.data.data : null;
+            const newGfgData = gfgRes.status === 'fulfilled' && gfgRes.value?.data?.data ? gfgRes.value.data.data : null;
 
             // During a silent background revalidation, never wipe good data with null.
             // A null result means the platform fetch failed transiently — keep the
@@ -51,18 +56,20 @@ export function useDashboardData() {
                 // CC: always upsert-merge — spread new fields on top of prev so no
                 // existing field is lost even on a successful partial response.
                 if (newCcData !== null) setCcData(prev => ({ ...(prev || {}), ...newCcData }));
+                if (newGfgData !== null) setGfgData(newGfgData);
             } else {
                 setCfData(newCfData);
                 setLcData(newLcData);
                 // Non-silent (hard load): still merge CC so a re-fetch that omits a
                 // field doesn't blank out something the user was already seeing.
                 setCcData(prev => newCcData !== null ? { ...(prev || {}), ...newCcData } : prev);
+                setGfgData(newGfgData);
             }
 
             // Only update the localStorage cache if we have at least one real data
             // payload — avoids caching a partial-null snapshot that would then be
             // displayed as blank stats on the next page load.
-            const hasAnyData = newCfData || newLcData || newCcData;
+            const hasAnyData = newCfData || newLcData || newCcData || newGfgData;
             if (hasAnyData) {
                 try {
                     // Merge with any existing cached values so we never write nulls
@@ -75,9 +82,10 @@ export function useDashboardData() {
                         ? { ...(existing?.ccData || {}), ...newCcData }
                         : (existing?.ccData ?? null);
                     localStorage.setItem(cacheKey(uid), JSON.stringify({
-                        cfData: newCfData ?? existing?.cfData ?? null,
-                        lcData: newLcData ?? existing?.lcData ?? null,
-                        ccData: mergedCcData,
+                        cfData:  newCfData  ?? existing?.cfData  ?? null,
+                        lcData:  newLcData  ?? existing?.lcData  ?? null,
+                        ccData:  mergedCcData,
+                        gfgData: newGfgData ?? existing?.gfgData ?? null,
                     }));
                 } catch {}
             }
@@ -98,9 +106,10 @@ export function useDashboardData() {
 
                 const uid = user._id;
                 const linked = {
-                    codeforces: !!user.linkedAccounts?.codeforces,
-                    leetcode:   !!user.linkedAccounts?.leetcode,
-                    codechef:   !!user.linkedAccounts?.codechef,
+                    codeforces:    !!user.linkedAccounts?.codeforces,
+                    leetcode:      !!user.linkedAccounts?.leetcode,
+                    codechef:      !!user.linkedAccounts?.codechef,
+                    geeksforgeeks: !!user.linkedAccounts?.geeksforgeeks,
                 };
 
                 uidRef.current = uid;
@@ -125,6 +134,7 @@ export function useDashboardData() {
                         setCfData(cached.cfData ?? null);
                         setLcData(cached.lcData ?? null);
                         setCcData(cached.ccData ?? null);
+                        setGfgData(cached.gfgData ?? null);
                         hasCached = true;
                     }
                 } catch {}
@@ -154,5 +164,5 @@ export function useDashboardData() {
         await fetchPlatformData(uid, linked, silent);
     }, [fetchPlatformData]);
 
-    return { cfData, lcData, ccData, userId, userRole, userName, userUsername, linkedAccounts, lcSessionStatus, hardSyncTimestamps, loading, error, refetch };
+    return { cfData, lcData, ccData, gfgData, userId, userRole, userName, userUsername, linkedAccounts, lcSessionStatus, hardSyncTimestamps, loading, error, refetch };
 }

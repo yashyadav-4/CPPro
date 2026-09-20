@@ -84,6 +84,31 @@ const unlinkCodeChefAccount = async (req, res) => {
     }
 };
 
+// ── GFG handlers ──
+const verifyGfgAccount = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { handle } = req.body;
+        if (!handle) {
+            return res.status(400).json({ success: false, message: 'GFG handle required' });
+        }
+        const result = await settingsService.verifyAndLinkGfg(userId, handle);
+        return res.status(200).json({ success: true, message: result.message });
+    } catch (error) {
+        return res.status(error.status || 500).json({ success: false, message: error.message });
+    }
+};
+
+const unlinkGfgAccount = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const result = await settingsService.unlinkGfg(userId);
+        return res.status(200).json({ success: true, message: result.message });
+    } catch (error) {
+        return res.status(error.status || 500).json({ success: false, message: error.message });
+    }
+};
+
 const getProfile = async (req, res) => {
     try {
         const userId = req.user._id;
@@ -250,14 +275,27 @@ async function updatePreferences(req, res) {
     }
 }
 
+const getGfgVerificationCode = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const code = await settingsService.generateGfgCode(userId);
+        return res.status(200).json({ success: true, code });
+    } catch {
+        return res.status(500).json({ success: false, message: 'Could not generate code' });
+    }
+};
+
 module.exports = {
     getVerificationCode,
+    getGfgVerificationCode,
     verifyCodeforcesAccount,
     unlinkCodeforcesAccount,
     verifyLeetcodeAccount,
     unlinkLeetcodeAccount,
     verifyCodeChefAccount,
     unlinkCodeChefAccount,
+    verifyGfgAccount,
+    unlinkGfgAccount,
     getProfile,
     updateProfile,
     saveLcSession,

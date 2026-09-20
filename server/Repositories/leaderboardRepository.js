@@ -46,6 +46,14 @@ function buildCorePipeline(scope, scopeValue) {
                 foreignField: 'userId',
                 as: 'lcStats'
             }
+        },
+        {
+            $lookup: {
+                from: 'gfgdatas',
+                localField: '_id',
+                foreignField: 'userId',
+                as: 'gfgStats'
+            }
         }
     );
 
@@ -76,7 +84,8 @@ function buildCorePipeline(scope, scopeValue) {
                     0
                 ]
             },
-            lcDoc: { $arrayElemAt: ["$lcStats", 0] }
+            lcDoc: { $arrayElemAt: ["$lcStats", 0] },
+            gfgDoc: { $arrayElemAt: ["$gfgStats", 0] }
         }
     });
 
@@ -135,7 +144,8 @@ function buildCorePipeline(scope, scopeValue) {
                 $add: [
                     { $ifNull: ["$codeforcesDoc.totalSolved", 0] },
                     { $ifNull: ["$lcDoc.profile.totalSolved", 0] },
-                    { $ifNull: ["$codechefDoc.totalSolved", 0] }
+                    { $ifNull: ["$codechefDoc.totalSolved", 0] },
+                    { $ifNull: ["$gfgDoc.totalSolved", 0] }
                 ]
             }
         }
@@ -150,12 +160,17 @@ function buildCorePipeline(scope, scopeValue) {
                         { $multiply: ["$cfRating", 1.5] },
                         { $multiply: ["$lcRating", 1.2] },
                         { $multiply: ["$ccRating", 1.1] },
+                        // Problem difficulty weighting
                         { $multiply: [{ $ifNull: ["$codeforcesDoc.hardSolved", 0] }, 15] },
                         { $multiply: [{ $ifNull: ["$codeforcesDoc.mediumSolved", 0] }, 8] },
                         { $multiply: [{ $ifNull: ["$codeforcesDoc.easySolved", 0] }, 2] },
                         { $multiply: [{ $ifNull: ["$lcDoc.profile.hardSolved", 0] }, 20] },
                         { $multiply: [{ $ifNull: ["$lcDoc.profile.mediumSolved", 0] }, 8] },
                         { $multiply: [{ $ifNull: ["$lcDoc.profile.easySolved", 0] }, 2] },
+                        // CodeChef solved problems bonus (2 pts each)
+                        { $multiply: ["$ccSolved", 2] },
+                        // Overall solved questions bonus (1 pt per problem across all platforms)
+                        { $multiply: ["$totalSolved", 1] },
                         { $multiply: [{ $add: ["$cfContests", "$lcContests", "$ccContests"] }, 10] },
                         { $max: [0, { $multiply: [{ $subtract: ["$cfMaxRating", "$cfRating"] }, 0.5] }] },
                         {
@@ -163,7 +178,12 @@ function buildCorePipeline(scope, scopeValue) {
                                 { $multiply: [{ $max: ["$cfStreak", "$lcStreak"] }, 2] },
                                 200
                             ]
-                        }
+                        },
+                        // GFG contribution: codingScore×0.4 + hard×15 + medium×6 + easy×2
+                        { $multiply: [{ $ifNull: ["$gfgDoc.codingScore", 0] }, 0.4] },
+                        { $multiply: [{ $ifNull: ["$gfgDoc.solvedByDifficulty.hard", 0] }, 15] },
+                        { $multiply: [{ $ifNull: ["$gfgDoc.solvedByDifficulty.medium", 0] }, 6] },
+                        { $multiply: [{ $ifNull: ["$gfgDoc.solvedByDifficulty.easy", 0] }, 2] }
                     ]
                 }
             }
@@ -220,6 +240,7 @@ const getLeaderboardData = async (scope, scopeValue, category, isAdmin = false) 
         lcSolved: "$lcTotalSolved",
         ccRating: 1,
         ccSolved: 1,
+        gfgSolved: { $ifNull: ["$gfgDoc.totalSolved", 0] },
         totalSolved: 1,
         isPublic: { $ifNull: ["$preferences.public", true] }
     };
