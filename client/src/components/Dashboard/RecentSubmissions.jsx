@@ -19,6 +19,11 @@ const CC_BADGE = (
     CC
   </span>
 );
+const GFG_BADGE = (
+  <span className="text-[9px] font-bold text-[#2F8D46] dark:text-[#4ade80] bg-green-500/10 border border-green-500/20 px-1.5 py-0.5 rounded flex-shrink-0">
+    GFG
+  </span>
+);
 
 function timeAgo(value) {
   if (!value) return '';
@@ -55,7 +60,7 @@ function isValidTime(value) {
   return ms > 0 && ms <= NOW_MS + 172_800_000; // reject epoch + future (48h buffer)
 }
 
-export default function RecentSubmissions({ loading, cfSubmissions, lcSubmissions, ccSubmissions, view = 'all' }) {
+export default function RecentSubmissions({ loading, cfSubmissions, lcSubmissions, ccSubmissions, gfgSubmissions, view = 'all' }) {
   if (loading) {
     return (
       <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4">
@@ -103,8 +108,19 @@ export default function RecentSubmissions({ loading, cfSubmissions, lcSubmission
       time: s.submittedAt,
     }));
 
+  // Normalise GFG items
+  const gfgItems = (gfgSubmissions || [])
+    .filter(s => isValidTime(s.submittedAt))
+    .map(s => ({
+      platform: 'gfg',
+      title: s.title || s.slug || 'Unknown',
+      url: s.slug ? `https://www.geeksforgeeks.org/problems/${s.slug}/1` : null,
+      difficulty: s.difficulty || null,
+      time: s.submittedAt,
+    }));
+
   // Merge + sort by time desc (most recent first)
-  const merged = [...cfItems, ...lcItems, ...ccItems]
+  const merged = [...cfItems, ...lcItems, ...ccItems, ...gfgItems]
     .sort((a, b) => getMs(b.time) - getMs(a.time))
     .slice(0, 10);
 
@@ -114,7 +130,9 @@ export default function RecentSubmissions({ loading, cfSubmissions, lcSubmission
       ? 'Recent AC Submissions (LC)'
       : view === 'cc'
         ? 'Recent AC Submissions (CC)'
-        : 'Recent AC Submissions';
+        : view === 'gfg'
+          ? 'Recent AC Submissions (GFG)'
+          : 'Recent AC Submissions';
 
   if (merged.length === 0) {
     return (
@@ -140,7 +158,12 @@ export default function RecentSubmissions({ loading, cfSubmissions, lcSubmission
             }`}
           >
             {/* Platform badge */}
-            {view === 'all' && (item.platform === 'cf' ? CF_BADGE : item.platform === 'lc' ? LC_BADGE : CC_BADGE)}
+            {view === 'all' && (
+              item.platform === 'cf' ? CF_BADGE
+              : item.platform === 'lc' ? LC_BADGE
+              : item.platform === 'cc' ? CC_BADGE
+              : GFG_BADGE
+            )}
 
             {/* Dot */}
             <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-emerald-500" />
@@ -153,8 +176,8 @@ export default function RecentSubmissions({ loading, cfSubmissions, lcSubmission
             {/* Difficulty tag */}
             {item.difficulty && (
               <span className={`text-[10px] font-semibold flex-shrink-0 ${
-                item.platform === 'lc'
-                  ? item.difficulty === 'Easy'
+                item.platform === 'lc' || item.platform === 'gfg'
+                  ? item.difficulty === 'Easy' || item.difficulty === 'Basic' || item.difficulty === 'School'
                     ? 'text-emerald-500 dark:text-emerald-400'
                     : item.difficulty === 'Medium'
                       ? 'text-amber-500 dark:text-amber-400'

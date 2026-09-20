@@ -69,10 +69,11 @@ function StatCard({ meta, value, sub, extra }) {
 export default function StatCards({
   loading,
   totalSolved, cfSolved, lcSolved, ccSolved, gfgSolved, activeDays,
-  totalSubmissions, cfTotalSubmissions, lcTotalSubmissions, ccTotalSubmissions,
+  totalSubmissions, cfTotalSubmissions, lcTotalSubmissions, ccTotalSubmissions, gfgTotalSubmissions,
   currentStreak, bestStreak,
   acceptanceRate, cfAcceptanceRate, lcAcceptanceRate, ccAcceptanceRate,
-  solvedThisMonth, activeDaysThisMonth,
+  solvedThisMonth, cfSolvedThisMonth, lcSolvedThisMonth, ccSolvedThisMonth, gfgSolvedThisMonth,
+  activeDaysThisMonth,
 }) {
   if (loading) {
     return (
@@ -109,7 +110,7 @@ export default function StatCards({
       meta: CARDS_META[2],
       value: totalSubmissions ?? '—',
       sub: 'total attempts across platforms',
-      extra: platformBreakdown(cfTotalSubmissions, lcTotalSubmissions, ccTotalSubmissions),
+      extra: platformBreakdown(cfTotalSubmissions, lcTotalSubmissions, ccTotalSubmissions, gfgTotalSubmissions),
     },
     {
       meta: CARDS_META[3],
@@ -131,7 +132,7 @@ export default function StatCards({
       meta: CARDS_META[5],
       value: solvedThisMonth ?? 0,
       sub: 'this month',
-      extra: null,
+      extra: platformBreakdown(cfSolvedThisMonth, lcSolvedThisMonth, ccSolvedThisMonth, gfgSolvedThisMonth),
     },
   ];
 

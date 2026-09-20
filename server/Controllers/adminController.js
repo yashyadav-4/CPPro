@@ -322,6 +322,7 @@ async function getAdminStats(req, res) {
                 cfLinked: !!(u.linkedAccounts?.codeforces),
                 lcLinked: !!(u.linkedAccounts?.leetcode),
                 ccLinked: !!(u.linkedAccounts?.codechef),
+                gfgLinked: !!(u.linkedAccounts?.geeksforgeeks),
             })),
             serverMeta: {
                 uptime: `${Math.floor(process.uptime() / 60)} min`,
@@ -613,6 +614,7 @@ async function getActiveUsers(req, res) {
             cfLinked: !!(u.linkedAccounts?.codeforces),
             lcLinked: !!(u.linkedAccounts?.leetcode),
             ccLinked: !!(u.linkedAccounts?.codechef),
+            gfgLinked: !!(u.linkedAccounts?.geeksforgeeks),
         });
 
         return res.json({

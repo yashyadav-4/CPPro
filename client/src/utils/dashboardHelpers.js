@@ -4,27 +4,32 @@
  */
 
 //merge day arrays into combined last-7-days
-export function mergeLast7Days(cfDays, lcDays, ccDays) {
+export function mergeLast7Days(cfDays, lcDays, ccDays, gfgDays) {
   const result = [];
-  const len = Math.max(cfDays?.length || 0, lcDays?.length || 0, ccDays?.length || 0, 7);
+  const len = Math.max(cfDays?.length || 0, lcDays?.length || 0, ccDays?.length || 0, gfgDays?.length || 0, 7);
   for (let i = 0; i < len; i++) {
     const cfDay = cfDays?.[i] || { date: '', solved: false };
     const lcDay = lcDays?.[i] || { date: '', solved: false };
     const ccDay = ccDays?.[i] || { date: '', solved: false };
+    const gfgDay = gfgDays?.[i] || { date: '', solved: false };
     result.push({
-      date: cfDay.date || lcDay.date || ccDay.date,
-      solved: cfDay.solved || lcDay.solved || ccDay.solved,
+      date: cfDay.date || lcDay.date || ccDay.date || gfgDay.date,
+      solved: cfDay.solved || lcDay.solved || ccDay.solved || gfgDay.solved,
     });
   }
   return result;
 }
 
-//merge heatmap arrays (CF + LC + CC calendar)
-export function mergeHeatmaps(cfHeatmap, lcCalendar, ccHeatmap) {
+//merge heatmap arrays (CF + LC + CC + GFG calendar)
+export function mergeHeatmaps(...heatmaps) {
   const map = {};
-  (cfHeatmap || []).forEach(d => { map[d.date] = (map[d.date] || 0) + d.count; });
-  (lcCalendar || []).forEach(d => { map[d.date] = (map[d.date] || 0) + d.count; });
-  (ccHeatmap || []).forEach(d => { map[d.date] = (map[d.date] || 0) + d.count; });
+  heatmaps.forEach(hm => {
+    (hm || []).forEach(d => {
+      if (d && d.date) {
+        map[d.date] = (map[d.date] || 0) + (d.count || 1);
+      }
+    });
+  });
   return Object.entries(map).map(([date, count]) => ({ date, count })).sort((a, b) => a.date.localeCompare(b.date));
 }
 

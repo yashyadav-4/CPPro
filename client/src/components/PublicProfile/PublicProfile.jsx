@@ -329,10 +329,10 @@ export default function PublicProfile() {
   const loading = dataLoading;
 
   const totalSolved = (cf.cfSolved ?? 0) + (lc.lcSolved ?? 0) + (cc.totalSolved ?? 0) + (gfg.totalSolved ?? 0);
-  const totalSubmissions = (cf.cfTotalSubmissions ?? 0) + (lc.lcTotalSubmissions ?? 0) + (cc.totalSubmissions ?? 0);
-  const solvedThisMonth = (cf.cfSolvedThisMonth ?? 0) + (lc.lcSolvedThisMonth ?? 0) + (cc.ccSolvedThisMonth ?? 0);
+  const totalSubmissions = (cf.cfTotalSubmissions ?? 0) + (lc.lcTotalSubmissions ?? 0) + (cc.totalSubmissions ?? 0) + (gfg.totalSolved ?? 0);
+  const solvedThisMonth = (cf.cfSolvedThisMonth ?? 0) + (lc.lcSolvedThisMonth ?? 0) + (cc.ccSolvedThisMonth ?? 0) + (gfg.solvedThisMonth ?? 0);
 
-  const heatmapData = mergeHeatmaps(cf.cfHeatmap, lc.lcCalendarParsed, cc.ccHeatmap);
+  const heatmapData = mergeHeatmaps(cf.cfHeatmap, lc.lcCalendarParsed, cc.ccHeatmap, gfg.heatmap);
   const activeDays = heatmapData.length;
   const now = new Date();
   const monthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -344,9 +344,11 @@ export default function PublicProfile() {
   const ccBS = cc.bestStreak ?? 0;
   const cfBS = cf.cfBestStreak ?? 0;
   const lcBS = lc.bestStreak ?? 0;
-  const currentStreak = Math.max(lc.currentStreak ?? 0, cf.cfCurrentStreak ?? 0, cc.currentStreak ?? 0);
-  const bestStreak = Math.max(lcBS, cfBS, ccBS);
-  const bestStreakPlatform = ccBS > lcBS && ccBS > cfBS ? 'codechef' : (lc.bestStreakPlatform ?? 'codeforces');
+  const gfgBS = gfg.bestStreak ?? 0;
+  const currentStreak = Math.max(lc.currentStreak ?? 0, cf.cfCurrentStreak ?? 0, cc.currentStreak ?? 0, gfg.currentStreak ?? 0);
+  const bestStreak = Math.max(lcBS, cfBS, ccBS, gfgBS);
+  const maxBS = Math.max(ccBS, lcBS, cfBS, gfgBS);
+  const bestStreakPlatform = maxBS === gfgBS && gfgBS > 0 ? 'geeksforgeeks' : (ccBS > lcBS && ccBS > cfBS ? 'codechef' : (lc.bestStreakPlatform ?? 'codeforces'));
 
   const cfAR = cf.cfAcceptanceRate ?? null;
   const lcAR = lc.lcAcceptanceRate ?? null;
@@ -379,7 +381,18 @@ export default function PublicProfile() {
     { label: 'Hard',   count: gfg.solvedByDifficulty?.hard   ?? 0 },
   ];
 
-  const last7Days = mergeLast7Days(cf.cfLast7Days, lc.lcLast7Days, cc.ccLast7Days);
+  const last7DaysDates = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+    return d.toISOString().split('T')[0];
+  });
+  const gfgHeatmapSet = new Set((gfg.heatmap || []).map(h => h.date));
+  const gfgLast7Days = last7DaysDates.map(date => ({
+    date,
+    solved: gfgHeatmapSet.has(date),
+  }));
+
+  const last7Days = mergeLast7Days(cf.cfLast7Days, lc.lcLast7Days, cc.ccLast7Days, gfgLast7Days);
 
   const cfRatingHistory = cf.cfRatingHistory || [];
   const lcRatingHistory = lc.lcRatingHistory || [];
@@ -428,6 +441,7 @@ export default function PublicProfile() {
             cfTotalSubmissions={cf.cfTotalSubmissions ?? 0}
             lcTotalSubmissions={lc.lcTotalSubmissions ?? 0}
             ccTotalSubmissions={cc.totalSubmissions ?? 0}
+            gfgTotalSubmissions={gfg.totalSolved ?? 0}
             currentStreak={currentStreak}
             bestStreak={bestStreak}
             acceptanceRate={acceptanceRate}
@@ -435,6 +449,10 @@ export default function PublicProfile() {
             lcAcceptanceRate={lcAR}
             ccAcceptanceRate={ccAR}
             solvedThisMonth={solvedThisMonth}
+            cfSolvedThisMonth={cf.cfSolvedThisMonth ?? 0}
+            lcSolvedThisMonth={lc.lcSolvedThisMonth ?? 0}
+            ccSolvedThisMonth={cc.ccSolvedThisMonth ?? 0}
+            gfgSolvedThisMonth={gfg.solvedThisMonth ?? 0}
             activeDaysThisMonth={activeDaysThisMonth}
           />
         </ErrorBoundary>
@@ -523,6 +541,7 @@ export default function PublicProfile() {
               cfSubmissions={cf.recentCfSubmissions}
               lcSubmissions={lc.recentSubmissions}
               ccSubmissions={cc.recentCcAcSubmissions}
+              gfgSubmissions={gfg.recentSubmissions}
               view="all"
             />
           </ErrorBoundary>

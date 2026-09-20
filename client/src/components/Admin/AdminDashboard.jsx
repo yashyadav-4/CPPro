@@ -431,6 +431,11 @@ function UserRow({ u }) {
           {u.ccLinked ? 'CC' : '—'}
         </span>
       </td>
+      <td className="py-2.5 pr-4">
+        <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${u.gfgLinked ? 'bg-emerald-600/20 text-[#2F8D46]' : 'text-gray-700'}`}>
+          {u.gfgLinked ? 'GFG' : '—'}
+        </span>
+      </td>
       <td className="py-2.5 text-gray-500">
         {u.isOnlineNow
           ? <span className="text-emerald-400 font-medium">Online</span>
@@ -467,7 +472,7 @@ function ActiveUsersPanel() {
     return () => clearInterval(interval);
   }, [fetchActive]);
 
-  const tableHeaders = ['', 'User', 'Email', 'Role', 'CF', 'LC', 'CC', 'Last Seen'];
+  const tableHeaders = ['', 'User', 'Email', 'Role', 'CF', 'LC', 'CC', 'GFG', 'Last Seen'];
 
   return (
     <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-5 space-y-4">
@@ -1325,7 +1330,7 @@ export default function AdminDashboard() {
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b border-white/[0.06]">
-                    {['User', 'Email', 'Role', 'Verified', 'CF', 'LC', 'CC', 'Last Login', 'Joined'].map(h => (
+                    {['User', 'Email', 'Role', 'Verified', 'CF', 'LC', 'CC', 'GFG', 'Last Login', 'Joined'].map(h => (
                       <th key={h} className="text-left text-gray-500 font-medium pb-2 pr-4 uppercase tracking-wide text-[10px]">{h}</th>
                     ))}
                   </tr>
@@ -1370,6 +1375,11 @@ export default function AdminDashboard() {
                       <td className="py-2.5 pr-4">
                         <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${u.ccLinked ? 'bg-emerald-500/15 text-emerald-400' : 'text-gray-700'}`}>
                           {u.ccLinked ? 'CC' : '—'}
+                        </span>
+                      </td>
+                      <td className="py-2.5 pr-4">
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${u.gfgLinked ? 'bg-emerald-600/20 text-[#2F8D46]' : 'text-gray-700'}`}>
+                          {u.gfgLinked ? 'GFG' : '—'}
                         </span>
                       </td>
                       <td className="py-2.5 pr-4 text-gray-500">{timeAgo(u.lastLogin)}</td>

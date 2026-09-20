@@ -53,7 +53,7 @@ function LcRow({ label, count, maxCount, colorClass }) {
   );
 }
 
-export default function DifficultyBreakdown({ loading, cfBands, lcBands }) {
+export default function DifficultyBreakdown({ loading, cfBands, lcBands, gfgBands }) {
   const [tab, setTab] = useState('cf');
 
   if (loading) {
@@ -71,15 +71,18 @@ export default function DifficultyBreakdown({ loading, cfBands, lcBands }) {
   const cfRows  = (cfBands  || []).filter(b => b.count > 0);
   const hasCf   = cfRows.length > 0;
   const hasLc   = lcBands  && lcBands.some(b  => b.count > 0);
+  const hasGfg  = gfgBands && gfgBands.some(b => b.count > 0);
 
   // Pick a sensible default tab
-  const fallbackTab = hasCf ? 'cf' : hasLc ? 'lc' : 'cf';
+  const fallbackTab = hasCf ? 'cf' : hasLc ? 'lc' : hasGfg ? 'gfg' : 'cf';
   const activeTab = (!hasCf && tab === 'cf') ? fallbackTab
                   : (!hasLc && tab === 'lc') ? fallbackTab
+                  : (!hasGfg && tab === 'gfg') ? fallbackTab
                   : tab;
 
   const isCfTab  = activeTab === 'cf';
-  const rows = isCfTab ? cfRows : (lcBands || []);
+  const isGfgTab = activeTab === 'gfg';
+  const rows = isCfTab ? cfRows : isGfgTab ? (gfgBands || []) : (lcBands || []);
   const maxCount = Math.max(...rows.map(r => r.count), 1);
   const total    = rows.reduce((s, r) => s + r.count, 0);
 
@@ -106,6 +109,14 @@ export default function DifficultyBreakdown({ loading, cfBands, lcBands }) {
                  ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-500'
                  : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
              >LeetCode</button>
+          )}
+          {hasGfg && (
+            <button
+               onClick={() => setTab('gfg')}
+               className={`text-xs px-2.5 py-1 rounded-md font-medium transition-colors ${activeTab === 'gfg'
+                 ? 'bg-green-50 dark:bg-green-950/40 text-[#2F8D46] dark:text-[#4ade80]'
+                 : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
+             >GeeksforGeeks</button>
           )}
         </div>
       </div>

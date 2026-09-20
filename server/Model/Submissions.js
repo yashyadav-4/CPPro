@@ -16,7 +16,7 @@ const submissionSchema= new mongoose.Schema({
     },
     platform:{
         type:String,
-        enum:['codeforces' , 'leetcode' , 'codechef'],
+        enum:['codeforces' , 'leetcode' , 'codechef', 'geeksforgeeks'],
         required:true,
     },
     problemUrl:{
