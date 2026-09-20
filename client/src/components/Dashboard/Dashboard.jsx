@@ -1,7 +1,7 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
-import { RefreshCw, Link as LinkIcon, AlertTriangle, Shield, Share2, ExternalLink, Zap } from 'lucide-react';
+import { RefreshCw, Link as LinkIcon, AlertTriangle, Shield, Share2, ExternalLink, Zap, Check } from 'lucide-react';
 
 import { useDashboardData } from '../../hooks/useDashboardData';
 import { mergeLast7Days, mergeHeatmaps, mergeTopics, mergeContests } from '../../utils/dashboardHelpers';
@@ -114,17 +114,52 @@ export default function Dashboard() {
 
   const formatCooldown = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
-  const handleRefresh = useCallback(async () => {
-    if (cooldown > 0 || !userId) return;
+  // ── Sync popover state ──────────────────────────────────────────────────────
+  const [showSyncPopover, setShowSyncPopover] = useState(false);
+  const [selectedPlatforms, setSelectedPlatforms] = useState(new Set());
+  const popoverRef = useRef(null);
+
+  // Close popover on outside click
+  useEffect(() => {
+    if (!showSyncPopover) return;
+    const handler = (e) => {
+      if (popoverRef.current && !popoverRef.current.contains(e.target)) {
+        setShowSyncPopover(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showSyncPopover]);
+
+  const openSyncPopover = useCallback(() => {
+    if (cooldown > 0 || refreshing) return;
+    // Open with nothing selected — user explicitly picks what they practiced
+    setSelectedPlatforms(new Set());
+    setShowSyncPopover(true);
+  }, [cooldown, refreshing]);
+
+  const togglePlatform = useCallback((key) => {
+    setSelectedPlatforms(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  }, []);
+
+  const handleRefresh = useCallback(async (platformsToSync) => {
+    if (cooldown > 0 || !userId || !platformsToSync || platformsToSync.size === 0) return;
+    setShowSyncPopover(false);
     setRefreshing(true);
     setCcSyncError(null);
 
     try {
       const config = { withCredentials: true };
       const tagged = [];
-      if (linkedAccounts.codeforces) tagged.push({ platform: 'cf', promise: axios.post('/api/sync/refresh', {}, config) });
-      if (linkedAccounts.leetcode)   tagged.push({ platform: 'lc', promise: axios.post('/api/sync/refresh-lc', {}, config) });
-      if (linkedAccounts.codechef)   tagged.push({ platform: 'cc', promise: axios.post('/api/sync/refresh-cc', {}, config) });
+      if (platformsToSync.has('cf') && linkedAccounts.codeforces) tagged.push({ platform: 'cf', promise: axios.post('/api/sync/refresh', {}, config) });
+      if (platformsToSync.has('lc') && linkedAccounts.leetcode)   tagged.push({ platform: 'lc', promise: axios.post('/api/sync/refresh-lc', {}, config) });
+      if (platformsToSync.has('cc') && linkedAccounts.codechef)   tagged.push({ platform: 'cc', promise: axios.post('/api/sync/refresh-cc', {}, config) });
+
+      if (tagged.length === 0) { setRefreshing(false); return; }
 
       const results = await Promise.allSettled(tagged.map(t => t.promise));
 
@@ -403,20 +438,92 @@ export default function Dashboard() {
               <Share2 size={12} />
               Share
             </button>
-            <button
-              onClick={handleRefresh}
-              disabled={refreshing || cooldown > 0}
-              className={`flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg text-white transition-colors ${
-                refreshing
-                    ? 'bg-emerald-400 cursor-not-allowed'
-                  : cooldown > 0
-                    ? 'bg-amber-500 cursor-not-allowed'
-                    : 'bg-emerald-600 hover:bg-emerald-700'
-              }`}
-            >
-              <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
-              {refreshing ? 'Refreshing...' : cooldown > 0 ? `${formatCooldown(cooldown)}` : 'Refresh'}
-            </button>
+            {/* Refresh — opens inline platform-picker popover */}
+            <div className="relative" ref={popoverRef}>
+              <button
+                onClick={refreshing || cooldown > 0 ? undefined : openSyncPopover}
+                disabled={refreshing || cooldown > 0}
+                className={`flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg text-white transition-colors ${
+                  refreshing
+                      ? 'bg-emerald-400 cursor-not-allowed'
+                    : cooldown > 0
+                      ? 'bg-amber-500 cursor-not-allowed'
+                      : 'bg-emerald-600 hover:bg-emerald-700'
+                }`}
+              >
+                <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
+                {refreshing ? 'Refreshing...' : cooldown > 0 ? `${formatCooldown(cooldown)}` : 'Refresh'}
+              </button>
+
+              {/* Inline sync popover — horizontal */}
+              {showSyncPopover && (
+                <div className="absolute right-0 top-full mt-1.5 z-50 rounded-xl border border-black/[0.08] dark:border-white/[0.09] bg-white dark:bg-[#111111] shadow-lg dark:shadow-none ring-1 ring-black/[0.04] dark:ring-white/[0.04] p-2.5 min-w-max">
+                  <p className="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2 px-0.5">Select platforms to sync</p>
+
+                  {/* Platform toggle pills — horizontal row */}
+                  <div className="flex items-center gap-1.5 mb-2.5">
+                    {[
+                      linkedAccounts.codeforces && {
+                        key: 'cf', label: 'Codeforces',
+                        selectedLight: 'border-[#1F8ACB] bg-blue-50/80 text-blue-700 font-semibold shadow-sm',
+                        selectedDark:  'dark:border-[#1F8ACB]/60 dark:bg-blue-500/15 dark:text-blue-300 dark:ring-1 dark:ring-[#1F8ACB]/30',
+                        icon: (
+                          <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 shrink-0" fill="currentColor">
+                            <path d="M4.5 7.5A1.5 1.5 0 0 1 6 6h3a1.5 1.5 0 0 1 1.5 1.5v9A1.5 1.5 0 0 1 9 18H6a1.5 1.5 0 0 1-1.5-1.5v-9zM13.5 3A1.5 1.5 0 0 1 15 1.5h3A1.5 1.5 0 0 1 19.5 3v13.5A1.5 1.5 0 0 1 18 18h-3a1.5 1.5 0 0 1-1.5-1.5V3z"/>
+                          </svg>
+                        ),
+                      },
+                      linkedAccounts.leetcode && {
+                        key: 'lc', label: 'LeetCode',
+                        selectedLight: 'border-[#FFA116] bg-amber-50/80 text-amber-700 font-semibold shadow-sm',
+                        selectedDark:  'dark:border-[#FFA116]/60 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-1 dark:ring-[#FFA116]/30',
+                        icon: (
+                          <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 shrink-0" fill="currentColor">
+                            <path d="M13.483 0a1.374 1.374 0 0 0-.961.438L7.116 6.226l-3.854 4.126a5.266 5.266 0 0 0-1.209 2.104 5.35 5.35 0 0 0-.125.513 5.527 5.527 0 0 0 .062 2.362 5.83 5.83 0 0 0 .349 1.017 5.938 5.938 0 0 0 1.271 1.818l4.277 4.193.039.038c2.248 2.165 5.852 2.133 8.063-.074l2.396-2.392c.54-.54.54-1.414.003-1.955a1.378 1.378 0 0 0-1.951-.003l-2.396 2.392a3.021 3.021 0 0 1-4.205.038l-.02-.019-4.276-4.193c-.652-.64-.972-1.469-.948-2.263a2.68 2.68 0 0 1 .066-.523 2.545 2.545 0 0 1 .619-1.164L9.13 8.114c1.058-1.134 3.204-1.27 4.43-.278l3.501 2.831c.593.48 1.461.387 1.94-.207a1.384 1.384 0 0 0-.207-1.943l-3.5-2.831c-.8-.647-1.766-1.045-2.774-1.202l2.015-2.158A1.384 1.384 0 0 0 13.483 0zm-2.866 12.815a1.38 1.38 0 0 0-1.38 1.382 1.38 1.38 0 0 0 1.38 1.382H20.79a1.38 1.38 0 0 0 1.38-1.382 1.38 1.38 0 0 0-1.38-1.382z"/>
+                          </svg>
+                        ),
+                      },
+                      linkedAccounts.codechef && {
+                        key: 'cc', label: 'CodeChef',
+                        selectedLight: 'border-[#8B5A2B] bg-orange-50/80 text-orange-800 font-semibold shadow-sm',
+                        selectedDark:  'dark:border-[#D97706]/60 dark:bg-orange-500/15 dark:text-orange-300 dark:ring-1 dark:ring-[#D97706]/30',
+                        icon: (
+                          <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 shrink-0" fill="currentColor">
+                            <path d="M11.007 0C4.926.01-.01 4.957 0 11.038c.01 6.121 4.977 11.058 11.097 11.04 6.082-.017 11.005-4.993 10.985-11.073C22.062 4.923 17.088-.008 11.007 0zm1.933 17.246c-.372.152-.757.267-1.148.345-.396.078-.795.116-1.194.114a5.73 5.73 0 0 1-1.845-.293 4.38 4.38 0 0 1-1.527-.894 4.2 4.2 0 0 1-1.032-1.458c-.253-.577-.38-1.226-.38-1.946 0-.806.148-1.51.444-2.11a4.17 4.17 0 0 1 1.197-1.49 5.146 5.146 0 0 1 1.73-.882 7.088 7.088 0 0 1 2.008-.288c.336 0 .679.022 1.024.067.35.044.686.115 1.007.213.317.096.617.22.898.37.28.15.529.327.743.528l-.979 1.34a3.68 3.68 0 0 0-.979-.6 3.057 3.057 0 0 0-1.204-.229c-.358 0-.709.052-1.047.156a2.595 2.595 0 0 0-.898.47c-.26.21-.47.479-.627.802-.158.323-.237.706-.237 1.148 0 .43.074.807.221 1.133.148.326.35.599.604.817.255.218.552.383.891.496.34.113.703.17 1.09.17.454 0 .873-.08 1.255-.24.383-.16.73-.39 1.04-.69l.917 1.28a5.25 5.25 0 0 1-1.072.67z"/>
+                          </svg>
+                        ),
+                      },
+                    ].filter(Boolean).map(({ key, label, selectedLight, selectedDark, icon }) => {
+                      const isSelected = selectedPlatforms.has(key);
+                      return (
+                        <button
+                          key={key}
+                          onClick={() => togglePlatform(key)}
+                          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs transition-all duration-100 ${
+                            isSelected
+                              ? `${selectedLight} ${selectedDark}`
+                              : 'border-black/[0.08] dark:border-white/[0.08] bg-gray-50/50 dark:bg-white/[0.02] text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/[0.04]'
+                          }`}
+                        >
+                          {icon}
+                          <span>{label}</span>
+                          {isSelected && <Check size={10} className="shrink-0 opacity-80" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Sync action */}
+                  <button
+                    onClick={() => handleRefresh(selectedPlatforms)}
+                    disabled={selectedPlatforms.size === 0}
+                    className="w-full py-1.5 text-xs font-medium rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    {selectedPlatforms.size === 0 ? 'Select a platform' : ` Sync (${selectedPlatforms.size})`}
+                  </button>
+                </div>
+              )}
+            </div>
             {/* Hard Refresh hint */}
             {(() => {
               if (cooldown > 0 || refreshing) return null;
