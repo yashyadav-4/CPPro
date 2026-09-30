@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const User = require('../Model/User');
 
-// Map category query param to the sort field
+//map category query param to the sort field
 const SORT_FIELD_MAP = {
     cpscore: 'cpScore',
     totalQuestions: 'totalSolved',
@@ -11,14 +11,13 @@ const SORT_FIELD_MAP = {
 };
 
 /**
- * Builds the shared aggregation stages that compute all stats.
- * Used by both getLeaderboardData and getUserRank so the score
- * logic is never duplicated.
+ * builds the shared aggregation stages that compute all stats.
+ * used by both getLeaderboardData and getUserRank so the score
  */
 function buildCorePipeline(scope, scopeValue) {
     const stages = [];
 
-    // ── 1. Scope filter (before $lookup to shrink working set) ──
+    // Scope filter (before $lookup to shrink working set)
     const matchStage = {};
     if (scope === 'country' && scopeValue) {
         matchStage["location.country"] = scopeValue;
@@ -29,7 +28,7 @@ function buildCorePipeline(scope, scopeValue) {
         stages.push({ $match: matchStage });
     }
 
-    // ── 2. Lookups ──
+    //lookups
     stages.push(
         {
             $lookup: {
@@ -57,7 +56,7 @@ function buildCorePipeline(scope, scopeValue) {
         }
     );
 
-    // ── 3. Extract CF, LC & CC docs ──
+    //extract CF, LC & CC docs
     stages.push({
         $addFields: {
             codeforcesDoc: {
@@ -89,7 +88,7 @@ function buildCorePipeline(scope, scopeValue) {
         }
     });
 
-    // ── 4. Extract LC latest contest rating ──
+    //extract LC latest contest rating
     stages.push({
         $addFields: {
             lcLatestRating: {
@@ -126,7 +125,7 @@ function buildCorePipeline(scope, scopeValue) {
         }
     });
 
-    // ── 5. Flatten stats + compute totalSolved early (needed for sort) ──
+    //flatten stats + compute totalSolved early (needed for sort)
     stages.push({
         $addFields: {
             cfRating:   { $ifNull: ["$codeforcesDoc.currentRating", 0] },
@@ -151,7 +150,7 @@ function buildCorePipeline(scope, scopeValue) {
         }
     });
 
-    // ── 6. Compute cpScore ──
+    //compute cpScore
     stages.push({
         $addFields: {
             cpScore: {
@@ -160,15 +159,18 @@ function buildCorePipeline(scope, scopeValue) {
                         { $multiply: ["$cfRating", 1.5] },
                         { $multiply: ["$lcRating", 1.2] },
                         { $multiply: ["$ccRating", 1.1] },
-                        // Problem difficulty weighting
+
+                        //problem difficulty weighting
                         { $multiply: [{ $ifNull: ["$codeforcesDoc.hardSolved", 0] }, 15] },
                         { $multiply: [{ $ifNull: ["$codeforcesDoc.mediumSolved", 0] }, 8] },
                         { $multiply: [{ $ifNull: ["$codeforcesDoc.easySolved", 0] }, 2] },
                         { $multiply: [{ $ifNull: ["$lcDoc.profile.hardSolved", 0] }, 20] },
                         { $multiply: [{ $ifNull: ["$lcDoc.profile.mediumSolved", 0] }, 8] },
                         { $multiply: [{ $ifNull: ["$lcDoc.profile.easySolved", 0] }, 2] },
-                        // CodeChef solved problems bonus (2 pts each)
+
+                        //codeChef solved problems bonus (2 pts each)
                         { $multiply: ["$ccSolved", 2] },
+
                         // Overall solved questions bonus (1 pt per problem across all platforms)
                         { $multiply: ["$totalSolved", 1] },
                         { $multiply: [{ $add: ["$cfContests", "$lcContests", "$ccContests"] }, 10] },
@@ -179,6 +181,7 @@ function buildCorePipeline(scope, scopeValue) {
                                 200
                             ]
                         },
+
                         // GFG contribution: codingScore×0.4 + hard×15 + medium×6 + easy×2
                         { $multiply: [{ $ifNull: ["$gfgDoc.codingScore", 0] }, 0.4] },
                         { $multiply: [{ $ifNull: ["$gfgDoc.solvedByDifficulty.hard", 0] }, 15] },
@@ -194,22 +197,22 @@ function buildCorePipeline(scope, scopeValue) {
 }
 
 /**
- * Main leaderboard query — returns top 100 users.
+ * main leaderboard query — returns top 100 users
  */
 const getLeaderboardData = async (scope, scopeValue, category, isAdmin = false) => {
     const sortField = SORT_FIELD_MAP[category] || 'cpScore';
     const stages = buildCorePipeline(scope, scopeValue);
 
-    // Only show users with value > 0 in the chosen metric
+    // only show users with value > 0 in the chosen metric
     stages.push({ $match: { [sortField]: { $gt: 0 } } });
 
-    // Sort by chosen category
+    // sort by chosen category
     stages.push({ $sort: { [sortField]: -1 } });
 
-    // Limit to top 100
+    // limit to top 100
     stages.push({ $limit: 100 });
 
-    // Clean output + anonymity
+    // clean output + anonymity
     const projectStage = {
         _id: 1,
         username: {
@@ -245,7 +248,7 @@ const getLeaderboardData = async (scope, scopeValue, category, isAdmin = false) 
         isPublic: { $ifNull: ["$preferences.public", true] }
     };
 
-    // Admin gets the real username/name for anonymous users
+    //addmin gets the real username/name for anonymous users
     if (isAdmin) {
         projectStage.realUsername = "$username";
         projectStage.realName = "$name";
@@ -257,17 +260,17 @@ const getLeaderboardData = async (scope, scopeValue, category, isAdmin = false) 
 };
 
 /**
- * Gets a specific user's rank and stats for a given scope/category.
- * Counts how many users have a higher value in the sort field.
+ * gets a specific users rank and stats for a given scope or category
+ * counts how many users have a higher value in the sort field
  */
 const getUserRank = async (userId, scope, scopeValue, category) => {
     const sortField = SORT_FIELD_MAP[category] || 'cpScore';
     const stages = buildCorePipeline(scope, scopeValue);
 
-    // Only users with value > 0
+    // only users with value > 0
     stages.push({ $match: { [sortField]: { $gt: 0 } } });
 
-    // Find the target user's score first
+    // find the target user's score first
     const userStages = [...stages, { $match: { _id: new mongoose.Types.ObjectId(userId) } }];
     userStages.push({
         $project: {
@@ -295,7 +298,7 @@ const getUserRank = async (userId, scope, scopeValue, category) => {
 
     if (userScore <= 0) return null;
 
-    // Count how many users have a strictly higher score
+    // count how many users have a strictly higher score
     const countStages = [...stages];
     countStages.push({ $match: { [sortField]: { $gt: userScore } } });
     countStages.push({ $count: "above" });

@@ -26,6 +26,9 @@ import CFRatingDistribution from '../Dashboard/CFRatingDistribution';
 import CCQuickStats from '../Dashboard/CCQuickStats';
 import CCLanguageChart from '../Dashboard/CCLanguageChart';
 import CCVerdictBreakdown from '../Dashboard/CCVerdictBreakdown';
+import GFGQuickStats from '../Dashboard/GFGQuickStats';
+import GFGInstitutionalCard from '../Dashboard/GFGInstitutionalCard';
+import GFGProblemsBreakdown from '../Dashboard/GFGProblemsBreakdown';
 
 const config = { withCredentials: true };
 
@@ -400,6 +403,7 @@ export default function PublicProfile() {
 
   const topics = mergeTopics(cf.cfTopics, lc.lcTopics);
   const contests = mergeContests(cf.recentCfContests, lc.recentLcContests, cc.recentCcContests);
+  const gfgLanguages = gfg.languageDistribution || null;
 
   const cfContestCount = cfRatingHistory.length || 0;
   const lcContestCount = lc.lcContests || lcRatingHistory.length || 0;
@@ -474,6 +478,16 @@ export default function PublicProfile() {
                 ccSolvedThisMonth={cc.ccSolvedThisMonth}
                 lastSyncedAt={cc.lastSyncedAt}
               />
+            ) : singleView === 'gfg' ? (
+              <GFGQuickStats
+                loading={loading}
+                codingScore={gfg.codingScore}
+                monthlyScore={gfg.monthlyScore}
+                totalSolved={gfg.totalSolved}
+                instituteRank={gfg.instituteRank}
+                institution={gfg.institution}
+                lastSyncedAt={gfg.lastSyncedAt}
+              />
             ) : (
               <DifficultyBreakdown loading={loading} cfBands={cfBands} lcBands={lcBands} gfgBands={gfgBands} />
             )}
@@ -527,45 +541,85 @@ export default function PublicProfile() {
           <ErrorBoundary>
             {singleView === 'cc' ? (
               <CCLanguageChart loading={loading} languages={cc.languageDistribution} />
+            ) : singleView === 'gfg' ? (
+              <CCLanguageChart loading={loading} languages={gfgLanguages} />
             ) : (
               <TopTopics loading={loading} topics={topics} />
             )}
           </ErrorBoundary>
         </div>
 
-        {/* Row 6: Recent Submissions + contextual right panel */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-          <ErrorBoundary>
-            <RecentSubmissions
-              loading={loading}
-              cfSubmissions={cf.recentCfSubmissions}
-              lcSubmissions={lc.recentSubmissions}
-              ccSubmissions={cc.recentCcAcSubmissions}
-              gfgSubmissions={gfg.recentSubmissions}
-              view="all"
-            />
-          </ErrorBoundary>
-          <ErrorBoundary>
-            {singleView === 'lc' ? (
-              <LCSkillBreakdown
+        {/* Row 6: GFG full view OR Recent Submissions + contextual right panel */}
+        {singleView === 'gfg' ? (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            <ErrorBoundary>
+              <GFGProblemsBreakdown
                 loading={loading}
-                fundamental={lc.lcSkillFundamental}
-                intermediate={lc.lcSkillIntermediate}
-                advanced={lc.lcSkillAdvanced}
+                problems={gfg.problems || gfg.recentSubmissions || []}
+                totalSolved={gfg.totalSolved}
               />
-            ) : singleView === 'cf' ? (
-              <CFRatingDistribution loading={loading} cfDiffBands={cf.cfDiffBands} />
-            ) : singleView === 'cc' ? (
-              <CCVerdictBreakdown
+            </ErrorBoundary>
+            <div className="space-y-3 flex flex-col">
+              <ErrorBoundary>
+                <GFGInstitutionalCard
+                  loading={loading}
+                  institution={gfg.institution}
+                  instituteRank={gfg.instituteRank}
+                  codingScore={gfg.codingScore}
+                  monthlyScore={gfg.monthlyScore}
+                  handle={profile.linkedAccounts?.geeksforgeeks}
+                />
+              </ErrorBoundary>
+              <ErrorBoundary>
+                <CCLanguageChart loading={loading} languages={gfgLanguages} />
+              </ErrorBoundary>
+              <ErrorBoundary>
+                <GFGQuickStats
+                  loading={loading}
+                  codingScore={gfg.codingScore}
+                  monthlyScore={gfg.monthlyScore}
+                  totalSolved={gfg.totalSolved}
+                  instituteRank={gfg.instituteRank}
+                  institution={gfg.institution}
+                  lastSyncedAt={gfg.lastSyncedAt}
+                />
+              </ErrorBoundary>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            <ErrorBoundary>
+              <RecentSubmissions
                 loading={loading}
-                verdictBreakdown={cc.verdictBreakdown}
-                totalSubmissions={cc.totalSubmissions}
+                cfSubmissions={cf.recentCfSubmissions}
+                lcSubmissions={lc.recentSubmissions}
+                ccSubmissions={cc.recentCcAcSubmissions}
+                gfgSubmissions={gfg.recentSubmissions}
+                view="all"
               />
-            ) : (
-              <SkillGaps loading={loading} skills={skills} />
-            )}
-          </ErrorBoundary>
-        </div>
+            </ErrorBoundary>
+            <ErrorBoundary>
+              {singleView === 'lc' ? (
+                <LCSkillBreakdown
+                  loading={loading}
+                  fundamental={lc.lcSkillFundamental}
+                  intermediate={lc.lcSkillIntermediate}
+                  advanced={lc.lcSkillAdvanced}
+                />
+              ) : singleView === 'cf' ? (
+                <CFRatingDistribution loading={loading} cfDiffBands={cf.cfDiffBands} />
+              ) : singleView === 'cc' ? (
+                <CCVerdictBreakdown
+                  loading={loading}
+                  verdictBreakdown={cc.verdictBreakdown}
+                  totalSubmissions={cc.totalSubmissions}
+                />
+              ) : (
+                <SkillGaps loading={loading} skills={skills} />
+              )}
+            </ErrorBoundary>
+          </div>
+        )}
 
         {/* Row 7: Achievements */}
         <ErrorBoundary>

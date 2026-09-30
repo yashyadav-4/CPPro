@@ -14,18 +14,16 @@ function todayIST() {
     return getISTDate(new Date());
 }
 
-// ── 1. CF stat fields from Submission collection ─────────────────────────────
+//cf stat fields from submission collection
 const getCfStats = async (userId) => {
     const uid = new mongoose.Types.ObjectId(userId);
 
-    // All CF submissions
     const all = await Submission.find({ userId: uid, platform: 'codeforces' })
         .select('problemId verdict submittedAt')
         .lean();
 
     const total = all.length;
 
-    // Unique AC problems
     const acSet = new Set();
     let acCount = 0;
     all.forEach(s => {
@@ -35,7 +33,7 @@ const getCfStats = async (userId) => {
     const cfSolved = acSet.size;
     const cfAcceptanceRate = total > 0 ? Math.round((acCount / total) * 100) : 0;
 
-    // Active days (all CF submissions)
+    // active days (all CF submissions)
     const daySet = new Set();
     all.forEach(s => {
         const d = new Date(s.submittedAt).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
@@ -71,13 +69,13 @@ const getCfStats = async (userId) => {
         }
     });
 
-    // cfSolvedThisMonth = problems whose first AC was this month
+    // cfSolvedThisMonth = problems whose first Ac was this month
     const cfSolvedThisMonth = Object.values(firstAcDateMap).filter(ym => ym === monthStr).length;
     // cfSolvedLastMonth = problems whose first AC was last month
     const cfSolvedLastMonth = Object.values(firstAcDateMap).filter(ym => ym === lastMonthStr).length;
     const cfActiveDaysThisMonth = thisMonthDaySet.size;
 
-    // Total submissions (all verdicts) and AC-only submissions
+    // total submissions (all verdicts) and AC-only submissions
     const cfTotalSubmissions = total;         // all CF submissions in DB
     const cfAcSubmissions   = acCount;        // only AC verdicts
 
@@ -94,7 +92,7 @@ const getCfStats = async (userId) => {
     };
 };
 
-// ── 2. CF streak from submission days set ────────────────────────────────────
+//cf streak from submission days set
 const computeCfStreak = (cfDaySet) => {
     const sorted = [...cfDaySet].sort();
     if (sorted.length === 0) return { currentStreak: 0, bestStreak: 0 };
@@ -108,7 +106,7 @@ const computeCfStreak = (cfDaySet) => {
         else if (diff > 1) cur = 1;
     }
 
-    // Check if streak is still alive (did user submit today or yesterday?)
+    // check if streak is still alive (did user submit today or yesterday?)
     const today = todayIST();
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
@@ -119,16 +117,16 @@ const computeCfStreak = (cfDaySet) => {
     return { currentStreak: activeCurrent, bestStreak: best };
 };
 
-// ── 3. CF difficulty — per exact rating (every rating with ≥1 solve) ──────────
+// CF difficulty — per exact rating
 const getCfDiffBands = async (userId) => {
     const uid = new mongoose.Types.ObjectId(userId);
 
-    // Unique solved problems grouped by their exact difficulty rating
+    //unique solved problems grouped by their exact difficulty rating
     const solved = await Submission.aggregate([
         { $match: { userId: uid, platform: 'codeforces', verdict: 'AC' } },
         { $group: { _id: '$problemId', difficulty: { $first: '$difficulty' } } },
         { $group: { _id: '$difficulty', count: { $sum: 1 } } },
-        { $match: { _id: { $ne: '0', $ne: null, $ne: '' } } }, // exclude unrated
+        { $match: { _id: { $ne: '0', $ne: null, $ne: '' } } }, 
         { $sort: { _id: 1 } },
     ]);
 
@@ -138,7 +136,7 @@ const getCfDiffBands = async (userId) => {
         .sort((a, b) => a.rating - b.rating);
 };
 
-// ── 4. CF heatmap (all platforms in Submission, lifetime) ───────────────
+//CF heatmap
 const getCfHeatmap = async (userId) => {
     const uid = new mongoose.Types.ObjectId(userId);
 
@@ -155,7 +153,7 @@ const getCfHeatmap = async (userId) => {
     ]);
 };
 
-// ── 5. CF topics (solved only) ────────────────────────────────────────────────
+//CF topics 
 const getCfTopics = async (userId) => {
     const uid = new mongoose.Types.ObjectId(userId);
 
@@ -169,7 +167,7 @@ const getCfTopics = async (userId) => {
     ]);
 };
 
-// ── 6. Recent CF contests (from Platform.ratedHistory) ───────────────────────
+// recent CF contests
 const getRecentCfContests = async (userId) => {
     const platform = await Platform.findOne({ userId, platform: 'codeforces' })
         .select('ratedHistory platformUsername userId')
@@ -179,14 +177,14 @@ const getRecentCfContests = async (userId) => {
 
     const history = [...platform.ratedHistory].sort((a, b) => new Date(b.date) - new Date(a.date));
 
-    // Fetch submissions to map contestId by date proximity and count solved problems
+    // fetch submissions to map contestId by date proximity and count solved problems
     const subs = await Submission.find({ userId: platform.userId, platform: 'codeforces' })
         .select('contestId submittedAt verdict problemId').lean();
 
     return history.slice(0, 15).map((h, i) => {
         const prevRating = i < history.length - 1 ? history[i + 1].rating : h.rating;
         
-        // Find nearest submission within 48 hours to reliably fetch the exact CF contestId
+        // find nearest submission within 48 hours to reliably fetch the exact CF contestId
         let cid = null;
         let minDiff = Infinity;
         subs.forEach(s => {
@@ -220,9 +218,9 @@ const getRecentCfContests = async (userId) => {
     });
 };
 
-// ── 7. Upsolve Queue ──────────────────────────────────────────────────────────
-// Part A: Problems attempted but never ACed
-// Part B: Problems from latest contest NOT attempted at all
+// upsolve queue
+// part A: problems attempted but never ACed
+// part B: problems from latest contest NOT attempted at all
 const getUpsolveQueue = async (userId) => {
     const uid = new mongoose.Types.ObjectId(userId);
 
@@ -250,7 +248,7 @@ const getUpsolveQueue = async (userId) => {
         if (s.verdict === 'AC') problemMap[s.problemId].hasAC = true;
     });
 
-    // Part A: attempted but never solved (WA/TLE/etc and no AC)
+    // part A: attempted but never solved (WA/TLE/etc and no AC)
     const notSolved = Object.values(problemMap)
         .filter(p => !p.hasAC && p.attempts > 0)
         .map(p => ({
@@ -263,7 +261,7 @@ const getUpsolveQueue = async (userId) => {
             failReason: p.verdicts[p.verdicts.length - 1] || 'WA', // last verdict
         }));
 
-    // Part B: Find the most recent contest and get problems not attempted
+    // part B: Find the most recent contest and get problems not attempted
     // We identify "contest problems" = those with a contestId
     // Find the most recent contest
     const contestIds = [...new Set(subs.map(s => s.contestId).filter(Boolean))];
@@ -305,7 +303,7 @@ const getUpsolveQueue = async (userId) => {
     return combined;
 };
 
-// ── 8. Skill gaps ─────────────────────────────────────────────────────────────
+// skill gaps
 const getSkillGaps = async (userId) => {
     const uid = new mongoose.Types.ObjectId(userId);
 
@@ -341,7 +339,7 @@ const getSkillGaps = async (userId) => {
 
 };
 
-// ── 9. CF Rating history ──────────────────────────────────────────────────────
+// CF Rating history 
 const getCfRatingHistory = async (userId) => {
     const platform = await Platform.findOne({ userId, platform: 'codeforces' })
         .select('ratedHistory currentRating maxRating currentRank platformUsername')
@@ -367,7 +365,7 @@ const getCfRatingHistory = async (userId) => {
     };
 };
 
-// ── 10. Recent CF AC submissions (last 20 unique problems) ──────────────────
+// Recent CF AC submissions (20 uniqie only)
 const getRecentCfSubmissions = async (userId) => {
     const uid = new mongoose.Types.ObjectId(userId);
 
@@ -389,7 +387,7 @@ const getRecentCfSubmissions = async (userId) => {
     }
 
     return unique.map(s => {
-        // Build URL: problemUrl stored in DB, fallback to constructed URL
+        // build URL: problemUrl stored in DB, fallback to constructed URL
         let url = s.problemUrl || null;
         if (!url && s.contestId && s.problemId) {
             // problemId looks like "1234A" — extract index by stripping contestId prefix
@@ -408,7 +406,7 @@ const getRecentCfSubmissions = async (userId) => {
     });
 };
 
-// ── 11. Last 7 days (CF) ─────────────────────────────────────────────────────
+// Last 7 days (CF)
 const getCfLast7Days = async (userId) => {
     const uid = new mongoose.Types.ObjectId(userId);
     const sevenDaysAgo = new Date();

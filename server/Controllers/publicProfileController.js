@@ -39,6 +39,7 @@ async function getUserPublicProfile(req, res) {
                     codeforces: user.linkedAccounts?.codeforces || '',
                     leetcode: user.linkedAccounts?.leetcode || '',
                     codechef: user.linkedAccounts?.codechef || '',
+                    geeksforgeeks: user.linkedAccounts?.geeksforgeeks || '',
                 },
                 college: user.college || '',
                 location: user.location || {},

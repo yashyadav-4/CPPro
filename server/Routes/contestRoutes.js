@@ -26,11 +26,11 @@ router.get('/', optionalAuth, async (req, res) => {
                 .select('-__v -createdAt -updatedAt')
                 .lean();
 
-            // 1. Filter out AtCoder contests with Japanese/Chinese/CJK characters in name
+            //filter out atcoder contests with japanese/chinese characters in name
             const CJK_RE = /[\u3000-\u9fff\uac00-\ud7af\uf900-\ufaff]/;
             contests = contests.filter(c => c.platform !== 'atcoder' || !CJK_RE.test(c.name));
 
-            // 2. Deduplicate contests with the same URL
+            //deduplicate contests with the same URL
             const uniqueContests = [];
             const seenUrls = new Set();
             for (const c of contests) {
@@ -40,7 +40,7 @@ router.get('/', optionalAuth, async (req, res) => {
             }
             contests = uniqueContests;
 
-            // Deduplicate AtCoder division contests (Div.1/Div.2/Div.3 etc. same start time)
+            //deduplicate atCoder division contests (Div.1/Div.2/Div.3 etc. same start time)
             const AC_DIV_RE = /[\s\-–]*(div(ision)?\.?\s*\d+)$/i;
             const acSeen = new Map();
             const nonAc = contests.filter(c => c.platform !== 'atcoder');
@@ -61,9 +61,8 @@ router.get('/', optionalAuth, async (req, res) => {
             contests = [...nonAc, ...Array.from(acSeen.values())]
                 .sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
             
-            await setCache('contests:list', contests, 6 * 3600); // 6 hours
+            await setCache('contests:list', contests, 6 * 3600);
         } else {
-            // Restore Date objects from JSON stringified cache
             contests.forEach(c => {
                 c.startTime = new Date(c.startTime);
                 c.endTime = new Date(c.endTime);
@@ -71,11 +70,10 @@ router.get('/', optionalAuth, async (req, res) => {
         }
 
 
-        // ── Personalized Analytics (In-Memory Aggregate) ────────────────────
+        // ── personalized analytics (in-memory aggregate) ────────────────────
         if (req.user) {
             const userId = req.user._id;
 
-            // Fetch the user's private custom contests and append them
             const customContests = await Contest.find({
                 creatorId: userId,
                 startTime: { $gte: from, $lte: to }
@@ -85,14 +83,13 @@ router.get('/', optionalAuth, async (req, res) => {
                 contests = [...contests, ...customContests].sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
             }
 
-            // 1. O(1) query for Platform ratedHistory
             const platforms = await Platform.find({ userId }).select('platform ratedHistory').lean();
             const lcData = await LeetCodeData.findOne({ userId }).select('contestHistory').lean();
             
             // Map: platform -> contestName -> { rank, solvedCount }
             const attemptMap = { codeforces: {}, leetcode: {} };
 
-            // Codeforces
+            //codeforces
             platforms.forEach(p => {
                 const platKey = p.platform;
                 if (!attemptMap[platKey]) attemptMap[platKey] = {};
@@ -108,7 +105,7 @@ router.get('/', optionalAuth, async (req, res) => {
                 }
             });
 
-            // LeetCode
+            //leetCode
             if (lcData && lcData.contestHistory) {
                 lcData.contestHistory.forEach(h => {
                     if (h.contestTitle) {

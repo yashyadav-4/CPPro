@@ -50,6 +50,7 @@ function getThemeVars(isDark) {
 }
 
 const CC_EMERALD = EMERALD;
+const GFG_GREEN = '#2F8D46';
 
 const CF_RANK_COLOR = {
   'newbie': '#9ca3af', 'pupil': '#22c55e', 'specialist': '#06b6d4',
@@ -99,6 +100,13 @@ function LeetCodeMark({ size = 22 }) {
     </svg>
   );
 }
+function GeeksforGeeksMark({ size = 22 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill={GFG_GREEN}>
+      <path d="M21.45 14.315c-.143.28-.334.532-.565.745a3.691 3.691 0 0 1-1.104.695 4.51 4.51 0 0 1-1.67.282 4.74 4.74 0 0 1-1.184-.13 3.856 3.856 0 0 1-.996-.437 3.417 3.417 0 0 1-.814-.772h-.033a3.72 3.72 0 0 1-.82.78 3.624 3.624 0 0 1-.99.43 4.685 4.685 0 0 1-1.18.128 4.56 4.56 0 0 1-1.67-.28 3.757 3.757 0 0 1-1.108-.696 2.966 2.966 0 0 1-.562-.745A2.213 2.213 0 0 1 8.56 13.5H6.814a4.673 4.673 0 0 0 .42 1.97 4.335 4.335 0 0 0 1.177 1.5 5.31 5.31 0 0 0 1.778.954 7.2 7.2 0 0 0 2.218.327 6.98 6.98 0 0 0 1.664-.194 5.23 5.23 0 0 0 1.374-.56 4.168 4.168 0 0 0 1.017-.898 4.152 4.152 0 0 0 1.017.898 5.13 5.13 0 0 0 1.374.56 6.98 6.98 0 0 0 1.664.194 7.175 7.175 0 0 0 2.218-.327 5.31 5.31 0 0 0 1.778-.953 4.31 4.31 0 0 0 1.177-1.5 4.673 4.673 0 0 0 .42-1.97H21.64a2.178 2.178 0 0 1-.19.815z" />
+    </svg>
+  );
+}
 
 // ── Smart headline ─────────────────────────────────────────────────────────────
 function buildHeadline({ totalSolved, bestStreak, solvedThisMonth, activeDays, platforms }) {
@@ -130,6 +138,7 @@ const ShareableCard = forwardRef(function ShareableCard({
   lcHandle = null, lcRating = 0, lcMaxRating = 0, lcRank = null,
   ccHandle = null, ccRating = 0, ccMaxRating = 0, ccRank = null,
   cfSolved = 0, lcSolved = 0, ccSolved = 0,
+  gfgHandle = null, gfgSolved = 0, gfgCodingScore = 0,
   ccRatingHistory = [],
   currentStreak = 0, bestStreak = 0,
   cfCurrentStreak = 0, lcStreak = 0,
@@ -223,10 +232,11 @@ const ShareableCard = forwardRef(function ShareableCard({
   const PlatformPanel = ({ platform, handle, rating, maxRating, rank }) => {
     const isCf = platform === 'cf';
     const isCc = platform === 'cc';
-    const name = isCf ? 'Codeforces' : isCc ? 'CodeChef' : 'LeetCode';
-    const accent = isCf ? CF_BLUE : isCc ? CC_EMERALD : LC_AMBER;
-    const Icon = isCf ? CodeforcesMark : isCc ? CodeChefMark : LeetCodeMark;
-    const rc = rankColor(platform, rank);
+    const isGfg = platform === 'gfg';
+    const name = isCf ? 'Codeforces' : isCc ? 'CodeChef' : isGfg ? 'GeeksforGeeks' : 'LeetCode';
+    const accent = isCf ? CF_BLUE : isCc ? CC_EMERALD : isGfg ? GFG_GREEN : LC_AMBER;
+    const Icon = isCf ? CodeforcesMark : isCc ? CodeChefMark : isGfg ? GeeksforGeeksMark : LeetCodeMark;
+    const rc = isGfg ? GFG_GREEN : rankColor(platform, rank);
     return (
       <div style={{ background: theme.CARD_BG_ELEVATED, border: `1px solid ${theme.BORDER}`, borderRadius: 14, padding: '18px 22px', position: 'relative', overflow: 'hidden', marginBottom: 10 }}>
         <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: accent, opacity: 0.9 }} />
@@ -235,11 +245,13 @@ const ShareableCard = forwardRef(function ShareableCard({
           <div style={{ fontFamily: FONT_SANS, fontSize: 15, fontWeight: 700, color: theme.TEXT_PRIMARY, letterSpacing: '-0.01em', marginLeft: 10 }}>{name}</div>
           <div style={{ fontFamily: FONT_SANS, fontSize: 13, fontWeight: 500, color: theme.TEXT_MUTED, marginLeft: 'auto', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>@{handle}</div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'baseline', marginBottom: 8 }}>
-          <div style={{ fontFamily: FONT_MONO, fontSize: 44, fontWeight: 700, color: accent, letterSpacing: '-0.02em', lineHeight: 1.15 }}>{rating || '—'}</div>
-          {maxRating ? <div style={{ fontFamily: FONT_SANS, fontSize: 14, fontWeight: 500, color: theme.TEXT_DIM, marginLeft: 10, lineHeight: 1.15 }}>/ {maxRating} peak</div> : null}
-        </div>
-        <div style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 700, color: rc, letterSpacing: '0.15em', textTransform: 'uppercase', lineHeight: 1.2 }}>{rank || 'Unrated'}</div>
+        {!isGfg && (
+          <div style={{ display: 'flex', alignItems: 'baseline', marginBottom: 8 }}>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 44, fontWeight: 700, color: accent, letterSpacing: '-0.02em', lineHeight: 1.15 }}>{rating || '—'}</div>
+            {maxRating ? <div style={{ fontFamily: FONT_SANS, fontSize: 14, fontWeight: 500, color: theme.TEXT_DIM, marginLeft: 10, lineHeight: 1.15 }}>/ {maxRating} peak</div> : null}
+          </div>
+        )}
+        <div style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 700, color: rc, letterSpacing: '0.15em', textTransform: 'uppercase', lineHeight: 1.2 }}>{isGfg ? 'GeeksforGeeks' : (rank || 'Unrated')}</div>
       </div>
     );
   };
@@ -260,11 +272,12 @@ const ShareableCard = forwardRef(function ShareableCard({
   const PlatformBadge = ({ platform }) => {
     const isCf = platform === 'cf';
     const isCc = platform === 'cc';
-    const accent = isCf ? CF_BLUE : isCc ? CC_EMERALD : LC_AMBER;
-    const bg = isCf ? 'rgba(59,130,246,0.12)' : isCc ? 'rgba(16,185,129,0.12)' : 'rgba(245,158,11,0.12)';
-    const border = isCf ? 'rgba(59,130,246,0.25)' : isCc ? 'rgba(16,185,129,0.25)' : 'rgba(245,158,11,0.25)';
-    const Icon = isCf ? CodeforcesMark : isCc ? CodeChefMark : LeetCodeMark;
-    const label = isCf ? 'CF' : isCc ? 'CC' : 'LC';
+    const isGfg = platform === 'gfg';
+    const accent = isCf ? CF_BLUE : isCc ? CC_EMERALD : isGfg ? GFG_GREEN : LC_AMBER;
+    const bg = isCf ? 'rgba(59,130,246,0.12)' : isCc ? 'rgba(16,185,129,0.12)' : isGfg ? 'rgba(47,141,70,0.12)' : 'rgba(245,158,11,0.12)';
+    const border = isCf ? 'rgba(59,130,246,0.25)' : isCc ? 'rgba(16,185,129,0.25)' : isGfg ? 'rgba(47,141,70,0.25)' : 'rgba(245,158,11,0.25)';
+    const Icon = isCf ? CodeforcesMark : isCc ? CodeChefMark : isGfg ? GeeksforGeeksMark : LeetCodeMark;
+    const label = isCf ? 'CF' : isCc ? 'CC' : isGfg ? 'GFG' : 'LC';
     return (
       <div style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 10px', borderRadius: 999, background: bg, border: `1px solid ${border}`, marginRight: 6 }}>
         <div style={{ marginRight: 6 }}><Icon size={12} /></div>
@@ -354,7 +367,7 @@ const ShareableCard = forwardRef(function ShareableCard({
   };
 
   // ── Compute final stats ──────────────────────────────────────────────────────
-  const totalSolved = (cfSolved || 0) + (lcSolved || 0) + (ccSolved || 0);
+  const totalSolved = (cfSolved || 0) + (lcSolved || 0) + (ccSolved || 0) + (gfgSolved || 0);
   const totalContests = (cfRatingHistory?.length || 0) + (lcRatingHistory?.length || 0) + (ccRatingHistory?.length || 0);
 
   const cpScore = serverCpScore ??
@@ -369,15 +382,16 @@ const ShareableCard = forwardRef(function ShareableCard({
   const hasCf = !!cfHandle;
   const hasLc = !!lcHandle;
   const hasCc = !!ccHandle;
+  const hasGfg = !!gfgHandle;
   const hasCp = cpScore > 0;
   const heroValue = hasCp ? cpScore : totalSolved;
   const heroLabel = hasCp ? 'CPScore' : 'Total Solved';
 
   const displayName = userName || userUsername || null;
-  const displayHandle = cfHandle || lcHandle || ccHandle || 'competitor';
+  const displayHandle = cfHandle || lcHandle || ccHandle || gfgHandle || 'competitor';
 
   const showCurrentStreak = currentStreak >= 7;
-  const activePlatforms = [hasCf && 'Codeforces', hasLc && 'LeetCode', hasCc && 'CodeChef'].filter(Boolean);
+  const activePlatforms = [hasCf && 'Codeforces', hasLc && 'LeetCode', hasCc && 'CodeChef', hasGfg && 'GeeksforGeeks'].filter(Boolean);
   const headline = buildHeadline({ totalSolved, bestStreak, solvedThisMonth, activeDays, platforms: activePlatforms });
 
   const top3Topics = (topics || []).filter(t => t?.name).slice(0, 3);
@@ -459,6 +473,7 @@ const ShareableCard = forwardRef(function ShareableCard({
                   {hasCf && <PlatformBadge platform="cf" />}
                   {hasLc && <PlatformBadge platform="lc" />}
                   {hasCc && <PlatformBadge platform="cc" />}
+                  {hasGfg && <PlatformBadge platform="gfg" />}
                 </div>
               </div>
             </div>
@@ -493,7 +508,8 @@ const ShareableCard = forwardRef(function ShareableCard({
             {hasCf && <PlatformPanel platform="cf" handle={cfHandle} rating={cfRating} maxRating={cfMaxRating} rank={cfRank} />}
             {hasLc && <PlatformPanel platform="lc" handle={lcHandle} rating={lcRating} maxRating={lcMaxRating} rank={lcRank} />}
             {hasCc && <PlatformPanel platform="cc" handle={ccHandle} rating={ccRating} maxRating={ccMaxRating} rank={ccRank} />}
-            {!hasCf && !hasLc && !hasCc && (
+            {hasGfg && <PlatformPanel platform="gfg" handle={gfgHandle} rating={gfgCodingScore} maxRating={null} rank={null} />}
+            {!hasCf && !hasLc && !hasCc && !hasGfg && (
               <div style={{ background: theme.CARD_BG_ELEVATED, border: `1px solid ${theme.BORDER}`, borderRadius: 14, padding: '22px 24px', fontFamily: FONT_SANS, fontSize: 14, color: theme.TEXT_MUTED }}>
                 No platforms linked yet
               </div>

@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { ClipboardList, ChevronRight, ExternalLink } from 'lucide-react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { ClipboardList, ChevronRight, ChevronDown, Check, ExternalLink } from 'lucide-react';
 
 const Skeleton = () => (
   <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-5 h-full animate-pulse">
@@ -55,8 +55,30 @@ function getDifficultyBadge(diff) {
   return 'bg-gray-500/10 text-gray-400 border-gray-500/20';
 }
 
+const DIFFICULTY_OPTIONS = [
+  { key: 'ALL',    label: 'All Submissions', color: '#10b981' },
+  { key: 'SCHOOL', label: 'School',          color: '#06b6d4' },
+  { key: 'BASIC',  label: 'Basic',           color: '#84cc16' },
+  { key: 'EASY',   label: 'Easy',            color: '#10b981' },
+  { key: 'MEDIUM', label: 'Medium',          color: '#f59e0b' },
+  { key: 'HARD',   label: 'Hard',            color: '#f97316' },
+];
+
 export default function GFGProblemsBreakdown({ loading, problems = [], totalSolved }) {
   const [filterDifficulty, setFilterDifficulty] = useState('ALL');
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    if (!dropdownOpen) return;
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [dropdownOpen]);
 
   const filteredProblems = useMemo(() => {
     if (!problems || !problems.length) return [];
@@ -67,6 +89,7 @@ export default function GFGProblemsBreakdown({ loading, problems = [], totalSolv
   if (loading) return <Skeleton />;
 
   const total = totalSolved ?? problems.length;
+  const currentOption = DIFFICULTY_OPTIONS.find(o => o.key === filterDifficulty) || DIFFICULTY_OPTIONS[0];
 
   return (
     <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-5 flex flex-col h-full">
@@ -88,20 +111,46 @@ export default function GFGProblemsBreakdown({ loading, problems = [], totalSolv
           </div>
         </div>
 
-        {/* Right: Difficulty Filter Dropdown */}
-        <div className="flex items-center gap-2">
-          <select
-            value={filterDifficulty}
-            onChange={(e) => setFilterDifficulty(e.target.value)}
-            className="text-xs font-medium px-3 py-1.5 rounded-lg border border-black/[0.08] dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.04] text-gray-700 dark:text-gray-200 outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+        {/* Right: Custom Difficulty Filter Dropdown */}
+        <div className="relative" ref={dropdownRef}>
+          <button
+            type="button"
+            onClick={() => setDropdownOpen(prev => !prev)}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-black/[0.08] dark:border-white/[0.08] bg-gray-50 dark:bg-[#1a1a1a] text-gray-800 dark:text-gray-200 text-xs font-medium hover:bg-gray-100 dark:hover:bg-[#222222] transition-colors focus:ring-1 focus:ring-emerald-500"
           >
-            <option value="ALL">All Submissions</option>
-            <option value="SCHOOL">School</option>
-            <option value="BASIC">Basic</option>
-            <option value="EASY">Easy</option>
-            <option value="MEDIUM">Medium</option>
-            <option value="HARD">Hard</option>
-          </select>
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: currentOption.color }} />
+            <span>{currentOption.label}</span>
+            <ChevronDown size={14} className={`text-gray-400 transition-transform duration-200 ${dropdownOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {dropdownOpen && (
+            <div className="absolute right-0 top-full mt-1.5 w-44 rounded-xl border border-gray-200 dark:border-white/[0.1] bg-white dark:bg-[#161616] shadow-xl dark:shadow-2xl z-50 py-1 overflow-hidden">
+              {DIFFICULTY_OPTIONS.map((opt) => {
+                const isSelected = filterDifficulty === opt.key;
+                return (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    onClick={() => {
+                      setFilterDifficulty(opt.key);
+                      setDropdownOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-3 py-2 text-xs transition-colors ${
+                      isSelected
+                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold'
+                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/[0.06]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: opt.color }} />
+                      <span>{opt.label}</span>
+                    </div>
+                    {isSelected && <Check size={13} className="text-emerald-500" />}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 
