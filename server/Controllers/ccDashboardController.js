@@ -4,8 +4,6 @@ const CCProblem = require('../Model/CCProblem');
 const mongoose = require('mongoose');
 
 function getISTDate(dateInput) {
-    // Add IST offset (+5:30) directly to UTC ms — avoids the toLocaleString→re-parse
-    // double-conversion bug where the locale string is parsed as local server time.
     const utcMs = new Date(dateInput).getTime();
     const istMs = utcMs + 5.5 * 60 * 60 * 1000;
     const d = new Date(istMs);
@@ -35,7 +33,6 @@ async function getCcAggregateDashboard(req, res) {
                 .lean(),
         ]);
 
-        // Discard submissions with invalid / future / epoch dates — bad scrape artifacts.
         const nowMs = Date.now();
         const ccSubmissions = (() => {
             const valid = rawCcSubmissions.filter(s => {
@@ -43,14 +40,8 @@ async function getCcAggregateDashboard(req, res) {
                 const t = new Date(s.submittedAt).getTime();
                 return !isNaN(t) && t > 0 && t <= nowMs + 172_800_000;
             });
-            // Dedup by {problemId, day-bucket, verdict} — catches duplicate DB records where
-            // the same submission was stored with submittedAt values that differ by hours.
-            // Using day-bucket (IST) instead of hour-bucket ensures the count is stable
-            // across syncs, since CodeChef relative timestamps ("3h ago") resolve to
-            // different hours but always the same calendar day.
             const seen = new Map();
             for (const s of valid) {
-                // IST = UTC+5:30 = +19800s. Floor to day boundary.
                 const istMs = new Date(s.submittedAt).getTime() + 19800000;
                 const day = Math.floor(istMs / 86400000);
                 const key = `${s.problemId}\x00${day}\x00${s.verdict || ''}`;
@@ -66,27 +57,26 @@ async function getCcAggregateDashboard(req, res) {
         const currentRating = ccPlatform.currentRating || 0;
         const maxRating = ccPlatform.maxRating || 0;
         const now = new Date();
-        // Use IST "today" for all date string comparisons — submissions are IST-stamped
-        // and monthStr must match. Using UTC month would diverge by ~5.5h at boundaries.
         const todayIST = getISTDate(now);
 
-        // ── Heatmap from cumulative submissions (5-year cap) ─────────────────
         const fiveYearsAgoStr = (() => {
             const d = new Date(); d.setFullYear(d.getFullYear() - 5);
             return getISTDate(d);
         })();
+
         const heatmapMap = {};
+
         ccSubmissions.forEach(s => {
             if (!s.submittedAt || new Date(s.submittedAt).getFullYear() < 2010) return;
             const dateStr = getISTDate(new Date(s.submittedAt));
             if (dateStr < fiveYearsAgoStr) return;
             heatmapMap[dateStr] = (heatmapMap[dateStr] || 0) + 1;
         });
+
         const ccHeatmap = Object.entries(heatmapMap)
             .map(([date, count]) => ({ date, count }))
             .sort((a, b) => a.date.localeCompare(b.date));
 
-        // ── Streak from submission dates ──────────────────────────────────────
         const daySet = new Set(Object.keys(heatmapMap));
         const sorted = [...daySet].sort();
         let bestStreak = sorted.length ? 1 : 0;
@@ -102,7 +92,6 @@ async function getCcAggregateDashboard(req, res) {
         const last = sorted[sorted.length - 1];
         const currentStreak = sorted.length && (last === today || last === yStr) ? cur : 0;
 
-        // ── Last 7 days ───────────────────────────────────────────────────────
         const ccLast7Days = [];
         for (let i = 6; i >= 0; i--) {
             const d = new Date(); d.setDate(d.getDate() - i);
@@ -110,11 +99,9 @@ async function getCcAggregateDashboard(req, res) {
             ccLast7Days.push({ date: dateStr, solved: daySet.has(dateStr) });
         }
 
-        // ── AC submissions for solved counts ──────────────────────────────────
         const acSubmissions = ccSubmissions.filter(s => s.verdict === 'AC');
         const acProblemIds = new Set(acSubmissions.map(s => s.problemId));
 
-        // Derive month strings from IST "today" so they match getISTDate() output on submissions
         const monthStr = todayIST.slice(0, 7);
         const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
         const lastMonthStr = getISTDate(lastMonthDate).slice(0, 7);
@@ -124,7 +111,6 @@ async function getCcAggregateDashboard(req, res) {
         const ccSolvedThisMonth = acThisMonthIds.size;
         const ccSolvedLastMonth = acLastMonthIds.size;
 
-        // Active days this month / last month
         let activeDaysThisMonth = 0;
         let activeDaysLastMonth = 0;
         Object.keys(heatmapMap).forEach(d => {
@@ -133,12 +119,10 @@ async function getCcAggregateDashboard(req, res) {
             else if (ym === lastMonthStr) activeDaysLastMonth++;
         });
 
-        // Acceptance rate
         const ccAcceptanceRate = ccSubmissions.length > 0
             ? Math.round((acSubmissions.length / ccSubmissions.length) * 100)
             : null;
 
-        // ── Language distribution (top 8, all submissions) ────────────────────
         const langMap = {};
         ccSubmissions.forEach(s => {
             if (!s.language) return;
@@ -150,14 +134,12 @@ async function getCcAggregateDashboard(req, res) {
             .slice(0, 8)
             .map(([lang, count]) => ({ lang, count }));
 
-        // ── Verdict breakdown ─────────────────────────────────────────────────
         const verdictBreakdown = { AC: 0, WA: 0, TLE: 0, MLE: 0, RE: 0, CE: 0, PA: 0, OTHER: 0 };
         ccSubmissions.forEach(s => {
             const v = s.verdict || 'OTHER';
             verdictBreakdown[v] = (verdictBreakdown[v] || 0) + 1;
         });
 
-        // ── Contest history ───────────────────────────────────────────────────
         const ratedHistory = (ccPlatform.ratedHistory || [])
             .map(h => ({
                 contestName: h.contestName || '',
@@ -169,8 +151,7 @@ async function getCcAggregateDashboard(req, res) {
             .filter(h => h.date)
             .sort((a, b) => a.date.localeCompare(b.date));
 
-        // Build contestCode → Set<problemId> map for AC submissions so we can count
-        // how many unique problems the user solved in each contest.
+        //unique problems solved per contest
         const contestAcMap = {};
         ccSubmissions.forEach(s => {
             if (s.verdict === 'AC' && s.contestId) {
@@ -197,11 +178,6 @@ async function getCcAggregateDashboard(req, res) {
                 };
             });
 
-        // ── Recent AC submissions (last 15, one per problem) ─────────────────
-        // Dedup by problemId — the same problem can appear twice in the DB when
-        // relative-time strings ("3h ago") were parsed across two sync runs at
-        // slightly different wall-clock times, producing different submittedAt
-        // values that bypass the unique index. Show only the most recent AC per problem.
         const seenProblems = new Set();
         const recentCcAcSubmissionsRaw = [...acSubmissions]
             .sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt))

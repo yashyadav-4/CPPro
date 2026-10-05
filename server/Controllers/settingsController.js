@@ -35,7 +35,6 @@ const unlinkCodeforcesAccount = async(req, res)=>{
     }
 }
 
-// ── LeetCode handlers ──
 const verifyLeetcodeAccount = async (req, res) => {
     try {
         const userId = req.user._id;
@@ -84,7 +83,6 @@ const unlinkCodeChefAccount = async (req, res) => {
     }
 };
 
-// ── GFG handlers ──
 const verifyGfgAccount = async (req, res) => {
     try {
         const userId = req.user._id;
@@ -141,11 +139,7 @@ const saveLcSession = async (req, res) => {
         }
         const result = await settingsService.saveLcSession(userId, session);
 
-        // If this is a first-time or re-auth session, fire a background deep sync immediately.
-        // Don't await — respond to the user right away and let the sync happen in the background.
         if (result.needsDeepSync) {
-            // Stamp lastLcUpdate NOW to prevent a concurrent dashboard refresh from
-            // also firing a sync in the small window before the IIFE starts its job.
             await User.findByIdAndUpdate(userId, { $set: { lastLcUpdate: new Date() } });
 
             (async () => {
@@ -157,20 +151,15 @@ const saveLcSession = async (req, res) => {
                     const { syncLeetcodeProfile } = require('../Services/lcSyncService');
                     const { getDecryptedLcSession } = require('../Services/settingsService');
 
-                    // 'first' = 3000 subs (never had a session before, full history import)
-                    // 'hard'  = 600 subs  (re-auth after expiry, just catch up on recent)
                     const syncDepth = result.isFirstTimeSession ? 'first' : 'hard';
                     const sessionToken = await getDecryptedLcSession(userId, { allowExpired: false });
-                    if (!sessionToken) return; // safety: encryption not available
+                    if (!sessionToken) return; 
 
                     console.log(`[SESSION-SYNC] Firing background ${syncDepth} sync for ${handle}`);
                     await syncLeetcodeProfile(userId, handle, sessionToken, { syncDepth });
 
-                    // Clear the pending flag — sync succeeded with valid session
                     await User.findByIdAndUpdate(userId, { $set: { lcSessionPendingSync: false } });
 
-                    // Q2: regenerate today's daily problems so previously-solved problems
-                    // are excluded now that the Submissions collection has full history.
                     if (syncDepth === 'first') {
                         try {
                             const DailyProblem = require('../Model/DailyProblem');
@@ -184,8 +173,6 @@ const saveLcSession = async (req, res) => {
 
                     console.log(`[SESSION-SYNC] Background ${syncDepth} sync complete for ${handle}`);
                 } catch (err) {
-                    // Don't clear lcSessionPendingSync on failure — the flag ensures the
-                    // next manual sync or dashboard refresh will retry the deep sync.
                     console.error(`[SESSION-SYNC] Background deep sync failed:`, err.message);
                 }
             })();

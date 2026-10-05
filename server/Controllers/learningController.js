@@ -68,7 +68,6 @@ const updateProgress = async (req, res) => {
     doc.markModified('progress');
     await doc.save();
 
-    // Fire-and-forget History Write
     ProgressHistory.create({
       userId,
       topicId,
@@ -114,7 +113,7 @@ const getHistory = async (req, res) => {
 const bulkUpdateProgress = async (req, res) => {
   try {
     const userId = req.user._id;
-    const updates = req.body; // Array of { topicId, status }
+    const updates = req.body; 
 
     if (!Array.isArray(updates)) {
       return res.status(400).json({ error: 'Body must be an array of updates' });
@@ -153,7 +152,6 @@ const bulkUpdateProgress = async (req, res) => {
     doc.markModified('progress');
     await doc.save();
 
-    // Fire-and-forget History Writes
     if (historyPayloads.length > 0) {
        ProgressHistory.insertMany(historyPayloads).catch(() => {});
     }

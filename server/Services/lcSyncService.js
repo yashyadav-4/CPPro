@@ -8,11 +8,8 @@ const { checkDailyProblemSolves } = require('./dailyProblemService');
 const { checkUpsolveProblemSolves } = require('./upsolveRecommendationService');
 
 const FIFTEEN_MINUTES = 15 * 60 * 1000;
-const ADMIN_COOLDOWN  = 10 * 1000; // 10 s for admins
+const ADMIN_COOLDOWN  = 10 * 1000; 
 
-// ── NexusLC connection (set in .env) ──────────────────────────────────────
-// LC_SYNC_API  : full base URL of your NexusLC server, e.g. https://nexuslc.onrender.com
-// LC_SYNC_SECRET: the Bearer token NexusLC expects (matches its API_SECRET)
 const LC_SYNC_API    = (process.env.LC_SYNC_API || '').replace(/\/$/, '');
 const LC_SYNC_SECRET = process.env.LC_SYNC_SECRET || '';
 
@@ -22,8 +19,6 @@ if (!LC_SYNC_API) {
 if (!LC_SYNC_SECRET) {
     console.warn('[LC-SYNC] WARNING: LC_SYNC_SECRET is not set — NexusLC auth will fail.');
 }
-
-/** Shared axios instance pre-configured with NexusLC auth. */
 const nexusLC = axios.create({
     baseURL: LC_SYNC_API,
     headers: { Authorization: `Bearer ${LC_SYNC_SECRET}` },
@@ -34,11 +29,6 @@ function getCooldown(role) {
     return role === 'admin' ? ADMIN_COOLDOWN : FIFTEEN_MINUTES;
 }
 
-// ══════════════════════════════════════════════════════════════════════════
-// Role-based freshness gate — 15 min for users, 10 s for admins.
-// If stale: stamps lastLcUpdate immediately then fires a background sync
-// via NexusLC (single GraphQL call → writes directly to MongoDB).
-// ══════════════════════════════════════════════════════════════════════════
 const getLeetcodeData = async (userId, handle, role = 'user') => {
     const user = await User.findById(userId).lean();
     const cooldown = getCooldown(role);
@@ -54,36 +44,26 @@ const getLeetcodeData = async (userId, handle, role = 'user') => {
 
     console.log(`[LC-SYNC] >> ${handle} | Stale | Queuing NexusLC sync`);
 
-    // Stamp NOW to prevent duplicate dispatches before async work starts.
     await User.findByIdAndUpdate(userId, { $set: { lastLcUpdate: new Date() } });
 
-    // Retrieve the stored session token (active OR expired status) so the sync
-    // attempt can detect a newly-expired session and mark it accordingly.
     const { getDecryptedLcSession } = require('./settingsService');
     const sessionToken = await getDecryptedLcSession(userId, { allowExpired: true });
 
-    // If the pending sync flag is set and the user now has a valid session,
-    // escalate to 'first' depth (3000 subs) so full history is imported.
-    // This handles the case where the dashboard refreshes before the background
-    // sync triggered by saveLcSession() has completed.
     let autoSyncDepth = 'incremental';
     if (user.lcSessionPendingSync && sessionToken) {
         autoSyncDepth = 'first';
         console.log(`[LC-SYNC] >> ${handle} | lcSessionPendingSync=true + session present → escalating to depth='first'`);
     }
 
-    // Fire-and-forget: enqueue job on NexusLC, then poll until done.
     syncLeetcodeProfile(userId, handle, sessionToken, { syncDepth: autoSyncDepth })
         .then(() => console.log(`[LC-SYNC] >> ${handle} | NexusLC sync complete (depth=${autoSyncDepth})`))
         .catch(async (err) => {
             console.error(`[LC-SYNC] >> ${handle} | NexusLC sync failed:`, err.message);
-            // Log to ErrorLog so admin page shows this failure with full context
             ErrorLog.create({
                 source: 'LC-Sync-Service',
                 level: 'error',
                 message: `[LC_SYNC_FAILED] handle=${handle} | userId=${userId} | platform=leetcode | reason=${err.message}`,
             }).catch(() => {});
-            // Roll back timestamp so user can retry.
             await User.findByIdAndUpdate(userId, {
                 $set: { lastLcUpdate: user.lastLcUpdate || null },
             });
@@ -92,23 +72,15 @@ const getLeetcodeData = async (userId, handle, role = 'user') => {
     return { freshness: 'updating' };
 };
 
-// ══════════════════════════════════════════════════════════════════════════
-// Enqueue a sync job on NexusLC and poll until completion.
-// NexusLC does ONE combined GraphQL query and writes directly to MongoDB —
-// no data is returned here; CPPro reads from the DB as usual.
-// ══════════════════════════════════════════════════════════════════════════
 const syncLeetcodeProfile = async (userId, handle, sessionToken = null, opts = {}) => {
     const syncDepth = opts.syncDepth || 'incremental';
     if (!LC_SYNC_API || !LC_SYNC_SECRET) {
         throw new Error('LC_SYNC_API / LC_SYNC_SECRET not configured');
     }
 
-    // Build job payload. Session token is passed to NexusLC so it can make
-    // authenticated GraphQL calls for full submission history.
     const payload = { userId: String(userId), lcUsername: handle, force: true, syncDepth };
     if (sessionToken) payload.sessionToken = sessionToken;
 
-    // 1. Enqueue the job on NexusLC.
     let jobId;
     try {
         const enqRes = await nexusLC.post('/sync', payload);
@@ -125,14 +97,11 @@ const syncLeetcodeProfile = async (userId, handle, sessionToken = null, opts = {
         throw new Error(`NexusLC enqueue failed: ${msg}`);
     }
 
-    // 2. Poll /sync/status/:jobId until the job finishes (max ~100s).
     const POLL_INTERVAL_MS = 2_000;
     const MAX_POLLS        = 50;
     let lastLoggedState    = null;
 
     for (let attempt = 0; attempt < MAX_POLLS; attempt++) {
-        // First poll after 1s (incremental syncs often finish very quickly);
-        // subsequent polls every 2s.
         await new Promise((r) => setTimeout(r, attempt === 0 ? 1_000 : POLL_INTERVAL_MS));
 
         let state, failedReason;
@@ -145,19 +114,14 @@ const syncLeetcodeProfile = async (userId, handle, sessionToken = null, opts = {
             continue;
         }
 
-        // Only log when state changes to avoid spamming 'delayed' on every poll tick.
         if (state !== lastLoggedState) {
             console.log(`[LC-SYNC] >> ${handle} | job ${jobId} state: ${state}`);
             lastLoggedState = state;
         }
 
         if (state === 'completed') {
-            // Build update set — always stamp lastLcUpdate
             const completedUpdates = { lastLcUpdate: new Date() };
 
-            // Clear the pending flag if it was set, but ONLY when we had a valid session.
-            // Without a session the pending flag stays so the next session-save triggers
-            // a proper deep sync.
             if (sessionToken) {
                 const freshUser = await User.findById(userId, 'lcSessionPendingSync').lean();
                 if (freshUser?.lcSessionPendingSync) {
@@ -169,8 +133,6 @@ const syncLeetcodeProfile = async (userId, handle, sessionToken = null, opts = {
             await User.findByIdAndUpdate(userId, { $set: completedUpdates });
             console.log(`[LC-SYNC] >> ${handle} | sync done ✓`);
 
-            // If sync completed WITHOUT a session and LC is linked but no session ever set,
-            // send a weekly warning notification explaining partial data.
             if (!sessionToken) {
                 (async () => {
                     try {
@@ -198,9 +160,6 @@ const syncLeetcodeProfile = async (userId, handle, sessionToken = null, opts = {
                 })();
             }
 
-            // Post-sync fire-and-forget: persist LC AC slugs to Submissions collection so
-            // buildAttemptedSet's Submission.find query starts working for LC over time.
-            // Uses bulkWrite with updateOne+upsert so repeated syncs don't create duplicates.
             LeetCodeData.findOne({ userId }, 'acSlugs recentSubmissions').lean()
                 .then(async lcData => {
                     const acIds = [
@@ -210,9 +169,6 @@ const syncLeetcodeProfile = async (userId, handle, sessionToken = null, opts = {
                             .map(s => s.titleSlug),
                     ];
 
-                    // Persist unique AC slugs to Submissions — one doc per slug, fake date
-                    // of epoch+slug-hash avoids the unique(userId,problemId,submittedAt) conflict
-                    // while still deduplicating naturally across syncs.
                     const recentMap = new Map();
                     (lcData?.recentSubmissions || []).forEach(s => {
                         if (s.statusDisplay === 'Accepted' && s.timestamp) {
@@ -245,7 +201,6 @@ const syncLeetcodeProfile = async (userId, handle, sessionToken = null, opts = {
                         };
                     });
 
-                    // Also persist failed attempts from recentSubmissions so they appear in Upsolve Queue
                     const failedSubs = (lcData?.recentSubmissions || []).filter(s => s.statusDisplay !== 'Accepted');
                     failedSubs.forEach(s => {
                         const date = s.timestamp ? new Date(Number(s.timestamp) * 1000) : new Date();
@@ -283,8 +238,7 @@ const syncLeetcodeProfile = async (userId, handle, sessionToken = null, opts = {
                     }
                     checkDailyProblemSolves(userId, 'leetcode', acIds);
                     await checkUpsolveProblemSolves(userId, 'leetcode', acIds);
-                    
-                    // Recalculate Level Up Data after sync
+                
                     const { recalculateLevelUpData } = require('./levelUpRecalculationService');
                     recalculateLevelUpData(userId);
                 })
@@ -304,7 +258,6 @@ const syncLeetcodeProfile = async (userId, handle, sessionToken = null, opts = {
                 throw new Error('invalid leetcode handle');
             }
 
-            // Session expired — mark it in DB and notify the user (once).
             if (/SESSION_EXPIRED/i.test(reason)) {
                 try {
                     const freshUser = await User.findById(userId, 'lcSession').lean();
@@ -348,11 +301,6 @@ const syncLeetcodeProfile = async (userId, handle, sessionToken = null, opts = {
     throw new Error(`NexusLC job ${jobId} did not complete within the poll window`);
 };
 
-
-// ══════════════════════════════════════════════════════════════════════════
-// Health-check: ping GET /health on NexusLC (no auth required).
-// Returns the raw health payload or throws.
-// ══════════════════════════════════════════════════════════════════════════
 const checkNexusLCHealth = async () => {
     if (!LC_SYNC_API) throw new Error('LC_SYNC_API not configured');
     const res = await nexusLC.get(`${LC_SYNC_API}/data`, { timeout: 8_000 });

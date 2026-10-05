@@ -1,6 +1,5 @@
 const leaderboardService = require('../Services/leaderboardService');
 const leaderboardRepo = require('../Repositories/leaderboardRepository');
-const User = require('../Model/User');
 
 const VALID_SCOPES = ['global', 'country', 'college'];
 const VALID_CATEGORIES = ['cpscore', 'totalQuestions', 'leetcodeRating', 'codeforcesRating', 'codechefRating'];
@@ -12,7 +11,6 @@ const getGlobalLeaderboard = async (req, res) => {
 
         let scopeValue = null;
 
-        // Country and College scopes require authentication
         if (scope !== 'global') {
             if (!req.user) {
                 return res.status(401).json({
@@ -60,11 +58,6 @@ const getGlobalLeaderboard = async (req, res) => {
     }
 };
 
-/**
- * Returns the logged-in user's global rank across all 4 leaderboard categories
- * in one call. Uses the EXACT same pipeline (buildCorePipeline via getUserRank)
- * as the main leaderboard so serverCpScore always matches what the leaderboard shows.
- */
 const getMyRank = async (req, res) => {
     try {
         const userId = req.user?._id?.toString();
@@ -72,7 +65,6 @@ const getMyRank = async (req, res) => {
 
         const CATEGORIES = ['cpscore', 'totalQuestions', 'leetcodeRating', 'codeforcesRating', 'codechefRating'];
 
-        // All 4 rank lookups + 4 leaderboard list fetches (for total user counts) in parallel
         const rankPromises = CATEGORIES.map(cat =>
             leaderboardRepo.getUserRank(userId, 'global', null, cat)
         );
@@ -92,7 +84,6 @@ const getMyRank = async (req, res) => {
             const r = rankResults[i];
             if (r.status === 'fulfilled' && r.value) {
                 ranks[cat] = r.value.rank;
-                // getUserRank spreads the user doc which includes cpScore from buildCorePipeline
                 if (cat === 'cpscore') {
                     serverCpScore = r.value.cpScore ?? null;
                 }
@@ -101,14 +92,11 @@ const getMyRank = async (req, res) => {
             }
         });
 
-        // totals from the leaderboard list — service caps at 100 via getLeaderboardData.
-        // getLeaderboard returns { leaderboard: [], currentUser } not a raw array.
         const totals = {};
         CATEGORIES.forEach((cat, i) => {
             const r = countResults[i];
             if (r.status === 'fulfilled' && r.value?.leaderboard) {
                 const listLen = r.value.leaderboard.length;
-                // If list is at the cap (100), actual total >= rank; use rank as floor.
                 totals[cat] = (listLen >= 100 && ranks[cat])
                     ? Math.max(listLen, ranks[cat])
                     : listLen;
@@ -120,7 +108,7 @@ const getMyRank = async (req, res) => {
         return res.status(200).json({
             success: true,
             data: {
-                serverCpScore,           // authoritative — same formula as leaderboard
+                serverCpScore,  
                 cpScoreRank: ranks.cpscore,
                 cpScoreTotal: totals.cpscore,
                 totalQRank: ranks.totalQuestions,

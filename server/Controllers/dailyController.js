@@ -4,17 +4,11 @@ const ErrorLog     = require('../Model/ErrorLog');
 const { generateDailyProblems } = require('../Services/dailyProblemService');
 const { getTodayIST, getNDaysAgoIST } = require('../Utils/dateUtils');
 
-// ── Streak helper ─────────────────────────────────────────────────────────────
-// The DB stores the streak current value only when a solve happens.
-// It is NEVER auto-decremented. So we must recompute the effective current
-// streak at read time: if lastSolved is more than 1 day ago, the streak
-// has broken and should display as 0.
 function effectiveCurrentStreak(dailyStreak) {
     if (!dailyStreak?.lastSolved) return 0;
     const last      = new Date(dailyStreak.lastSolved);
     const today     = getTodayIST();
     const yesterday = getNDaysAgoIST(1);
-    // getISTDate — pull just the YYYY-MM-DD string in IST
     const pad   = n => String(n).padStart(2, '0');
     const toIST = d => {
         const ist = new Date(d.getTime() + 5.5 * 60 * 60 * 1000);
@@ -22,7 +16,7 @@ function effectiveCurrentStreak(dailyStreak) {
     };
     const lastStr = toIST(last);
     if (lastStr === today || lastStr === yesterday) return dailyStreak.current || 0;
-    return 0; // streak broken
+    return 0;
 }
 
 async function getToday(req, res) {
@@ -43,8 +37,6 @@ async function getToday(req, res) {
         const user = await User.findById(userId, 'dailyStreak linkedAccounts lcSession preferences').lean();
         const ds   = user?.dailyStreak;
 
-        // Warn the frontend when LC is linked but no working session is set.
-        // This powers the "why am I seeing solved problems?" banner.
         const lcLinked      = !!user?.linkedAccounts?.leetcode;
         const sessionStatus = user?.lcSession?.status || 'not_set';
         const sessionWarning = lcLinked && sessionStatus !== 'active';

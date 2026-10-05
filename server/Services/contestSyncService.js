@@ -1,11 +1,7 @@
-// Services/contestSyncService.js
-// Fetches contests from official CF + LC APIs, upserts into MongoDB,
-// and deletes any contest that ended more than 1 day ago.
 const axios   = require('axios');
 const Contest = require('../Model/Contest');
 const ErrorLog = require('../Model/ErrorLog');
 
-// ── Shared axios instance ─────────────────────────────────────────────────────
 const http = axios.create({
     timeout: 15000,
     headers: {
@@ -14,27 +10,22 @@ const http = axios.create({
     },
 });
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
 function slugify(str) {
     return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
 function makeId(platform, name, startTime) {
-    // startTime is a Date
     return `${platform}::${slugify(name)}::${startTime.getTime()}`;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Codeforces — contest.list (all non-gym contests)
-// Keep: started within last 30 days  OR  starts within next 30 days
-// ─────────────────────────────────────────────────────────────────────────────
+
 async function fetchCF() {
     const { data } = await http.get('https://codeforces.com/api/contest.list?gym=false');
     if (data.status !== 'OK') throw new Error('CF API non-OK');
 
     const now    = Date.now();
-    const BACK    = 180 * 24 * 3600 * 1000; // 180 days back (6 months)
-    const FORWARD = 30 * 24 * 3600 * 1000; // 30 days forward
+    const BACK    = 180 * 24 * 3600 * 1000; 
+    const FORWARD = 30 * 24 * 3600 * 1000; 
 
     return data.result
         .filter(c => {
@@ -57,9 +48,7 @@ async function fetchCF() {
         });
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// LeetCode — upcomingContests + pastContests GraphQL query
-// ─────────────────────────────────────────────────────────────────────────────
+
 async function fetchLC() {
     const query = `
         query getContests($pageNo: Int!) {
@@ -79,8 +68,7 @@ async function fetchLC() {
             }
         }`;
 
-    // Leetcode gives max 10 past contests per page natively.
-    // 6 months is ~40 contests (weekly + biweekly), so we query pages 1 through 4.
+    
     const pageNumbers = [1, 2, 3, 4];
     
     const requests = pageNumbers.map(pageNo => 
@@ -98,7 +86,6 @@ async function fetchLC() {
 
     responses.forEach(res => {
         if (res.status === 'fulfilled' && res.value.data?.data) {
-            // upcoming is identical in every response; just grab the first one we find
             if (upcoming.length === 0) upcoming = res.value.data.data.upcomingContests || [];
             
             const pastData = res.value.data.data.pastContests?.data || [];
@@ -124,10 +111,6 @@ async function fetchLC() {
     });
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// AtCoder — via CLIST.by public API (resource=atcoder.jp)
-// Falls back gracefully if the CLIST_API_KEY env var is missing.
-// ─────────────────────────────────────────────────────────────────────────────
 async function fetchAC() {
     const apiKey = process.env.CLIST_API_KEY;
     if (!apiKey) {
@@ -166,11 +149,10 @@ async function fetchAC() {
         };
     });
 
-    // Deduplicate AtCoder division contests:
-    // AtCoder splits events into Div.1 / Div.2 / Div.3 etc. with the same start time.
-    // Strip the division suffix to get a base key, then keep only the first (Div.1 / highest tier).
+    //deduplication bcz AC returns same contest twice or maybe thrice because of different naming for div1 ,div2 ,,...
+
     const DIV_SUFFIX = /[\s\-–]*(div(ision)?\.?\s*\d+|grand\s*final|final)$/i;
-    const seen = new Map(); // key -> first contest
+    const seen = new Map(); 
 
     for (const c of raw) {
         const baseKey = c.name.replace(DIV_SUFFIX, '').trim().toLowerCase()
@@ -178,7 +160,6 @@ async function fetchAC() {
         if (!seen.has(baseKey)) {
             seen.set(baseKey, c);
         } else {
-            // Prefer the entry whose name ends with Div.1 or has no division suffix (main round)
             const existing = seen.get(baseKey);
             const isMainRound = !DIV_SUFFIX.test(c.name);
             const isDiv1 = /div(ision)?\.?\s*1/i.test(c.name);
@@ -191,8 +172,8 @@ async function fetchAC() {
 
     return Array.from(seen.values());
 }
+
 async function fetchCC() {
-    // CodeChef's public contest list endpoint
     const { data } = await http.get('https://www.codechef.com/api/list/contests/all?sort_by=START&sorting_order=asc&offset=0&mode=all');
     if (!data || !data.present_contests) throw new Error('CC contest API unexpected response');
 
@@ -228,13 +209,10 @@ async function fetchCC() {
         });
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Main sync function — called by the cron worker
-// ─────────────────────────────────────────────────────────────────────────────
+//15min sync cron job 
 async function syncContests() {
     console.log('[contestSync] Starting sync…');
 
-    // 1. Fetch from all APIs in parallel (partial failure is OK)
     const [cfRes, lcRes, ccRes, acRes] = await Promise.allSettled([fetchCF(), fetchLC(), fetchCC(), fetchAC()]);
 
     const logFailure = (platform, res) => {
@@ -263,7 +241,6 @@ async function syncContests() {
 
     console.log(`[contestSync] Fetched ${contests.length} contests (CF + LC + CC + AC)`);
 
-    // 2. Upsert all contests — update fields if the contest already exists
     if (contests.length > 0) {
         const ops = contests.map(c => ({
             updateOne: {
@@ -276,7 +253,6 @@ async function syncContests() {
         console.log(`[contestSync] Upserted: ${result.upsertedCount} new, ${result.modifiedCount} updated`);
     }
 
-    // 3. Delete stale contests: endTime older than 180 days (6 months)
     const cutoff = new Date(Date.now() - 180 * 24 * 3600 * 1000);
     const deleted = await Contest.deleteMany({ endTime: { $lt: cutoff } });
     if (deleted.deletedCount > 0) {

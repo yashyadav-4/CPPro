@@ -1,8 +1,5 @@
 ﻿const GFGData = require('../Model/GFGData');
-const User    = require('../Model/User');
 
-// GET /api/gfg-dashboard/aggregate/:userId
-// Returns GFG stats for a given user (respects public/private via middleware)
 async function getGfgAggregateDashboard(req, res) {
     try {
         const { userId } = req.params;

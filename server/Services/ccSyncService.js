@@ -28,10 +28,6 @@ function getCooldown(role) {
     return role === 'admin' ? ADMIN_COOLDOWN : FIFTEEN_MINUTES;
 }
 
-// ══════════════════════════════════════════════════════════════════════════
-// Freshness gate — 15 min for users, 10 s for admins.
-// Stamps lastCcUpdate immediately then fires background sync via CC server.
-// ══════════════════════════════════════════════════════════════════════════
 const getCodeChefData = async (userId, handle, role = 'user') => {
     const user = await User.findById(userId).lean();
     const cooldown = getCooldown(role);
@@ -66,10 +62,6 @@ const getCodeChefData = async (userId, handle, role = 'user') => {
     return { freshness: 'updating' };
 };
 
-// ══════════════════════════════════════════════════════════════════════════
-// Enqueue a sync job on the CC server and poll until completion.
-// The CC server scrapes CodeChef and writes directly to MongoDB.
-// ══════════════════════════════════════════════════════════════════════════
 const syncCodeChefProfile = async (userId, handle, opts = {}) => {
     const syncDepth = opts.syncDepth || 'incremental';
     if (!CC_SYNC_API || !CC_SYNC_SECRET) {
@@ -122,7 +114,6 @@ const syncCodeChefProfile = async (userId, handle, opts = {}) => {
         if (state === 'completed') {
             await User.findByIdAndUpdate(userId, { $set: { lastCcUpdate: new Date() } });
             console.log(`[CC-SYNC] >> ${handle} | sync done ✓`);
-            // Post-sync: check if today's daily problem was solved
             Submission.find(
                 { userId, platform: 'codechef', verdict: 'AC' },
                 { problemId: 1, _id: 0 }
@@ -130,7 +121,6 @@ const syncCodeChefProfile = async (userId, handle, opts = {}) => {
                 .then(async subs => {
                     checkDailyProblemSolves(userId, 'codechef', subs.map(s => s.problemId));
                     await checkUpsolveProblemSolves(userId, 'codechef', subs.map(s => s.problemId));
-                    // Recalculate Level Up Data after sync
                     const { recalculateLevelUpData } = require('./levelUpRecalculationService');
                     recalculateLevelUpData(userId);
                 })
@@ -166,9 +156,6 @@ const syncCodeChefProfile = async (userId, handle, opts = {}) => {
 };
 
 
-// ══════════════════════════════════════════════════════════════════════════
-// Health-check: ping GET /data on CC server.
-// ══════════════════════════════════════════════════════════════════════════
 const checkCcServerHealth = async () => {
     if (!CC_SYNC_API) throw new Error('CC_SYNC_API not configured');
     const res = await ccApi.get('/data', { timeout: 8_000 });

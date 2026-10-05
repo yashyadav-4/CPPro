@@ -1,23 +1,19 @@
-const mongoose = require('mongoose');
 const LevelUpData = require('../Model/LevelUpData');
 const User = require('../Model/User');
 const { recalculateLevelUpData } = require('../Services/levelUpRecalculationService');
 
-const STALE_THRESHOLD_MS = 30 * 60 * 1000; // 30 minutes
+const STALE_THRESHOLD_MS = 30 * 60 * 1000; 
 
 const getLevelUpDataSafe = async (userId, force = false) => {
     let data = await LevelUpData.findOne({ userId }).lean();
     if (!data) {
-        // First time — calculate synchronously so caller gets real data
         await recalculateLevelUpData(userId);
         data = await LevelUpData.findOne({ userId }).lean();
     } else {
-        // Check staleness — if stale, fire background recalc (Lean Nexus pattern)
         const age = data.lastRecalculatedAt
             ? Date.now() - new Date(data.lastRecalculatedAt).getTime()
             : Infinity;
         if (force || age > STALE_THRESHOLD_MS) {
-            // Fire-and-forget: serve cached data now, fresh data arrives on next request
             recalculateLevelUpData(userId).catch(err =>
                 console.error('[LevelUp] Background recalc failed:', err)
             );
@@ -29,7 +25,7 @@ const getLevelUpDataSafe = async (userId, force = false) => {
 const getUpsolveQueue = async (req, res) => {
     try {
         const userId = req.user._id;
-        const { platform } = req.query; // 'codeforces', 'leetcode', 'codechef', or undefined
+        const { platform } = req.query; 
 
         const data = await getLevelUpDataSafe(userId);
         let upsolveList = data.upsolveQueue || [];

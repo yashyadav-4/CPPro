@@ -1,5 +1,4 @@
 const Post = require('../Model/Post');
-
 const User = require('../Model/User');
 
 async function handleCreatePost(req , res){
@@ -95,7 +94,7 @@ async function handleUpvotes(req , res){
 
         const hasUpvoted = post.upVotes.some(id => id.toString() === userId.toString());
 
-        if(hasUpvoted){//togelling
+        if(hasUpvoted){
             await Post.findByIdAndUpdate(req.params.id , {$pull :{upVotes:userId}});
         }else{
             await Post.findByIdAndUpdate(req.params.id , {

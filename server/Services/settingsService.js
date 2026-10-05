@@ -5,7 +5,6 @@ const User = require('../Model/User');
 const Notification = require('../Model/Notification');
 const { encrypt, decrypt, isEnabled } = require('../Utils/encryption');
 
-// ── CF sync API connection (matches LC/CC verification pattern) ───────────────
 const CF_SYNC_API_SETTINGS    = (process.env.CF_SYNC_API || '').replace(/\/$/, '');
 const CF_SYNC_SECRET_SETTINGS = process.env.CF_SYNC_SECRET || '';
 
@@ -18,8 +17,6 @@ const generateCode=async(userId)=>{
     return uniqueCode;
 } 
 
-// GFG Name field only allows letters and spaces — no hyphens or numbers.
-// We generate a code like "cppro abcxyz" (letters only, space separator).
 const ALPHA = 'abcdefghijklmnopqrstuvwxyz';
 const generateGfgCode = async (userId) => {
     const randomLetters = Array.from({ length: 6 }, () =>
@@ -65,7 +62,6 @@ const verifyAndLinkCodeforces = async(userId ,handle)=>{
         throw err;
     }
 
-    // const lastName= cfProfile.lastName || ""; //will use only firstname for verification for cf
     const code= user.verificationCode;
 
     if(!firstName.includes(code)){
@@ -82,7 +78,6 @@ const verifyAndLinkCodeforces = async(userId ,handle)=>{
         {new:true}
     );
 
-    //trigger immediate hard sync in background so dashboard has data right away
     const syncService = require('./cfSyncService');
     syncService.syncCodeforcesProfile(userId, cleanHandle, { syncDepth: 'hard' })
         .then(() => console.log(`[VERIFY] initial hard sync complete for ${cleanHandle}`))
@@ -108,7 +103,6 @@ const unlinkCodeforces = async(userId)=>{
         $set:{"linkedAccounts.codeforces":"", lastCfUpdate: null},
         $unset:{verificationCode:""}
     });
-    //remove all codeforces data: platform stats + submission history
     const Platform = require('../Model/Platform');
     const Submission = require('../Model/Submissions');
     await Platform.deleteMany({userId, platform:'codeforces'});
@@ -116,9 +110,6 @@ const unlinkCodeforces = async(userId)=>{
     return {message:"Codeforces account unlinked successfully"};
 };
 
-// ── CodeChef verification ────────────────────────────────────────────────────
-// Route through CC server's /verify/:handle endpoint — it proxies through
-// residential proxies so Cloudflare doesn't block datacenter IPs.
 const CC_SYNC_API_SETTINGS    = (process.env.CC_SYNC_API || '').replace(/\/$/, '');
 const CC_SYNC_SECRET_SETTINGS = process.env.CC_SYNC_SECRET || '';
 
@@ -203,14 +194,11 @@ const unlinkCodechef = async (userId) => {
     return { message: "CodeChef account unlinked successfully" };
 };
 
-// LeetCode verification — proxy through NexusLC to avoid Cloudflare 403 on datacenter IPs.
-// Falls back to direct call only when NexusLC is not configured (local dev).
 const LC_SYNC_API    = (process.env.LC_SYNC_API || '').replace(/\/$/, '');
 const LC_SYNC_SECRET = process.env.LC_SYNC_SECRET || '';
 
 const fetchLcRealName = async (lcUsername) => {
     if (LC_SYNC_API && LC_SYNC_SECRET) {
-        // Route through NexusLC proxy — safe from Cloudflare blocking.
         const res = await axios.get(`${LC_SYNC_API}/verify/${encodeURIComponent(lcUsername)}`, {
             headers: { Authorization: `Bearer ${LC_SYNC_SECRET}` },
             timeout: 15_000,
@@ -218,7 +206,7 @@ const fetchLcRealName = async (lcUsername) => {
         if (!res.data || res.data.realName === undefined) throw new Error('LeetCode user not found');
         return res.data.realName || '';
     }
-    // Fallback: direct call (works locally, may 403 in production).
+    //doing direct but will probably give 403 in prod due to datacenter ip
     const query = `query v($u:String!){matchedUser(username:$u){profile{realName}}}`;
     const res = await axios.post(
         'https://leetcode.com/graphql',
@@ -261,9 +249,6 @@ const verifyAndLinkLeetcode = async (userId, handle) => {
     await User.findByIdAndUpdate(
         userId,
         {
-            // lastLcHardSync intentionally set to null — no real authenticated hard sync
-            // has run yet (no session). lcSessionPendingSync=true ensures the 30-day
-            // gate in handleLcHardSync is bypassed when the user later adds their session.
             $set:{ "linkedAccounts.leetcode": cleanHandle, lastLcHardSync: null, lcSessionPendingSync: true },
             $unset: {verificationCode: ""}
         },
@@ -296,9 +281,8 @@ const unlinkLeetcode= async(userId) =>{
         $set: {
             "linkedAccounts.leetcode": "",
             lastLcUpdate:    null,
-            lastLcHardSync:  null,   // clean slate — prevents 30d gate blocking re-link sync
+            lastLcHardSync:  null,  
             lcSessionPendingSync: false,
-            // Wipe session so re-linking starts fresh
             'lcSession.iv':             null,
             'lcSession.encryptedToken': null,
             'lcSession.authTag':        null,
@@ -328,7 +312,6 @@ const getProfile = async(userId) => {
 
 const updateUserProfile = async(userId, fields) =>{
     const updateSet = {};
-    // identity
     if(fields.name !== undefined && fields.name.trim()) updateSet['name'] = fields.name.trim();
     if(fields.gender !== undefined && ['Male','Female'].includes(fields.gender)) updateSet['gender'] = fields.gender;
     if(fields.age !== undefined) {
@@ -336,14 +319,14 @@ const updateUserProfile = async(userId, fields) =>{
         if(a >= 1 && a <= 100) updateSet['age'] = a;
     }
     if(fields.profilePic !== undefined) updateSet['profilePic'] = fields.profilePic.trim();
-    // location
+
     if(fields.country !== undefined) updateSet["location.country"] = fields.country.trim();
     if(fields.state !== undefined) updateSet["location.state"] = fields.state.trim();
     if(fields.city !== undefined) updateSet["location.city"] = fields.city.trim();
     if(fields.college !== undefined) {
         updateSet["college"] = fields.college.trim().replace(/\s+/g, ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
     }
-    // preferences
+
     if(fields.public !== undefined) updateSet["preferences.public"] = Boolean(fields.public);
     if(fields.preferredLanguage !== undefined) {
         const validLangs = ['cpp', 'java', 'python', 'javascript'];
@@ -367,7 +350,6 @@ const updateUserProfile = async(userId, fields) =>{
     return updated;
 };
 
-// ── LC Session management ────────────────────────────────────────────────────
 
 const saveLcSession = async (userId, rawToken) => {
     if (!isEnabled()) {
@@ -376,14 +358,10 @@ const saveLcSession = async (userId, rawToken) => {
         throw err;
     }
 
-    // Read current session state BEFORE overwriting so we can decide sync depth
     const existingUser = await User.findById(userId).select('lcSession linkedAccounts').lean();
-    const wasNoSession = !existingUser?.lcSession?.encryptedToken;      // first time ever
-    const wasExpired   = existingUser?.lcSession?.status === 'expired'; // re-auth after expiry
-    // needsDeepSync = true when history could be missing (first time OR re-auth)
+    const wasNoSession = !existingUser?.lcSession?.encryptedToken; 
+    const wasExpired   = existingUser?.lcSession?.status === 'expired'; 
     const needsDeepSync      = wasNoSession || wasExpired;
-    // isFirstTimeSession = true only when user literally never had a session stored
-    // → use syncDepth:'first' (3000 subs) vs 'hard' (600 subs for re-auth)
     const isFirstTimeSession = wasNoSession;
 
     const { iv, encryptedToken, authTag } = encrypt(rawToken.trim());
@@ -394,15 +372,14 @@ const saveLcSession = async (userId, rawToken) => {
             'lcSession.authTag':        authTag,
             'lcSession.status':         'active',
             'lcSession.updatedAt':      new Date(),
-            lastLcUpdate:               null,   // force re-sync with new session
+            lastLcUpdate:               null,  
             ...(needsDeepSync ? {
-                lastLcHardSync:      null,   // bypass 30-day cooldown gate
-                lcSessionPendingSync: true,  // signal: deep sync needed
+                lastLcHardSync:      null,   
+                lcSessionPendingSync: true,  
             } : {}),
         },
     });
 
-    // Contextual notification — message differs based on scenario
     const notifMessage = wasExpired
         ? 'LeetCode session reconnected. Your recent submissions will be updated in the background.'
         : wasNoSession
@@ -439,15 +416,10 @@ const removeLcSession = async (userId) => {
     return { status: 'not_set' };
 };
 
-/** Internal use only — decrypts and returns the raw session token for sync dispatch. */
 const getDecryptedLcSession = async (userId, opts = {}) => {
     if (!isEnabled()) return null;
     const user = await User.findById(userId).select('lcSession').lean();
     if (!user?.lcSession?.encryptedToken) return null;
-    // Only block if status is 'expired' AND allowExpired is false (default).
-    // When allowExpired=true (regular sync probing), we pass the token anyway so
-    // NexusLC can attempt auth and throw SESSION_EXPIRED — this is the only way to
-    // confirm & notify the user of a stale session.
     const { allowExpired = false } = opts;
     if (!allowExpired && user.lcSession.status !== 'active') return null;
     try {
@@ -457,10 +429,7 @@ const getDecryptedLcSession = async (userId, opts = {}) => {
     }
 };
 
-// ── GeeksforGeeks verification ───────────────────────────────────────────────
-// GFG relay is called directly with x-api-key header.
-// Verification checks that mentor.name (the GFG display Name field) includes
-// the cppro-XXXXXX verification code the user pasted there.
+
 const GFG_RELAY_URL_SETTINGS    = (process.env.GFG_RELAY_URL    || '').replace(/\/$/, '');
 const GFG_RELAY_SECRET_SETTINGS = process.env.GFG_RELAY_SECRET  || '';
 
@@ -518,7 +487,6 @@ const verifyAndLinkGfg = async (userId, handle) => {
         { new: true }
     );
 
-    // Fire initial sync in background so dashboard has data right away
     const gfgSyncService = require('./gfgSyncService');
     gfgSyncService.syncGfgProfile(userId, cleanHandle)
         .then(() => console.log(`[VERIFY-GFG] initial sync complete for ${cleanHandle}`))

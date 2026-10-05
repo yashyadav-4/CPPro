@@ -1,23 +1,9 @@
-/**
- * ccProblemsService.js
- *
- * Previously fetched problems from a private CodeChef sync microservice.
- * Now queries the synced CCProblem catalog in MongoDB directly.
- *
- * Return shape is identical to the old API shape so all callers are unaffected:
- *   { problemId, title, url, difficulty, tags, solvedCount, platform }
- *
- * The `tags` parameter is retained for API compatibility but CC problems are
- * not tag-filtered at the service level — callers filter on the returned array.
- */
 
 const CCProblem = require('../Model/CCProblem');
 
-// ── In-memory cache ──────────────────────────────────────────────────────────
-// Keyed by "diffMin:diffMax" band so different rating ranges stay independent.
 const _cache    = {};
 const _inFlight = {};
-const TTL = 30 * 60 * 1000; // 30 minutes
+const TTL = 30 * 60 * 1000; 
 
 function isFresh(key) {
     return _cache[key] && (Date.now() - _cache[key].ts < TTL);
@@ -28,7 +14,7 @@ async function getCCProblems(diffMin, diffMax, tags = []) {
 
     if (isFresh(key)) return _cache[key].data;
 
-    // Deduplicate concurrent callers for the same band
+    //already getting this particular problem band
     if (_inFlight[key]) return _inFlight[key];
 
     _inFlight[key] = (async () => {

@@ -10,23 +10,12 @@ const CF_SYNC_API = (process.env.CF_SYNC_API || 'http://localhost:3001').replace
 const CF_SYNC_SECRET = process.env.CF_SYNC_SECRET || '';
 
 const FIFTEEN_MINUTES = 15 * 60 * 1000;
-const ADMIN_COOLDOWN = 10 * 1000; // 10 seconds for admins
+const ADMIN_COOLDOWN = 10 * 1000; 
 
-/**
- * Returns the appropriate cooldown duration based on user role.
- * Admins get a 10-second cooldown; everyone else gets 15 minutes.
- */
 function getCooldown(role) {
     return role === 'admin' ? ADMIN_COOLDOWN : FIFTEEN_MINUTES;
 }
 
-/**
- * Freshness gate — checks lastCfUpdate against role-based cooldown.
- * Stamps lastCfUpdate IMMEDIATELY on dispatch to prevent duplicate syncs.
- * @param {string} userId
- * @param {string} handle
- * @param {string} role - user role ('user' | 'admin' | 'moderator')
- */
 const getCodeforcesData = async (userId, handle, role = 'user') => {
     const user = await User.findById(userId).lean();
     const cooldown = getCooldown(role);
@@ -41,35 +30,28 @@ const getCodeforcesData = async (userId, handle, role = 'user') => {
 
     console.log(`[LEAN-NEXUS] >> ${handle} | Stale | Updating`);
 
-    // IMMEDIATELY stamp lastCfUpdate to prevent duplicate dispatches
-    // from concurrent requests hitting the stale window
     await User.findByIdAndUpdate(userId, { $set: { lastCfUpdate: new Date() } });
 
-    // background sync — fire-and-forget to worker service
     syncCodeforcesProfile(userId, handle)
         .then(() => console.log(`[LEAN-NEXUS] >> ${handle} | Background update dispatched`))
         .catch(async (err) => {
             console.error(`[LEAN-NEXUS] >> ${handle} | Background update failed:`, err.message);
-            // Log to ErrorLog so admin page shows the failure
             ErrorLog.create({
                 source: 'CF-Sync-Service',
                 level: 'error',
                 message: `[CF_SYNC_DISPATCH_FAILED] handle=${handle} | userId=${userId} | reason=${err.message}`,
             }).catch(() => {});
-            // rollback the timestamp so the user can retry
             await User.findByIdAndUpdate(userId, { $set: { lastCfUpdate: user.lastCfUpdate || null } });
         });
 
     return { freshness: 'updating' };
 };
 
-// Enqueues a sync job on the CF worker and polls until completion — mirrors lcSyncService polling.
 const syncCodeforcesProfile = async (userId, handle, opts = {}) => {
     const syncDepth = opts.syncDepth || 'incremental';
     const headers = { 'Content-Type': 'application/json' };
     if (CF_SYNC_SECRET) headers['Authorization'] = `Bearer ${CF_SYNC_SECRET}`;
 
-    // 1. Enqueue the job.
     let jobId;
     try {
         const { data } = await axios.post(`${CF_SYNC_API}/sync`, {
@@ -85,9 +67,8 @@ const syncCodeforcesProfile = async (userId, handle, opts = {}) => {
         throw new Error(`CF worker enqueue failed: ${msg}`);
     }
 
-    // 2. Poll /sync/status/:jobId until done (max ~2 min, matching LC pattern).
     const POLL_INTERVAL_MS = 3_000;
-    const MAX_POLLS        = 40; // 40 × 3 s = 120 s
+    const MAX_POLLS        = 40;
 
     for (let attempt = 0; attempt < MAX_POLLS; attempt++) {
         await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
@@ -106,7 +87,6 @@ const syncCodeforcesProfile = async (userId, handle, opts = {}) => {
 
         if (state === 'completed') {
             console.log(`[LEAN-NEXUS] >> ${handle} | sync done ✓`);
-            // Post-sync: check if today's daily problem was solved
             Submission.find(
                 { userId, platform: 'codeforces', verdict: 'AC' },
                 { problemId: 1, _id: 0 }
@@ -114,7 +94,6 @@ const syncCodeforcesProfile = async (userId, handle, opts = {}) => {
                 .then(async subs => {
                     checkDailyProblemSolves(userId, 'codeforces', subs.map(s => s.problemId));
                     await checkUpsolveProblemSolves(userId, 'codeforces', subs.map(s => s.problemId));
-                    // Recalculate Level Up Data after sync
                     recalculateLevelUpData(userId);
                 })
                 .catch(err => console.warn('[DAILY-CF] solve check failed:', err.message));
@@ -125,7 +104,6 @@ const syncCodeforcesProfile = async (userId, handle, opts = {}) => {
             const reason = failedReason || 'unknown';
             throw new Error(`CF worker job failed: ${reason}`);
         }
-        // waiting | active | delayed → keep polling
     }
 
     throw new Error(`CF worker job ${jobId} did not complete within the poll window`);

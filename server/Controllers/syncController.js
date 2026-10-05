@@ -33,7 +33,6 @@ async function handleManualRefresh(req, res) {
             ? Date.now() - new Date(user.lastCfUpdate).getTime()
             : Infinity;
 
-        // Still within cooldown — return current MongoDB data immediately.
         if (timeSinceUpdate < cooldown) {
             const remainingSeconds = Math.ceil((cooldown - timeSinceUpdate) / 1000);
             const profileData = await dashboardService.getProfileSummary(userId);
@@ -46,15 +45,12 @@ async function handleManualRefresh(req, res) {
             });
         }
 
-        // Stamp NOW to prevent duplicate dispatches on double-click.
         await User.findByIdAndUpdate(userId, { $set: { lastCfUpdate: new Date() } });
 
-        // Await the sync so the response carries fresh data (mirrors LC behaviour).
         try {
             await syncService.syncCodeforcesProfile(userId, handle);
         } catch (err) {
             console.error('[LEAN-NEXUS] sync failed:', err.message);
-            // Roll back timestamp so the user can retry.
             await User.findByIdAndUpdate(userId, { $set: { lastCfUpdate: user.lastCfUpdate || null } });
             return res.status(500).json({ success: false, message: `Sync failed: ${err.message}` });
         }
@@ -91,7 +87,6 @@ async function handleLcManualRefresh(req, res) {
             ? Date.now() - new Date(user.lastLcUpdate).getTime()
             : Infinity;
 
-        // Data is still fresh — return immediately without syncing.
         if (timeSinceUpdate < cooldown) {
             const remainingSeconds = Math.ceil((cooldown - timeSinceUpdate) / 1000);
             const lcData = await LeetCodeData.findOne({ userId }).lean();
@@ -104,17 +99,14 @@ async function handleLcManualRefresh(req, res) {
             });
         }
 
-        // Stamp NOW to prevent duplicate dispatches if the user double-clicks.
         await User.findByIdAndUpdate(userId, { $set: { lastLcUpdate: new Date() } });
 
         const sessionToken = await getDecryptedLcSession(userId, { allowExpired: true });
 
-        // Await the sync so this response only returns once MongoDB has fresh data.
         try {
             await lcSyncService.syncLeetcodeProfile(userId, handle, sessionToken);
         } catch (err) {
             console.error('[LEAN-NEXUS] sync failed:', err.message);
-            // Roll back the timestamp so the user can retry after a page reload.
             await User.findByIdAndUpdate(userId, { $set: { lastLcUpdate: user.lastLcUpdate || null } });
             return res.status(500).json({ success: false, message: `Sync failed: ${err.message}` });
         }
@@ -231,14 +223,8 @@ async function handleCcHealthCheck(_req, res) {
     }
 }
 
-// ── Hard Sync Handlers ────────────────────────────────────────────────────
-// Requirements:
-// 1. 30-day cooldown on hard sync (admin bypass)
-// 2. Regular 15-min sync cooldown must ALSO be expired (no spam)
-// 3. Fire-and-forget background sync with syncDepth: 'hard'
-
 const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
-const ADMIN_HARD_SYNC_COOLDOWN = 30 * 1000; // 30 seconds for testing
+const ADMIN_HARD_SYNC_COOLDOWN = 30 * 1000; 
 
 async function handleCfHardSync(req, res) {
     try {
@@ -252,14 +238,12 @@ async function handleCfHardSync(req, res) {
         const role = user.role || 'user';
         const regularCooldown = role === 'admin' ? ADMIN_COOLDOWN : FIFTEEN_MINUTES;
 
-        // Gate 1: regular sync cooldown must be expired
         const timeSinceUpdate = user.lastCfUpdate ? (Date.now() - new Date(user.lastCfUpdate).getTime()) : Infinity;
         if (timeSinceUpdate < regularCooldown) {
             const remainingSeconds = Math.ceil((regularCooldown - timeSinceUpdate) / 1000);
             return res.status(429).json({ success: false, message: `Regular sync cooldown active. Try again in ${remainingSeconds}s`, remainingSeconds });
         }
 
-        // Gate 2: Hard sync cooldown
         if (role === 'admin') {
             const timeSinceHard = user.lastCfHardSync ? (Date.now() - new Date(user.lastCfHardSync).getTime()) : Infinity;
             if (timeSinceHard < ADMIN_HARD_SYNC_COOLDOWN) {
@@ -274,7 +258,6 @@ async function handleCfHardSync(req, res) {
             }
         }
 
-        // Stamp both timestamps immediately to prevent spam
         await User.findByIdAndUpdate(userId, { $set: { lastCfHardSync: new Date(), lastCfUpdate: new Date() } });
 
         const handle = user.linkedAccounts.codeforces;
@@ -310,9 +293,7 @@ async function handleLcHardSync(req, res) {
             return res.status(429).json({ success: false, message: `Regular sync cooldown active. Try again in ${remainingSeconds}s`, remainingSeconds });
         }
 
-        // Gate 2: Hard sync 30-day cooldown.
-        // BYPASS entirely when lcSessionPendingSync=true — the user just added their
-        // session for the first time (or re-authed), so we MUST run a deep sync.
+        //first time lc session added
         if (!user.lcSessionPendingSync) {
             if (role === 'admin') {
                 const timeSinceHard = user.lastLcHardSync ? (Date.now() - new Date(user.lastLcHardSync).getTime()) : Infinity;
@@ -334,11 +315,6 @@ async function handleLcHardSync(req, res) {
         const handle = user.linkedAccounts.leetcode;
         const sessionToken = await getDecryptedLcSession(userId, { allowExpired: true });
 
-        // Use 'first' depth when the pending flag is set (= first time session ever added)
-        // so NexusLC fetches up to 3000 subs. Otherwise 'hard' = 600.
-        // Guard: if no session token, 'first' depth is meaningless (auth query is skipped in NexusLC)
-        // \u2014 degrade to 'hard' to at least refresh public data. The flag stays set so the real
-        // 3000-sub sync fires correctly once the user adds their session.
         let manualSyncDepth = user.lcSessionPendingSync ? 'first' : 'hard';
         if (manualSyncDepth === 'first' && !sessionToken) {
             console.log(`[HARD-SYNC-LC] ${handle} | lcSessionPendingSync=true but no session \u2014 degrading to 'hard' (public only)`);
@@ -348,9 +324,7 @@ async function handleLcHardSync(req, res) {
         lcSyncService.syncLeetcodeProfile(userId, handle, sessionToken, { syncDepth: manualSyncDepth })
             .then(async () => {
                 console.log(`[HARD-SYNC-LC] ${handle} | done (depth=${manualSyncDepth})`);
-                // Clear the pending flag after a successful manual hard sync
                 await User.findByIdAndUpdate(userId, { $set: { lcSessionPendingSync: false } });
-                // Regenerate daily problems when doing a full history import
                 if (manualSyncDepth === 'first') {
                     try {
                         const DailyProblem = require('../Model/DailyProblem');
@@ -451,14 +425,12 @@ async function handleGfgManualRefresh(req, res) {
             });
         }
 
-        // Stamp timestamp first to prevent duplicate dispatches
         await User.findByIdAndUpdate(userId, { $set: { lastGfgUpdate: new Date() } });
 
         try {
             await gfgSyncService.syncGfgProfile(userId, handle);
         } catch (err) {
             console.error('[GFG-SYNC] sync failed:', err.message);
-            // Roll back so user can retry
             await User.findByIdAndUpdate(userId, { $set: { lastGfgUpdate: user.lastGfgUpdate || null } });
             return res.status(500).json({ success: false, message: `Sync failed: ${err.message}` });
         }

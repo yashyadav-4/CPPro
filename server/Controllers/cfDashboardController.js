@@ -125,7 +125,6 @@ async function getDifficultyBreakdown(req , res){
     }
 }
 
-// ── New consolidated aggregate endpoint ──────────────────────────────────────
 async function getAggregateDashboard(req, res) {
     try {
         const { userId } = req.params;
@@ -143,10 +142,8 @@ async function getAggregateDashboard(req, res) {
             cfAggRepo.getRecentCfSubmissions(userId),
         ]);
 
-        // Compute streak from CF day set only (LC days will be merged in the lc-aggregate endpoint for unified streak)
         const cfStreak = cfAggRepo.computeCfStreak(cfStats.cfDaySet);
 
-        // Strip the raw Set before sending (not serialisable)
         const { cfDaySet: _, ...cfStatsClean } = cfStats;
 
         res.status(200).json({
@@ -172,7 +169,6 @@ async function getAggregateDashboard(req, res) {
     }
 }
 
-// ── Next Target micro-bracket endpoint ──────────────────────────────────
 async function getNextTarget(req, res) {
     try {
         const { userId } = req.params;
@@ -199,7 +195,6 @@ async function getNextTarget(req, res) {
         const nextRank = getRankFromRating(microParams.nextMilestone);
         const rankBoundaryChange = currentRank !== nextRank;
 
-        // Get nearest topics based on brackets
         let topicsKeys = Object.keys(microBracketTopics).map(Number).sort((a,b)=>a-b);
         let selectedBracket = 800;
         for (let key of topicsKeys) {
@@ -209,7 +204,6 @@ async function getNextTarget(req, res) {
                 break;
             }
         }
-        // Compute 3-tier topics
         const topicTiers = {
             master: microBracketTopics[selectedBracket - 50] || [],
             current: microBracketTopics[selectedBracket] || [],
@@ -218,7 +212,6 @@ async function getNextTarget(req, res) {
         const allTopicsSet = new Set([...topicTiers.master, ...topicTiers.current, ...topicTiers.stretch]);
         const allTopics = Array.from(allTopicsSet);
 
-        // Gather user's topic strengths for these topics
         const topicStats = await Submission.aggregate([
             { $match: { userId: new mongoose.Types.ObjectId(userId), platform: 'codeforces', verdict: 'AC' } },
             { $unwind: "$tags" },
@@ -243,9 +236,7 @@ async function getNextTarget(req, res) {
             stretch: formatTopics(topicTiers.stretch)
         };
 
-        // Compute momentum
         const history = platform.ratedHistory || [];
-        // sorted descending by date
         const sortedHistory = [...history].sort((a, b) => new Date(b.date) - new Date(a.date));
         
         let recentContestDeltas = [];
@@ -281,7 +272,7 @@ async function getNextTarget(req, res) {
                 rankBoundaryChange,
                 ...microParams,
                 topicTiers: topicTiersWithStats,
-                recentContestDeltas: last3, // Send only last 3 for UI
+                recentContestDeltas: last3, 
                 avgDeltaLast10,
                 avgDeltaLast3,
                 estimatedContests,

@@ -7,7 +7,6 @@ const { incrementDailyStat, recordDAU } = require('../Utils/dailyStatHelper');
 
 const client = new OAuth2Client(process.env.CLIENT_ID);
 
-// ── lastLogin throttle: at most 1 DB write per minute per user ───────────────
 const lastLoginThrottle = new Map();
 const LOGIN_THROTTLE_MS = 60 * 1000;
 
@@ -32,10 +31,8 @@ async function handleVerifyAuth(req, res) {
         const user = await User.findById(userPayload._id).select('-password');
         if (!user) return res.json({ authenticated: false });
 
-        // Record DAU (safe against race conditions)
         recordDAU(user._id);
 
-        // Update lastLogin on every page load (throttled to 1 DB write/min)
         throttledUpdateLastLogin(user._id);
 
         return res.json({ authenticated: true, user });
@@ -53,7 +50,6 @@ async function handleUserSignup(req, res) {
         const user = await User.findOne({ email });
         if (user) return res.status(400).json({ message: "Account already exists" });
 
-        // auto-generate a unique username from the name
         const baseUsername = name.trim().toLowerCase().replace(/\s+/g, '_');
         const suffix = Math.floor(1000 + Math.random() * 9000);
         const username = `${baseUsername}_${suffix}`;
@@ -67,7 +63,7 @@ async function handleUserSignup(req, res) {
         });
 
         incrementDailyStat('newSignups');
-        incrementDailyStat('activeUsers'); // Signups are active
+        incrementDailyStat('activeUsers'); 
 
         return res.status(201).json({ message: "Account created successfully" })
     } catch (err) {
@@ -85,7 +81,6 @@ async function handleUserLogin(req, res) {
         const user = await User.findOne({ email });
         if (!user) return res.status(401).json({ message: "Invalid Credentials" })
 
-        // bcrypt confirmation
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
             return res.status(401).json({ message: "Invalid Credentials" });
@@ -93,10 +88,8 @@ async function handleUserLogin(req, res) {
 
         const token = setUser(user);
 
-        // Record DAU
         recordDAU(user._id);
 
-        // Track last login
         User.updateOne({ _id: user._id }, { lastLogin: new Date() }).catch(() => {});
 
         res.cookie('token', token, {
@@ -181,15 +174,13 @@ async function handleGoogleAuth(req, res) {
             });
 
             incrementDailyStat('newSignups');
-            incrementDailyStat('activeUsers'); // Signups are active
+            incrementDailyStat('activeUsers'); 
         } else {
-            // Existing user, Record DAU
             recordDAU(user._id);
         }
 
         const token = setUser(user);
 
-        // Track last login + mark verified (Google-verified email)
         User.updateOne(
             { _id: user._id },
             { lastLogin: new Date(), isVerified: true }
@@ -210,13 +201,6 @@ async function handleGoogleAuth(req, res) {
     }
 }
 
-/**
- * POST /api/auth/heartbeat
- * Ultra-lightweight ping called every 60s by the browser while the tab is open.
- * The verifyToken middleware already updated lastLogin (throttled to 1/min).
- * DAU is now derived from User.lastLogin directly — no separate collection needed.
- * Returns 204 No Content — no body to parse on the client.
- */
 function handleHeartbeat(req, res) {
     return res.status(204).send();
 }
@@ -229,4 +213,4 @@ module.exports = {
     handlePasswordChange,
     handleGoogleAuth,
     handleHeartbeat,
-}
+}

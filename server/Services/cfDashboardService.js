@@ -7,8 +7,7 @@ const generateLast365Days=()=>{
     for(let i=364; i>=0; i--){
         const d= new Date(today);
         d.setDate(today.getDate()-i);
-       //for spliting absolute time to the day
-       const localDate= d.toLocaleDateString('en-CA' , {timeZone:"Asia/Kolkata"}); //to correct timzone error for users
+       const localDate= d.toLocaleDateString('en-CA' , {timeZone:"Asia/Kolkata"});
        dates.push(localDate);
     }
     return dates;
@@ -22,7 +21,6 @@ const getHeatmap = async(userId)=>{
         submissionMap[item.date]=item.count;
     })
 
-    //now generating all 365days and filling in blanks so heatmap doesnt look good
     const allDays= generateLast365Days();
     const completeHeatmap= allDays.map(dateStr=>({
         date:dateStr,

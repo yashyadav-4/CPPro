@@ -5,17 +5,13 @@ const getLeaderboard = async ({ scope, scopeValue, category, currentUserId, isAd
     let rawLeaderboard;
 
     if (scope === 'global') {
-        // Serve from Redis precomputed cache — falls back to live if cache is empty
         const cachedEntries = await getCache(`leaderboard:global:${category}`);
         if (cachedEntries?.length) {
             rawLeaderboard = cachedEntries;
-            // If admin, the cached entries won't have real names for anonymous users.
-            // Fall through to live query so admin sees full data.
             if (isAdmin) rawLeaderboard = null;
         }
     }
 
-    // Country/college scopes (scoped per user) and cache-miss fallback always run live
     if (!rawLeaderboard) {
         rawLeaderboard = await leaderboardRepo.getLeaderboardData(scope, scopeValue, category, isAdmin);
     }

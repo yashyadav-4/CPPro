@@ -12,8 +12,6 @@ const { fetchPopularProblems } = require('./popularSheetsService');
 
 const EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
 
-// ── Utility ──────────────────────────────────────────────────────────────────
-
 function shuffleArray(array) {
     const arr = [...array];
     for (let i = arr.length - 1; i > 0; i--) {
@@ -29,8 +27,7 @@ function ratingToInt(tierStr) {
 
 function enforceVariety(pool, limit, linkedCount) {
     if (linkedCount <= 1) return pool.slice(0, limit);
-    
-    // User explicitly requested max 4 per platform
+
     const maxPerPlatform = limit === 6 ? 4 : Math.ceil(limit * 0.66);
     let selected = [];
     let counts = {};
@@ -59,7 +56,6 @@ function weakScore(problem, weakList) {
     return problem.tags.filter(t => weakList.includes(t)).length;
 }
 
-// ── Level mapping ─────────────────────────────────────────────────────────────
 
 function getLCDifficultyForUser(lcData) {
     const lastRating = lcData?.contestHistory?.slice(-1)[0]?.rating;
@@ -137,7 +133,6 @@ function _buildCCResult(p, weakTopics) {
     };
 }
 
-// ── Generators ────────────────────────────────────────────────────────────────
 
 async function generateWorkout(limit, { cfLinked, lcLinked, ccLinked, linkedCount, cfRating, ccRating, lcData, cfWeak, lcWeak, ccWeak, attemptedSet, popularData }) {
     let pool = [];
@@ -190,7 +185,7 @@ async function generateWorkout(limit, { cfLinked, lcLinked, ccLinked, linkedCoun
 
         if (a._weakScore !== b._weakScore) return b._weakScore - a._weakScore;
 
-        if (a._ratingDiff !== b._ratingDiff) return a._ratingDiff - b._ratingDiff; // Ascending: smaller diff is better
+        if (a._ratingDiff !== b._ratingDiff) return a._ratingDiff - b._ratingDiff; 
 
         return 0;
     });
@@ -291,7 +286,6 @@ async function generateBonus(limit, { cfLinked, lcLinked, ccLinked, linkedCount,
     return enforceVariety(pool, limit, linkedCount);
 }
 
-// ── Main Interface ────────────────────────────────────────────────────────────
 
 async function getUpsolveRecommendations(userId) {
     const [user, cfPlatform, ccPlatform, lcData] = await Promise.all([
@@ -343,7 +337,6 @@ async function getUpsolveRecommendations(userId) {
     };
 }
 
-// ── Auto-solve detection ─────────────────────────────────────────────────────
 
 async function checkUpsolveProblemSolves(userId, platform, acProblemIds) {
     if (!acProblemIds || !acProblemIds.length) return;
@@ -354,7 +347,6 @@ async function checkUpsolveProblemSolves(userId, platform, acProblemIds) {
     const acSet = new Set(acProblemIds.map(String));
     let changed = false;
 
-    // Fetch actual submission timestamps to reflect when the problem was solved
     const recentAc = await Submission.find({
         userId, platform, problemId: { $in: acProblemIds }, verdict: 'AC'
     }, 'problemId submittedAt').lean();
@@ -379,7 +371,6 @@ async function checkUpsolveProblemSolves(userId, platform, acProblemIds) {
     }
 
     if (changed) {
-        // Mongoose nested arrays modifications require marking as modified or saving
         recs.markModified('workout');
         recs.markModified('challenge');
         recs.markModified('bonus');

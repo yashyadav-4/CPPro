@@ -4,15 +4,12 @@ const Submission = require('../Model/Submissions');
 const LCProblem = require('../Model/LCProblem');
 const mongoose = require('mongoose');
 
-// Helper to strictly format dates as YYYY-MM-DD in IST
 function getISTDate(dateInput) {
-    // Convert input date into a string formatted in IST using en-US to guarantee parsability
     const istString = new Date(dateInput).toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
     const d = new Date(istString);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-// ── Helper: parse LC submissionCalendar to {date, count}[] ──────────────────
 function parseLcCalendar(submissionCalendar) {
     try {
         const obj = JSON.parse(submissionCalendar || '{}');
@@ -26,7 +23,6 @@ function parseLcCalendar(submissionCalendar) {
     } catch { return []; }
 }
 
-// ── Helper: compute streak from a set of date strings ───────────────────────
 function computeStreakFromSet(daySet) {
     const sorted = [...daySet].sort();
     if (sorted.length === 0) return { currentStreak: 0, bestStreak: 0 };
@@ -140,12 +136,10 @@ async function getLcRecentSubmissions(req, res) {
     }
 }
 
-// ── New consolidated LC aggregate endpoint ───────────────────────────────────
 async function getLcAggregateDashboard(req, res) {
     try {
         const { userId } = req.params;
 
-        // Fetch LC data and CF Platform data in parallel
         const [lcData, cfPlatform, cfSubmissions] = await Promise.all([
             LeetCodeData.findOne({ userId }).lean(),
             Platform.findOne({ userId, platform: 'codeforces' })
@@ -165,13 +159,10 @@ async function getLcAggregateDashboard(req, res) {
         const contestHistory = lcData.contestHistory || [];
         const skillStats = lcData.skillStats || {};
 
-        // ── LC calendar entries ──────────────────────────────────────────────
         const lcCalendarParsed = parseLcCalendar(calendar.submissionCalendar);
-        // Build lcDaySet from calendar. Individual recentSubmissions timestamps are merged
-        // later when needed so the 12am–5:30am IST window is covered correctly.
+
         const lcDaySet = new Set(lcCalendarParsed.filter(d => d.count > 0).map(d => d.date));
 
-        // ── LC this month / last month ───────────────────────────────────────
         const now = new Date();
         const monthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
         const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -183,16 +174,12 @@ async function getLcAggregateDashboard(req, res) {
             if (ym === monthStr && d.count > 0) lcActiveDaysThisMonth++;
         });
 
-        // Use recentSubmissions to count unique problems NEWLY AC'd this month / last month.
-        // recentSubmissions is ordered newest-first; we track per-titleSlug first AC occurrence
-        // and only count it if that first AC falls within the target month.
         const recentSubs = lcData.recentSubmissions || [];
-        // Sort ascending by timestamp so we can find the first AC for each problem
         const recentSorted = [...recentSubs]
             .filter(s => s.timestamp)
             .sort((a, b) => Number(a.timestamp) - Number(b.timestamp));
 
-        const firstAcMonthMap = {}; // titleSlug -> YYYY-MM of its first AC
+        const firstAcMonthMap = {};
         recentSorted.forEach(s => {
             if (s.statusDisplay === 'Accepted' && !firstAcMonthMap[s.titleSlug]) {
                 firstAcMonthMap[s.titleSlug] = getISTDate(Number(s.timestamp) * 1000).slice(0, 7);
@@ -202,17 +189,12 @@ async function getLcAggregateDashboard(req, res) {
         const lcSolvedThisMonth = Object.values(firstAcMonthMap).filter(ym => ym === monthStr).length;
         const lcSolvedLastMonth = Object.values(firstAcMonthMap).filter(ym => ym === lastMonthStr).length;
 
-        // ── LC acceptance rate ───────────────────────────────────────────────
         const acSubmissions = (profile.acSubmissionNum || []).find(s => s.difficulty === 'All');
         const totalSubmissionsNum = (profile.totalSubmissionNum || []).find(s => s.difficulty === 'All');
         const lcAcceptanceRate = (totalSubmissionsNum?.submissions > 0)
             ? Math.round((acSubmissions?.submissions || 0) / totalSubmissionsNum.submissions * 100)
             : 0;
 
-        // ── Unified streak: merge CF days + LC days ──────────────────────────
-        // Also merge per-submission IST dates from recentSubmissions so solves in the
-        // 12am–5:30am IST window (which land in the previous UTC calendar bucket) don't
-        // create artificial streak gaps.
         const lcRecentAcDays = new Set(
             (lcData.recentSubmissions || [])
                 .filter(s => s.statusDisplay === 'Accepted' && s.timestamp)
@@ -229,7 +211,6 @@ async function getLcAggregateDashboard(req, res) {
         const lcOnlyStreak = computeStreakFromSet(lcDaySetFull);
         const bestStreakPlatform = cfOnlyStreak.bestStreak >= lcOnlyStreak.bestStreak ? 'codeforces' : 'leetcode';
 
-        // ── LC rating history ────────────────────────────────────────────────
         const attendedContests = contestHistory.filter(c => c.attended);
         const lcRatingHistory = attendedContests
             .map(c => ({
@@ -251,7 +232,6 @@ async function getLcAggregateDashboard(req, res) {
             return 'Guardian';
         };
 
-        // ── Recent LC contests ───────────────────────────────────────────────
         const recentLcContests = attendedContests
             .sort((a, b) => (b.contestStartTime || 0) - (a.contestStartTime || 0))
             .slice(0, 15)
@@ -272,7 +252,6 @@ async function getLcAggregateDashboard(req, res) {
                 };
             });
 
-        // ── LC topics from skillStats ────────────────────────────────────────
         const lcTopics = [
             ...(skillStats.fundamental || []),
             ...(skillStats.intermediate || []),
@@ -280,9 +259,6 @@ async function getLcAggregateDashboard(req, res) {
         ].map(t => ({ name: t.tagName, count: t.problemsSolved }))
             .sort((a, b) => b.count - a.count);
 
-        // ── Last 7 days (LC side) ────────────────────────────────────────────
-        // lcDaySetFull already merges calendar + per-submission IST dates so solves in
-        // the 12am–5:30am IST window are correctly attributed to the actual IST date.
         const lcLast7Days = [];
         for (let i = 6; i >= 0; i--) {
             const d = new Date();
@@ -291,9 +267,6 @@ async function getLcAggregateDashboard(req, res) {
             lcLast7Days.push({ date: dateStr, solved: lcDaySetFull.has(dateStr) });
         }
 
-        // ── LC Upsolve Queue (from recentSubmissions) ───────────────────────
-        // acSlugs = 100 most recent AC slugs from the public endpoint, stored separately
-        // so problems solved outside the session window are still excluded.
         const acSlugSet = new Set(lcData.acSlugs || []);
         const recentSubmissions = lcData.recentSubmissions || [];
         const lcProblemMap = {};
@@ -337,17 +310,15 @@ async function getLcAggregateDashboard(req, res) {
                 failReason: p.verdicts[0] || 'WA',
             }));
 
-        // ── Achievements (combined CF + LC) ──────────────────────────────────
         const cfRating = cfPlatform?.currentRating || 0;
         const cfMaxRating = cfPlatform?.maxRating || 0;
-        const cfSolvedPlat = 0; // will be summed in frontend — we only need thresholds here
+        const cfSolvedPlat = 0; 
 
         const lcSolved = profile.totalSolved || 0;
         const lcEasy = profile.easySolved || 0;
         const lcMedium = profile.mediumSolved || 0;
         const lcHard = profile.hardSolved || 0;
 
-        // We'll fetch CF solved count from submissions
         const cfAcCount = await Submission.distinct('problemId', {
             userId: new mongoose.Types.ObjectId(userId),
             platform: 'codeforces',
@@ -360,25 +331,25 @@ async function getLcAggregateDashboard(req, res) {
         const bestStreak = unifiedStreak.bestStreak;
 
         const achievements = [
-            // Streak achievements
+
             { icon: '🔥', label: '7-Day Streak', platform: 'combined', earned: bestStreak >= 7, progress: Math.min(bestStreak / 7, 1) },
             { icon: '🔥', label: '30-Day Streak', platform: 'combined', earned: bestStreak >= 30, progress: Math.min(bestStreak / 30, 1) },
             { icon: '🔥', label: '100-Day Streak', platform: 'combined', earned: bestStreak >= 100, progress: Math.min(bestStreak / 100, 1) },
             { icon: '🔥', label: '200-Day Streak', platform: 'combined', earned: bestStreak >= 200, progress: Math.min(bestStreak / 200, 1) },
-            // Problems solved milestones
+  
             { icon: '💡', label: '50 Problems', platform: 'combined', earned: totalSolvedCombined >= 50, progress: Math.min(totalSolvedCombined / 50, 1) },
             { icon: '💡', label: '100 Problems', platform: 'combined', earned: totalSolvedCombined >= 100, progress: Math.min(totalSolvedCombined / 100, 1) },
             { icon: '💡', label: '200 Problems', platform: 'combined', earned: totalSolvedCombined >= 200, progress: Math.min(totalSolvedCombined / 200, 1) },
             { icon: '🏆', label: '500 Problems', platform: 'combined', earned: totalSolvedCombined >= 500, progress: Math.min(totalSolvedCombined / 500, 1) },
-            // CF rating milestones
+
             { icon: '⭐', label: 'CF 1200+', platform: 'codeforces', earned: cfMaxRating >= 1200, progress: Math.min(cfMaxRating / 1200, 1) },
             { icon: '⭐', label: 'CF 1400+', platform: 'codeforces', earned: cfMaxRating >= 1400, progress: Math.min(cfMaxRating / 1400, 1) },
             { icon: '⭐', label: 'CF 1600+', platform: 'codeforces', earned: cfMaxRating >= 1600, progress: Math.min(cfMaxRating / 1600, 1) },
-            // LC rating milestones
+
             { icon: '🟡', label: 'LC 1600+', platform: 'leetcode', earned: lcMaxRating >= 1600, progress: Math.min(lcMaxRating / 1600, 1) },
             { icon: '🟡', label: 'LC 1800+', platform: 'leetcode', earned: lcMaxRating >= 1800, progress: Math.min(lcMaxRating / 1800, 1) },
             { icon: '🟡', label: 'LC 2000+', platform: 'leetcode', earned: lcMaxRating >= 2000, progress: Math.min(lcMaxRating / 2000, 1) },
-            // Hard problems
+  
             { icon: '🧠', label: '10 Hard Problems', platform: 'leetcode', earned: lcHard >= 10, progress: Math.min(lcHard / 10, 1) },
             { icon: '🧠', label: '50 Hard Problems', platform: 'leetcode', earned: lcHard >= 50, progress: Math.min(lcHard / 50, 1) },
             { icon: '🧠', label: '100 Hard Problems', platform: 'leetcode', earned: lcHard >= 100, progress: Math.min(lcHard / 100, 1) },
@@ -404,28 +375,23 @@ async function getLcAggregateDashboard(req, res) {
         res.status(200).json({
             success: true,
             data: {
-                // Profile
                 lcHandle: lcData.lcUsername,
                 lcRating: lcCurrentRating,
                 lcMaxRating,
                 lcRank: getLcRank(lcCurrentRating),
-                // Solved breakdown
                 lcSolved,
                 lcEasy,
                 lcMedium,
                 lcHard,
-                // Stats
                 lcActiveDays: lcCalendarParsed.filter(d => d.count > 0).length || calendar.totalActiveDays || 0,
                 lcActiveDaysThisMonth,
                 lcSolvedThisMonth,
                 lcSolvedLastMonth,
                 lcAcceptanceRate,
                 lcStreak: calendar.streak || 0,
-                // Unified streak (merged CF + LC days)
                 currentStreak: unifiedStreak.currentStreak,
                 bestStreak: unifiedStreak.bestStreak,
                 bestStreakPlatform,
-                // Data arrays
                 lcCalendarParsed,
                 lcLast7Days,
                 lcRatingHistory,
@@ -433,15 +399,11 @@ async function getLcAggregateDashboard(req, res) {
                 lcTopics,
                 achievements,
                 upsolveQueue: lcUpsolveQueue,
-                // Raw CF data for combined stats in frontend
                 cfSolved,
-                // LC submission counts from LeetCode's own API
-                lcTotalSubmissions: totalSubmissionsNum?.submissions || 0,  // ALL submissions (every attempt)
-                lcAcSubmissions: acSubmissions?.submissions || 0,            // AC submissions only
+                lcTotalSubmissions: totalSubmissionsNum?.submissions || 0, 
+                lcAcSubmissions: acSubmissions?.submissions || 0,          
                 lastSyncedAt: lcData.lastSyncedAt || null,
-                // Recent AC submissions (title, titleSlug, timestamp) with difficulty mapped
                 recentSubmissions: recentSubmissionsWithDiff,
-                // Tiered skill stats for LC Skill Breakdown component
                 lcSkillFundamental: (skillStats.fundamental || [])
                     .map(t => ({ name: t.tagName, count: t.problemsSolved }))
                     .sort((a, b) => b.count - a.count).slice(0, 10),

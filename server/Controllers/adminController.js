@@ -20,9 +20,6 @@ const ErrorLog = require('../Model/ErrorLog');
 const DailyActiveUser = require('../Model/DailyActiveUser');
 const axios = require('axios');
 
-// ── In-memory catalog sync state ─────────────────────────────────────────────
-// Tracks the status of each platform's problem catalog sync.
-// Resets on server restart — admin just re-triggers if needed.
 const catalogSyncState = {
     cf:      { status: 'idle', startedAt: null, finishedAt: null, total: 0, inserted: 0, updated: 0, error: null },
     lc:      { status: 'idle', startedAt: null, finishedAt: null, total: 0, inserted: 0, updated: 0, error: null },
@@ -30,16 +27,11 @@ const catalogSyncState = {
     lc_tags: { status: 'idle', startedAt: null, finishedAt: null, contests: 0, tagged: 0, skipped: 0, error: null },
 };
 
-/**
- * GET /api/admin/stats?days=7|30
- * Returns comprehensive platform analytics for the admin dashboard.
- */
 async function getAdminStats(req, res) {
     try {
         const days = Math.min(Math.max(parseInt(req.query.days) || 7, 1), 90);
         const now = new Date();
 
-        // ── Date boundaries ──────────────────────────────────────────────────
         const startOfRange = new Date(now);
         startOfRange.setDate(startOfRange.getDate() - (days - 1));
         startOfRange.setHours(0, 0, 0, 0);
@@ -61,10 +53,8 @@ async function getAdminStats(req, res) {
         const startOfThisWeek = new Date(startOf7);
         const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-        // Retention: users who logged in within last 30 days (active users)
         const retentionWindow = new Date(startOf30);
 
-        // ── All aggregations in parallel ─────────────────────────────────────
         const [
             totalUsers,
             verifiedUsers,
@@ -97,13 +87,11 @@ async function getAdminStats(req, res) {
             ccRatingBuckets,
         ] = await Promise.all([
 
-            // ── User counts ─────────────────────────────────────────────────
             User.countDocuments(),
             User.countDocuments({ isVerified: true }),
             User.countDocuments({ 'linkedAccounts.codeforces': { $nin: [null, ''] } }),
             User.countDocuments({ 'linkedAccounts.leetcode': { $nin: [null, ''] } }),
 
-            // ── Both platforms linked ────────────────────────────────────────
             Platform.aggregate([
                 { $group: { _id: '$userId', platforms: { $addToSet: '$platform' } } },
                 { $match: { platforms: { $all: ['codeforces', 'leetcode'] } } },
@@ -115,33 +103,25 @@ async function getAdminStats(req, res) {
             User.countDocuments({ createdAt: { $gte: startOfThisWeek } }),
             User.countDocuments({ createdAt: { $gte: startOfThisMonth } }),
 
-            // ── Submissions ─────────────────────────────────────────────────
             Submission.countDocuments(),
             Submission.countDocuments({ verdict: 'AC' }),
 
-            // ── Unique submitters in last 7 days ─────────────────────────────
             Submission.distinct('userId', { submittedAt: { $gte: startOf7 } })
                 .then(ids => ids.length),
 
-            // ── Synced today ─────────────────────────────────────────────────
             Platform.countDocuments({ platform: 'codeforces', lastSyncedAt: { $gte: startOfToday } }),
             LeetCodeData.countDocuments({ lastSyncedAt: { $gte: startOfToday } }),
 
-            // ── Retention: users logged in within last 30 days ───────────────
             User.countDocuments({ lastLogin: { $gte: retentionWindow } }),
 
-            // ── Community ───────────────────────────────────────────────────
             Post.countDocuments(),
             Comment.countDocuments(),
             Post.countDocuments({ createdAt: { $gte: startOfThisWeek } }),
 
-            // ── Daily Stats (New Users, Syncs, DAU) ─────────────────────────
             DailyStat.find({ date: { $gte: startOfRange.toISOString().slice(0, 10) } }).sort({ date: 1 }).lean(),
 
-            // Dummy for syncedOverTime slot
             Promise.resolve(null),
 
-            // ── AC submissions per day ────────────────────────────────────────
             Submission.aggregate([
                 { $match: { submittedAt: { $gte: startOfRange }, verdict: 'AC' } },
                 {
@@ -153,18 +133,15 @@ async function getAdminStats(req, res) {
                 { $sort: { _id: 1 } }
             ]),
 
-            // Dummy for dauOverTime slot
             Promise.resolve(null),
 
-            // ── Top countries ────────────────────────────────────────────────
             User.aggregate([
                 { $match: { 'location.country': { $nin: [null, ''] } } },
                 { $group: { _id: '$location.country', count: { $sum: 1 } } },
                 { $sort: { count: -1 } },
-                { $limit: 8 }
+                { $limit: 20 }
             ]),
 
-            // ── Top colleges ─────────────────────────────────────────────────
             User.aggregate([
                 { $match: { college: { $nin: [null, ''] } } },
                 { $group: { _id: '$college', count: { $sum: 1 } } },
@@ -172,7 +149,6 @@ async function getAdminStats(req, res) {
                 { $limit: 8 }
             ]),
 
-            // ── CF rating distribution ────────────────────────────────────────
             Platform.aggregate([
                 { $match: { platform: 'codeforces', currentRating: { $gt: 0 } } },
                 {
@@ -185,7 +161,6 @@ async function getAdminStats(req, res) {
                 }
             ]),
 
-            // ── LC solved distribution ────────────────────────────────────────
             LeetCodeData.aggregate([
                 {
                     $bucket: {
@@ -197,16 +172,13 @@ async function getAdminStats(req, res) {
                 }
             ]),
 
-            // ── Recent 10 signups ─────────────────────────────────────────────
             User.find()
                 .sort({ createdAt: -1 })
                 .limit(10)
                 .select('name username email role isVerified createdAt linkedAccounts lastLogin'),
 
-            // ── CC linked count ───────────────────────────────────────────────
             User.countDocuments({ 'linkedAccounts.codechef': { $nin: [null, ''] } }),
 
-            // ── CC rating distribution ────────────────────────────────────────
             Platform.aggregate([
                 { $match: { platform: 'codechef', currentRating: { $gt: 0 } } },
                 {
@@ -220,7 +192,6 @@ async function getAdminStats(req, res) {
             ]),
         ]);
 
-        // ── Build complete date range array (fill missing days with 0) ────────
         const buildTimeSeries = (rawData, rangeStart, numDays) => {
             const map = {};
             rawData.forEach(d => { map[d._id] = d.count; });
@@ -371,12 +342,6 @@ async function refreshStats(req, res) {
     }
 }
 
-/**
- * POST /api/admin/notify
- * Send an in-platform notification to all users or a specific user.
- * Body: { title, message, type?, actionUrl?, targetType: 'all'|'user', targetUserId? }
- * targetType='user' requires targetUserId (MongoDB _id) or targetUsername/targetEmail.
- */
 async function sendNotification(req, res) {
     try {
         const {
@@ -446,11 +411,6 @@ async function sendNotification(req, res) {
     }
 }
 
-/**
- * POST /api/admin/refresh/daily
- * Deletes all DailyProblem docs for today (IST). Each user gets fresh problems
- * generated lazily on their next GET /api/daily request.
- */
 async function refreshDailyProblems(req, res) {
     try {
         const today = getTodayIST();
@@ -466,11 +426,6 @@ async function refreshDailyProblems(req, res) {
     }
 }
 
-/**
- * POST /api/admin/refresh/daily-me
- * Deletes today's DailyProblem doc ONLY for the currently logged-in admin.
- * Leaves all other users' problems untouched — use this for isolated feature testing.
- */
 async function refreshMyDailyProblems(req, res) {
     try {
         const today  = getTodayIST();
@@ -515,10 +470,6 @@ async function clearErrorLogs(req, res) {
     }
 }
 
-/**
- * POST /api/admin/refresh/topics
- * Deletes all DailyTopic docs for today (IST). Users get fresh topics on next visit.
- */
 async function refreshDailyTopics(req, res) {
     try {
         const today = getTodayIST();
@@ -534,12 +485,6 @@ async function refreshDailyTopics(req, res) {
     }
 }
 
-/**
- * POST /api/admin/refresh/daily-topic-me
- * Deletes today's DailyTopic doc ONLY for the currently logged-in admin.
- * Leaves all other users' topics untouched — use this to test the topic engine
- * without disrupting the rest of the user base.
- */
 async function refreshMyDailyTopic(req, res) {
     try {
         const today  = getTodayIST();
@@ -558,23 +503,16 @@ async function refreshMyDailyTopic(req, res) {
     }
 }
 
-/**
- * GET /api/admin/active-users
- * Returns:
- *   - data: users active in last 15 min (isOnlineNow: true), or fallback recently active
- *   - todayUsers: all users whose lastLogin is >= IST midnight today
- *
- * lastLogin is now updated on every authenticated request (throttled to 1/min),
- * so it accurately reflects when a user was last active — not just when they logged in.
- */
+
+/** 
+     users active in last 15 min -> curr throtlled to 1 per min
+**/
 async function getActiveUsers(req, res) {
     try {
         const fifteenMinAgo = new Date(Date.now() - 15 * 60 * 1000);
 
-        // Rolling 24-hour window for "Online Today"
         const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
-        // ── Currently online: lastLogin within last 15 min ───────────────────
         let liveUsers = await User.find({ lastLogin: { $gte: fifteenMinAgo } })
             .sort({ lastLogin: -1 })
             .limit(25)
@@ -583,7 +521,6 @@ async function getActiveUsers(req, res) {
 
         const isLive = liveUsers.length > 0;
 
-        // ── Fallback: most recently active users if nobody online right now ──
         let fallbackUsers = [];
         if (!isLive) {
             fallbackUsers = await User.find({ lastLogin: { $ne: null } })
@@ -595,7 +532,6 @@ async function getActiveUsers(req, res) {
 
         const displayUsers = isLive ? liveUsers : fallbackUsers;
 
-        // ── Online in last 24h ────────────────────────────────────────────────
         const todayUsers = await User.find({ lastLogin: { $gte: last24h } })
             .sort({ lastLogin: -1 })
             .limit(200)
@@ -609,7 +545,6 @@ async function getActiveUsers(req, res) {
             email:       u.email,
             role:        u.role,
             lastLogin:   u.lastLogin,
-            // Server decides isOnlineNow — avoids client-side race conditions
             isOnlineNow: forceOnline || !!(u.lastLogin && u.lastLogin >= fifteenMinAgo),
             cfLinked: !!(u.linkedAccounts?.codeforces),
             lcLinked: !!(u.linkedAccounts?.leetcode),
@@ -633,13 +568,8 @@ async function getActiveUsers(req, res) {
 }
 
 
-// ── Problem Catalog Sync ──────────────────────────────────────────────────────
+//problem catalog sync
 
-/**
- * Helper: bulk-upsert an array of problems into a Mongoose model.
- * Returns { inserted, updated } counts derived from bulkWrite result.
- * Dedup key: `problemId` (unique index on all 3 models).
- */
 async function bulkUpsertProblems(Model, problems) {
     if (!problems.length) return { inserted: 0, updated: 0 };
     const now = new Date();
@@ -650,7 +580,6 @@ async function bulkUpsertProblems(Model, problems) {
             upsert: true,
         },
     }));
-    // Process in batches of 500 to avoid hitting MongoDB driver limits
     const BATCH = 500;
     let inserted = 0;
     let updated  = 0;
@@ -662,21 +591,12 @@ async function bulkUpsertProblems(Model, problems) {
     return { inserted, updated };
 }
 
-/**
- * POST /api/admin/sync/cf-problems
- * Kicks off a background sync of the full Codeforces problem catalog.
- * Returns immediately with { status: 'started' }.
- * Poll GET /api/admin/sync/catalog-status for progress.
- */
 async function syncCFProblems(req, res) {
     if (catalogSyncState.cf.status === 'running') {
         return res.json({ success: true, status: 'already_running', message: 'CF problem sync is already in progress.' });
     }
-
-    // Respond immediately — background work starts below
     res.json({ success: true, status: 'started', message: 'CF problem sync started in background. Poll /api/admin/sync/catalog-status for progress.' });
 
-    // ── Background sync ───────────────────────────────────────────────────────
     catalogSyncState.cf = { status: 'running', startedAt: new Date(), finishedAt: null, total: 0, inserted: 0, updated: 0, error: null };
 
     setImmediate(async () => {
@@ -688,13 +608,11 @@ async function syncCFProblems(req, res) {
 
             const { problems, problemStatistics } = response.data.result;
 
-            // Build solvedCount lookup
             const statMap = new Map();
             for (const s of problemStatistics) {
                 statMap.set(`${s.contestId}${s.index}`, s.solvedCount || 0);
             }
 
-            // Shape + filter: only store rated problems
             const shaped = problems
                 .filter(p => p.rating)
                 .map(p => ({
@@ -710,7 +628,6 @@ async function syncCFProblems(req, res) {
 
             const { inserted, updated } = await bulkUpsertProblems(CFProblem, shaped);
 
-            // Persist last sync time to GlobalSyncState
             await GlobalSyncState.findOneAndUpdate(
                 { syncKey: 'cf_problems' },
                 { syncKey: 'cf_problems', lastSyncedAt: new Date() },
@@ -742,10 +659,8 @@ async function syncCFProblems(req, res) {
     });
 }
 
-// LC GraphQL — used only by syncLCProblems.
-// The problem list is a public endpoint: no proxy, no CSRF, no auth needed.
 const LC_GQL_ENDPOINT = 'https://leetcode.com/graphql';
-const LC_PAGE_SIZE = 100; // LC's documented max per request
+const LC_PAGE_SIZE = 100;
 const LC_PROBLEM_LIST_QUERY = `
 query problemList($categorySlug: String, $limit: Int, $skip: Int, $filters: QuestionListFilterInput) {
   questionList(categorySlug: $categorySlug, limit: $limit, skip: $skip, filters: $filters) {
@@ -777,13 +692,6 @@ async function fetchLCPage(skip) {
     return res.data.data.questionList;
 }
 
-/**
- * POST /api/admin/sync/lc-problems
- * Paginates LC GraphQL directly from CPPro — no NexusLC needed.
- * Problem list is public data (no proxy, no CSRF, no auth required).
- * Returns immediately with { status: 'started' }.
- * Poll GET /api/admin/sync/catalog-status for progress.
- */
 async function syncLCProblems(req, res) {
     if (catalogSyncState.lc.status === 'running') {
         return res.json({ success: true, status: 'already_running', message: 'LC problem sync is already in progress.' });
@@ -796,14 +704,12 @@ async function syncLCProblems(req, res) {
         try {
             console.log('[ADMIN] LC catalog sync started (direct to leetcode.com/graphql)');
 
-            // Page 1 — get total count
             const firstPage    = await fetchLCPage(0);
             const total        = firstPage.total ?? 0;
             const allQuestions = [...(firstPage.questions || [])];
             const pageCount    = Math.ceil(total / LC_PAGE_SIZE);
             console.log(`[ADMIN] LC total=${total}, fetching ${pageCount} pages`);
 
-            // Remaining pages
             for (let page = 1; page < pageCount; page++) {
                 try {
                     const pageData = await fetchLCPage(page * LC_PAGE_SIZE);
@@ -814,7 +720,6 @@ async function syncLCProblems(req, res) {
                 }
             }
 
-            // Shape + filter out paid-only
             const problems = allQuestions
                 .filter(q => !q.isPaidOnly)
                 .map(q => ({
@@ -857,12 +762,6 @@ async function syncLCProblems(req, res) {
     });
 }
 
-/**
- * POST /api/admin/sync/cc-problems
- * Kicks off a background sync of the full CodeChef problem catalog via CC API Server.
- * Returns immediately with { status: 'started' }.
- * Poll GET /api/admin/sync/catalog-status for progress.
- */
 async function syncCCProblems(req, res) {
     if (catalogSyncState.cc.status === 'running') {
         return res.json({ success: true, status: 'already_running', message: 'CC problem sync is already in progress.' });
@@ -882,11 +781,9 @@ async function syncCCProblems(req, res) {
         try {
             console.log('[ADMIN] CC problem catalog sync started');
 
-            // CC API server /all-problems paginates all CC problems without difficulty band splitting.
-            // Proxy health check (~30s) + sequential pages with 200ms delay — allow 15 min.
             const response = await axios.get(`${CC_SYNC_API}/all-problems`, {
                 headers: { Authorization: `Bearer ${CC_SYNC_SECRET}` },
-                timeout: 900_000, // 15 min
+                timeout: 900_000,
             });
 
             const problems      = response.data?.problems      || [];
@@ -927,7 +824,6 @@ async function syncCCProblems(req, res) {
     });
 }
 
-// ── LC Contest Tags ──────────────────────────────────────────────────────────
 const LC_CONTEST_GQL = `
 query pastContests($pageNo: Int!, $numPerPage: Int!) {
   pastContests(pageNo: $pageNo, numPerPage: $numPerPage) {
@@ -941,14 +837,6 @@ query pastContests($pageNo: Int!, $numPerPage: Int!) {
 }
 `;
 
-/**
- * POST /api/admin/sync/lc-contest-tags
- * Fetches the last 100 LC contests (Weekly + Biweekly) and appends each
- * contest's titleSlug to the tags array of every matching LCProblem document.
- * Uses $addToSet so it is fully idempotent — safe to re-run.
- * Returns immediately; background work runs via setImmediate.
- * Poll GET /api/admin/sync/catalog-status for progress.
- */
 async function syncLCContestTags(req, res) {
     if (catalogSyncState.lc_tags.status === 'running') {
         return res.json({ success: true, status: 'already_running', message: 'LC contest tag sync is already in progress.' });
@@ -959,14 +847,13 @@ async function syncLCContestTags(req, res) {
 
     setImmediate(async () => {
         try {
-            const LC_PAGE_SIZE = 10; // LC's actual enforced page size for pastContests
-            const MAX_CONTESTS = 100;  // fetch last 100 contests per run
+            const LC_PAGE_SIZE = 10;
+            const MAX_CONTESTS = 100;
             const allContests  = [];
             let   pageNo       = 1;
 
             console.log('[ADMIN] LC contest tag sync started — fetching last 100 contests');
 
-            // Paginate until a page returns fewer results than PAGE_SIZE (end of list)
             while (true) {
                 const gqlRes = await axios.post(
                     'https://leetcode.com/graphql',
@@ -984,7 +871,7 @@ async function syncLCContestTags(req, res) {
                 );
 
                 const page = gqlRes.data?.data?.pastContests?.data || [];
-                if (!page.length) break; // no more contests
+                if (!page.length) break; 
 
                 allContests.push(...page);
                 console.log(`[ADMIN] LC contest tag sync — page ${pageNo}: ${page.length} contests (total so far: ${allContests.length})`);
@@ -1004,7 +891,6 @@ async function syncLCContestTags(req, res) {
                 const { titleSlug: contestSlug, questions = [] } = contest;
                 if (!questions.length) { skipped++; continue; }
 
-                // For each problem in this contest, append contestSlug to tags (no duplicate via $addToSet)
                 const slugs = questions.map(q => q.titleSlug).filter(Boolean);
                 if (!slugs.length) { skipped++; continue; }
 
@@ -1014,7 +900,7 @@ async function syncLCContestTags(req, res) {
                 );
 
                 tagged  += result.modifiedCount || 0;
-                skipped += slugs.length - (result.matchedCount || 0); // problems not yet in catalog
+                skipped += slugs.length - (result.matchedCount || 0); 
 
                 console.log(`[ADMIN] LC contest tag sync — ${contestSlug}: ${result.modifiedCount} tagged`);
             }
@@ -1030,7 +916,6 @@ async function syncLCContestTags(req, res) {
                 error:     null,
             };
 
-            // Persist to DB so stats survive server restarts
             await GlobalSyncState.findOneAndUpdate(
                 { syncKey: 'lc_contest_tags' },
                 { syncKey: 'lc_contest_tags', lastSyncedAt: finishedAt, contests: allContests.length, tagged, skipped },
@@ -1048,14 +933,9 @@ async function syncLCContestTags(req, res) {
     });
 }
 
-/**
- * GET /api/admin/sync/catalog-status
- * Returns the current in-memory sync state for all three platforms,
- * plus the last-synced timestamps from GlobalSyncState (persisted across restarts).
- */
+
 async function getCatalogSyncStatus(req, res) {
     try {
-        // Fetch persisted last-sync timestamps from DB
         const [cfState, lcState, ccState, lcTagsState] = await Promise.all([
             GlobalSyncState.findOne({ syncKey: 'cf_problems' }).lean(),
             GlobalSyncState.findOne({ syncKey: 'lc_problems' }).lean(),
@@ -1063,7 +943,6 @@ async function getCatalogSyncStatus(req, res) {
             GlobalSyncState.findOne({ syncKey: 'lc_contest_tags' }).lean(),
         ]);
 
-        // Also fetch current document counts so admin can see catalog size
         const [cfCount, lcCount, ccCount] = await Promise.all([
             CFProblem.estimatedDocumentCount(),
             LCProblem.estimatedDocumentCount(),
@@ -1088,8 +967,6 @@ async function getCatalogSyncStatus(req, res) {
                 catalogCount: ccCount,
             },
             lc_tags: {
-                // When in-memory is idle (e.g. after server restart), fall back to
-                // DB-persisted stats so the UI shows the real last-run numbers.
                 ...(catalogSyncState.lc_tags.status === 'idle' && lcTagsState ? {
                     status:    'idle',
                     contests:  lcTagsState.contests  ?? 0,

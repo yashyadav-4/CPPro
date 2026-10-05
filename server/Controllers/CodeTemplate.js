@@ -32,7 +32,6 @@ async function handleTemplateDelete(req , res){
     try{
         const {id}= req.params;
         const userId= req.user._id;
-        // applying  userId filter too in this so you can delete only your code template and cant touch anyone others even if you know there code template id
         const deletedTemplate= await CodeTemplate.findOneAndDelete({_id:id , userId : userId});
         if(!deletedTemplate){
             return res.status(404).json({message:"Template not found"});
@@ -49,7 +48,6 @@ async function handleTemplateUpdate(req , res){
         const {id}= req.params;
         const userId= req.user._id;
         const newTemplate=req.body;
-        // same here applying better security checks
         const updatedTemplate= await CodeTemplate.findOneAndUpdate({_id:id , userId:userId} , newTemplate , {returnDocument:'after'});
         if(!updatedTemplate){
             return res.status(404).json({message:"template cant be updated"});
@@ -66,5 +64,4 @@ module.exports={
     handleTemplateAdd ,
     handleTemplateDelete,
     handleTemplateUpdate,
-
 }

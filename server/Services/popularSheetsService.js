@@ -1,65 +1,28 @@
-// Services/popularSheetsService.js
-// ─────────────────────────────────────────────────────────────────────────────
-// Optimised popular-sheets recommendation engine.
-//
-// KEY DESIGN: `fetchPopularProblems()` runs ONE aggregation per platform
-// (popularlcproblems ⟶ lcproblems, popularcfproblems ⟶ cfproblems).
-// The caller caches the result and passes it to every picker — so a single
-// generateDailyProblems() call triggers exactly 2 DB queries regardless of
-// how many slots (workout / challenger / bonus) we fill.
-//
-// Picker API (all pure functions, no DB access):
-//   pickPopularLCWorkout   (lcPool, weakTags,   attemptedSet)
-//   pickPopularLCChallenger(lcPool, weakTags,   attemptedSet)
-//   pickPopularCFWorkout   (cfPool, weakTopics, attemptedSet, cfRating)
-//   pickPopularCFChallenger(cfPool, weakTopics, attemptedSet, cfRating)
-//
-// Rules enforced:
-//   LC Workout   : Easy ✓  Medium ✓  Hard ✓ only if tag NOT in weakTags
-//   LC Challenger: Hard + weakTag → Medium + weakTag → any Hard
-//   CF Workout   : ratingTier (int) ≤ cfRating
-//   CF Challenger: cfRating < ratingTier ≤ cfRating + 200, weak-topic preferred
-// ─────────────────────────────────────────────────────────────────────────────
 
 'use strict';
 
 const mongoose = require('mongoose');
 
-// ── helpers ───────────────────────────────────────────────────────────────────
-
 function ratingToInt(tierStr) {
     return parseInt(tierStr, 10) || 1200;
 }
 
-/** Pick randomly from the first `n` items of a sorted array */
 function randomFromTop(arr, n = 20) {
     if (!arr.length) return null;
     const pool = arr.slice(0, n);
     return pool[Math.floor(Math.random() * pool.length)];
 }
 
-/** Count how many of a problem's tags appear in the weak list */
 function weakScore(problem, weakList) {
     if (!weakList.length || !problem.tags?.length) return 0;
     return problem.tags.filter(t => weakList.includes(t)).length;
 }
 
-// ── one-time fetch (called once per daily generation) ─────────────────────────
 
-/**
- * Fetch and JOIN both popular collections against their full catalogs.
- * Returns { lc: Problem[], cf: Problem[] }.
- * Each item contains all catalog fields (title, url, difficulty, tags, …)
- * plus `sheets` from the popular collection and `ratingTier` for CF.
- *
- * The caller should pass the result to every pick* function — do NOT call
- * this more than once per request.
- */
 async function fetchPopularProblems() {
     const db = mongoose.connection.db;
 
     const [lcRaw, cfRaw] = await Promise.all([
-        // LC: join popularlcproblems → lcproblems
         db.collection('popularlcproblems').aggregate([
             {
                 $lookup: {
@@ -82,7 +45,6 @@ async function fetchPopularProblems() {
             },
         ]).toArray(),
 
-        // CF: join popularcfproblems → cfproblems
         db.collection('popularcfproblems').aggregate([
             {
                 $lookup: {
@@ -109,19 +71,6 @@ async function fetchPopularProblems() {
     return { lc: lcRaw, cf: cfRaw };
 }
 
-// ── LC pickers ────────────────────────────────────────────────────────────────
-
-/**
- * Pick a popular LC WORKOUT problem.
- *
- * Fitness: Easy ✓  Medium ✓  Hard ✓ only when tags don't overlap weakTags
- * Priority: weak-tag overlap → lower difficulty → higher acRate
- *
- * @param {Object[]} lcPool     - pre-fetched popular LC problems (from fetchPopularProblems)
- * @param {string[]} weakTags   - LC tag slugs the user struggles with
- * @param {Set}      attemptedSet
- * @returns {Object|null}
- */
 function pickPopularLCWorkout(lcPool, weakTags, attemptedSet) {
     const unsolved = lcPool.filter(p => !attemptedSet.has(`leetcode::${p.problemId}`));
     if (!unsolved.length) return null;
@@ -129,8 +78,6 @@ function pickPopularLCWorkout(lcPool, weakTags, attemptedSet) {
     const eligible = unsolved.filter(p => {
         const d = p.difficulty;
         if (d === 'Easy' || d === 'Medium') return true;
-        // Hard: only if this problem's tags do NOT touch any weak tag
-        // (Hard problems on weak topics are reserved for the Challenger slot)
         if (d === 'Hard') {
             return weakTags.length === 0 || !p.tags?.some(t => weakTags.includes(t));
         }
@@ -154,35 +101,20 @@ function pickPopularLCWorkout(lcPool, weakTags, attemptedSet) {
     return _buildLCResult(picked, weakTags);
 }
 
-/**
- * Pick a popular LC CHALLENGER problem.
- *
- * Pass 1: Hard + tags overlap weakTags
- * Pass 2: Medium + tags overlap weakTags  (beginner fallback)
- * Pass 3: Any Hard from popular sheets
- *
- * @param {Object[]} lcPool
- * @param {string[]} weakTags
- * @param {Set}      attemptedSet
- * @returns {Object|null}
- */
 function pickPopularLCChallenger(lcPool, weakTags, attemptedSet) {
     const unsolved = lcPool.filter(p => !attemptedSet.has(`leetcode::${p.problemId}`));
     if (!unsolved.length) return null;
 
-    // Pass 1: Hard + weak tag match
     let candidates = unsolved.filter(p =>
         p.difficulty === 'Hard' && weakTags.length && p.tags?.some(t => weakTags.includes(t))
     );
 
-    // Pass 2: Medium + weak tag match (when user is a beginner)
     if (!candidates.length && weakTags.length) {
         candidates = unsolved.filter(p =>
             p.difficulty === 'Medium' && p.tags?.some(t => weakTags.includes(t))
         );
     }
 
-    // Pass 3: Any Hard problem (no tag constraint)
     if (!candidates.length) {
         candidates = unsolved.filter(p => p.difficulty === 'Hard');
     }
@@ -201,21 +133,6 @@ function pickPopularLCChallenger(lcPool, weakTags, attemptedSet) {
     return _buildLCResult(picked, weakTags);
 }
 
-// ── CF pickers ────────────────────────────────────────────────────────────────
-
-/**
- * Pick a popular CF WORKOUT problem.
- *
- * Fitness: ratingTier (int) ≤ cfRating — user is comfortable at this level.
- * Priority: closest to cfRating (most challenging but still comfortable),
- *           then weak-topic overlap, then solvedCount.
- *
- * @param {Object[]} cfPool
- * @param {string[]} weakTopics
- * @param {Set}      attemptedSet
- * @param {number}   cfRating
- * @returns {Object|null}
- */
 function pickPopularCFWorkout(cfPool, weakTopics, attemptedSet, cfRating) {
     const unsolved = cfPool.filter(p => !attemptedSet.has(`codeforces::${p.problemId}`));
     if (!unsolved.length) return null;
@@ -224,7 +141,6 @@ function pickPopularCFWorkout(cfPool, weakTopics, attemptedSet, cfRating) {
     if (!eligible.length) return null;
 
     eligible.sort((a, b) => {
-        // Prefer tier closest to cfRating (smallest gap = most challenging)
         const aDiff = cfRating - ratingToInt(a.ratingTier);
         const bDiff = cfRating - ratingToInt(b.ratingTier);
         if (aDiff !== bDiff) return aDiff - bDiff;
@@ -239,18 +155,7 @@ function pickPopularCFWorkout(cfPool, weakTopics, attemptedSet, cfRating) {
     return _buildCFResult(picked, weakTopics);
 }
 
-/**
- * Pick a popular CF CHALLENGER problem.
- *
- * Fitness: cfRating < ratingTier ≤ cfRating + 200
- * Priority: weak-topic match → closest to cfRating → solvedCount
- *
- * @param {Object[]} cfPool
- * @param {string[]} weakTopics
- * @param {Set}      attemptedSet
- * @param {number}   cfRating
- * @returns {Object|null}
- */
+
 function pickPopularCFChallenger(cfPool, weakTopics, attemptedSet, cfRating) {
     const unsolved = cfPool.filter(p => !attemptedSet.has(`codeforces::${p.problemId}`));
     if (!unsolved.length) return null;
@@ -277,8 +182,6 @@ function pickPopularCFChallenger(cfPool, weakTopics, attemptedSet, cfRating) {
     return _buildCFResult(picked, weakTopics);
 }
 
-// ── result builders ───────────────────────────────────────────────────────────
-
 function _buildLCResult(p, weakTags) {
     return {
         platform:         'leetcode',
@@ -287,7 +190,6 @@ function _buildLCResult(p, weakTags) {
         url:              p.url,
         difficulty:       p.difficulty,
         tags:             p.tags || [],
-        // solvedCount defaults to 0 — lcproblems uses acRate, not solvedCount
         sheets:           p.sheets || [],
         fromPopularSheet: true,
         weakTag:          p.tags?.find(t => weakTags.includes(t)) || null,
@@ -309,7 +211,6 @@ function _buildCFResult(p, weakTopics) {
     };
 }
 
-// ── stats helper ──────────────────────────────────────────────────────────────
 
 async function getPopularSheetStats(userId, linkedPlatforms) {
     const db = mongoose.connection.db;

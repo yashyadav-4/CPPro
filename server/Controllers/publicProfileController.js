@@ -1,16 +1,9 @@
 const User = require('../Model/User');
 
-/**
- * GET /api/users/:username/profile
- * Public — no auth required (uses optionalAuth).
- * Resolves a username to a userId + safe public fields.
- * Admins bypass the privacy check.
- */
 async function getUserPublicProfile(req, res) {
     try {
         const { username } = req.params;
 
-        //case-insensitive exact match
         const user = await User.findOne({
             username: new RegExp(`^${username.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'),
         })

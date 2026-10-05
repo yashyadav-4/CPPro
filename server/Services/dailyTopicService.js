@@ -9,7 +9,6 @@ const ErrorLog   = require('../Model/ErrorLog');
 const { getTodayIST, getNDaysAgoIST } = require('../Utils/dateUtils');
 const ytSearch = require('yt-search');
 
-// ── Round-robin key pool ────────────────────────────────────────────
 const KEYS = (process.env.GEMINI_API_KEYS || '')
     .split(',')
     .map(k => k.trim())
@@ -23,7 +22,6 @@ function nextKey() {
     return key;
 }
 
-// ── Sub-topic mapping (~300+ entries) ───────────────────────────────
 const SUB_TOPICS = {
     'graph theory': [
         "Dijkstra's Shortest Path Algorithm", "Bellman-Ford Algorithm", "Floyd-Warshall All-Pairs Shortest Path",
@@ -248,7 +246,6 @@ function refineToSubTopic(broadTopic, recentSet) {
     return subs[Math.floor(Math.random() * subs.length)];
 }
 
-// ── LLM call with round-robin + retry ───────────────────────────────
 const MODEL_NAME = 'gemma-4-31b-it';
 
 function buildSystemPrompt(language) {
@@ -355,12 +352,7 @@ Also include one written reference site and one YouTube study video in study_res
 
     const maxAttempts = Math.min(KEYS.length, 5);
     let lastError = null;
-
-    // The model cascade: Try these models in order on the SAME key.
-    // Each model has its own independent rate-limit bucket on Google's free tier.
-    // NOTE: gemini-1.5 and gemini-2.0 were shut down on June 1, 2026.
-    // gemini-3.5-flash is the current recommended model, and gemini-3.1-flash-lite is the lightweight alternative.
-    // gemini-2.5-flash was removed as it deprecates on June 17, 2026.
+    
     const modelsToTry = [
         MODEL_NAME, // gemma-4-31b-it
         'gemini-3.5-flash',
@@ -373,8 +365,6 @@ Also include one written reference site and one YouTube study video in study_res
     for (let i = 0; i < maxAttempts; i++) {
         const key = nextKey();
 
-        // Add a small delay between key retries (not on the first attempt)
-        // to avoid hammering the same overloaded infrastructure immediately
         if (i > 0) {
             await new Promise(resolve => setTimeout(resolve, 1500));
         }
@@ -384,7 +374,6 @@ Also include one written reference site and one YouTube study video in study_res
             let result = null;
             let modelFailure = null;
 
-            // Try each model sequentially for this specific key
             for (const modelId of modelsToTry) {
                 try {
                     const model = genAI.getGenerativeModel({
@@ -394,20 +383,15 @@ Also include one written reference site and one YouTube study video in study_res
                     });
                     result = await model.generateContent(userPrompt);
 
-                    // Validate we got parseable JSON before declaring success
                     const rawText = result.response.text();
                     try {
                         const parsed = parseJSON(rawText);
-                        
-                        // Reject lazy generation/placeholders
+
                         if (parsed.topic === "..." || !parsed.article || parsed.article.length < 50) {
                             throw new Error("Model generated placeholder content");
                         }
-                        
-                        // Success! Return the parsed result directly
                         return parsed;
                     } catch (parseErr) {
-                        // Model responded but output was malformed JSON — try next model
                         console.log(`[DailyTopic] ${modelId} returned unparseable JSON, trying next model...`);
                         modelFailure = parseErr;
                         result = null;
@@ -416,18 +400,15 @@ Also include one written reference site and one YouTube study video in study_res
                 } catch (err) {
                     modelFailure = err;
                     const msg = err.message.toLowerCase();
-                    // If rate-limited (429) or overloaded (500/503), try the next model
                     if (msg.includes('500') || msg.includes('503') || msg.includes('429') || msg.includes('overloaded') || msg.includes('quota')) {
                         console.log(`[DailyTopic] ${modelId} failed (${err.message.split('\\n')[0]}). Cascading to next model...`);
                         continue; 
                     } else {
-                        // Auth error (400/403) -> The key itself is bad, stop trying models and throw to swap key
                         throw err; 
                     }
                 }
             }
 
-            // If we exhausted all models in the cascade, throw to swap the API key
             if (!result) {
                 throw new Error(`All fallback models exhausted for this key. Last error: ${modelFailure?.message}`);
             }
@@ -446,42 +427,34 @@ Also include one written reference site and one YouTube study video in study_res
 
 function parseJSON(raw) {
     let cleaned = raw.trim();
-    // Strip markdown fences
     if (cleaned.startsWith('```')) {
         cleaned = cleaned.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim();
     }
-    // Extract the JSON object if there's extra text around it
+
     const objMatch = cleaned.match(/\{[\s\S]*\}/);
     if (objMatch) cleaned = objMatch[0];
 
-    // Attempt 1: direct parse
+    // attempt 1: direct parse
     try { return JSON.parse(cleaned); } catch {}
 
-    // Attempt 2: repair common LLM JSON issues
+    // attempt 2: repair common LLM JSON issues
     try { return JSON.parse(repairJSON(cleaned)); } catch {}
 
-    // Attempt 3: aggressive — extract each field manually via regex
+    // attempt 3: aggressive — extract each field manually via regex
     try {
         const fields = ['topic', 'article', 'dry_run', 'code_template', 'visualization_data'];
         const obj = {};
-        for (const field of fields) {
-            // Match "field": "..." allowing for escaped chars
+        for (const field of fields) {s
             const rx = new RegExp(`"${field}"\\s*:\\s*"([\\s\\S]*?)(?:(?<!\\\\)"\\s*(?:,|\\}))`);
             const m = cleaned.match(rx);
             if (m) obj[field] = m[1].replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
         }
-        if (Object.keys(obj).length >= 3) return obj; // at least topic + article + one more
+        if (Object.keys(obj).length >= 3) return obj; 
     } catch {}
 
     throw new Error('Failed to parse LLM response as JSON');
 }
 
-/**
- * Repair common JSON issues from LLMs:
- * - Unescaped newlines/tabs inside string values
- * - Trailing commas before } or ]
- * - Control characters
- */
 function repairJSON(str) {
     let result = '';
     let inString = false;
@@ -491,12 +464,10 @@ function repairJSON(str) {
         const ch = str[i];
 
         if (escaped) {
-            // Valid escape sequences: \", \\, \/, \b, \f, \n, \r, \t, \uXXXX
             const valid = '"\\/bfnrtu';
             if (valid.includes(ch)) {
                 result += ch;
             } else {
-                // Invalid escape — double the backslash to make it literal
                 result += '\\' + ch;
             }
             escaped = false;
@@ -516,7 +487,6 @@ function repairJSON(str) {
         }
 
         if (inString) {
-            // Fix unescaped control characters inside strings
             if (ch === '\n') { result += '\\n'; continue; }
             if (ch === '\r') { result += '\\r'; continue; }
             if (ch === '\t') { result += '\\t'; continue; }
@@ -527,7 +497,6 @@ function repairJSON(str) {
         result += ch;
     }
 
-    // Fix trailing commas: ,} or ,]
     result = result.replace(/,\s*([\]}])/g, '$1');
 
     return result;
@@ -588,7 +557,6 @@ function fallbackStudyResources(topic) {
     };
 }
 
-// ── Verify URL is alive ─────────────────────────────────────────────
 async function checkUrlAlive(url) {
     if (!url) return false;
     try {
@@ -608,7 +576,7 @@ async function normalizeStudyResources(content, fallbackTopic) {
     const rawReference = asResource(resources.reference_site || resources.reference || resources.website);
     const rawYoutube = asResource(resources.youtube_video || resources.youtube || resources.video);
 
-    // Written reference -> try the exact URL LLM provided. If it's dead, fallback to Google search
+
     let referenceUrl = safeHttpsUrl(rawReference.exact_url || rawReference.url || rawReference.href);
     if (referenceUrl) {
         const isAlive = await checkUrlAlive(referenceUrl);
@@ -624,7 +592,6 @@ async function normalizeStudyResources(content, fallbackTopic) {
     let finalYoutubeUrl = fallback.youtube_video.url;
     let finalYoutubeTitle = cleanResourceTitle(rawYoutube.title || rawYoutube.name, fallback.youtube_video.title);
 
-    // YouTube -> Use yt-search to get the direct video link! Append English to force English videos.
     if (rawYoutube.search_query) {
         try {
             const ytRes = await ytSearch(rawYoutube.search_query + " English tutorial");
@@ -656,27 +623,23 @@ async function normalizeStudyResources(content, fallbackTopic) {
     };
 }
 
-// ── Flat set of all unique sub-topics (for exhaustion check) ────────
 const ALL_SUB_TOPICS = new Set();
 for (const subs of Object.values(SUB_TOPICS)) {
     for (const s of subs) ALL_SUB_TOPICS.add(s.toLowerCase());
 }
 console.log(`[DailyTopic] ${ALL_SUB_TOPICS.size} unique sub-topics loaded`);
 
-// ── Weakness detection ──────────────────────────────────────────────
 async function findWeakestTopic(userId) {
     const today = getTodayIST();
 
-    // Get ALL past topics for this user (not just 30 days) to prevent repeats
     let pastTopics = await DailyTopic.find({ userId }).distinct('topic');
     let usedSet = new Set(pastTopics.map(t => t.toLowerCase()));
 
-    // If all sub-topics exhausted → wipe history and restart the cycle
     const unusedCount = [...ALL_SUB_TOPICS].filter(t => !usedSet.has(t)).length;
     if (unusedCount === 0 && usedSet.size > 0) {
         console.log(`[DailyTopic] All ${ALL_SUB_TOPICS.size} topics exhausted for user=${userId}, resetting history`);
         await DailyTopic.deleteMany({ userId, date: { $ne: today } });
-        usedSet = new Set(); // fresh start
+        usedSet = new Set();
     }
 
     const uid = new mongoose.Types.ObjectId(userId);
@@ -706,10 +669,8 @@ async function findWeakestTopic(userId) {
         if (!usedSet.has(refined.toLowerCase())) return refined;
     }
 
-    // Last resort: pick any unused sub-topic from the entire pool
     const allUnused = [...ALL_SUB_TOPICS].filter(t => !usedSet.has(t));
     if (allUnused.length > 0) {
-        // Find the original casing from SUB_TOPICS
         const pick = allUnused[Math.floor(Math.random() * allUnused.length)];
         for (const subs of Object.values(SUB_TOPICS)) {
             const match = subs.find(s => s.toLowerCase() === pick);
@@ -718,7 +679,6 @@ async function findWeakestTopic(userId) {
         return pick;
     }
 
-    // Truly exhausted (shouldn't happen after reset above, but safety net)
     const defaults = [
         "Dijkstra's Shortest Path Algorithm", "Longest Increasing Subsequence (LIS)",
         "Segment Tree with Lazy Propagation", "KMP Pattern Matching Algorithm",
@@ -756,15 +716,12 @@ async function fallbackWeakness(userId, recentSet) {
     return null;
 }
 
-// ── In-flight generation lock (prevents duplicate LLM calls) ────────
-const inFlight = new Map(); // key: `${userId}:${date}` → Promise
+const inFlight = new Map(); 
 
-// ── Main orchestrator ───────────────────────────────────────────────
 function generateOrFetchDailyTopic(userId, language = 'cpp') {
     const today = getTodayIST();
     const lockKey = `${userId}:${today}`;
 
-    // If another call is already generating for this user+day, piggyback on it
     if (inFlight.has(lockKey)) {
         return inFlight.get(lockKey);
     }
@@ -777,9 +734,9 @@ function generateOrFetchDailyTopic(userId, language = 'cpp') {
     return promise;
 }
 
-async function _doGenerate(userId, today, language) {
+async function _doGenerate(userId, today, language){
     const existing = await DailyTopic.findOne({ userId, date: today }).lean();
-    if (existing) {
+    if (existing){
         if (existing.content && !existing.content.study_resources) {
             const studyResources = await normalizeStudyResources(existing.content, existing.topic);
             await DailyTopic.updateOne(
@@ -820,7 +777,6 @@ async function _doGenerate(userId, today, language) {
         { upsert: true, new: true, lean: true },
     );
 
-    // Strip content from all previous days (keep only topic name for dedup)
     DailyTopic.updateMany(
         { userId, date: { $ne: today } },
         { $set: { content: null } }

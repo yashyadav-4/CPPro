@@ -15,7 +15,6 @@ async function handleAddComment(req , res){
 
         await Post.findByIdAndUpdate(postId ,{$inc: {commentCount:1}});
 
-        // Populate author info so the frontend receives name & pic immediately
         const populated = await newComment.populate('authorId', 'name profilePic');
         res.status(201).json(populated);
     }catch(error){
@@ -52,7 +51,7 @@ async function handleGetComments(req , res){
     try{
         const comments= await Comment.find({postId:req.params.postId})
             .sort({createdAt:1})
-            .populate('authorId', 'name profilePic')  // include author name & pic
+            .populate('authorId', 'name profilePic') 
             .lean();
 
         res.json(comments);
@@ -65,5 +64,4 @@ module.exports={
     handleAddComment,
     handleDeleteComment,
     handleGetComments,
-
 }
