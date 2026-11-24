@@ -10,7 +10,7 @@ export default function TopTopics({ loading, topics }) {
         <Skeleton className="h-3 w-24 mb-4" />
         {[...Array(8)].map((_, i) => (
           <div key={i} className="flex items-center gap-3 mb-3">
-            <Skeleton className="h-3 w-24 shrink-0" />
+            <Skeleton className="h-3 w-20 sm:w-24 shrink-0" />
             <Skeleton className="h-1.5 flex-1" />
             <Skeleton className="h-3 w-6" />
           </div>
@@ -37,17 +37,17 @@ export default function TopTopics({ loading, topics }) {
         {top8.map((t, i) => {
           const pct = Math.round((t.count / maxCount) * 100);
           return (
-            <div key={i} className="flex items-center gap-3">
-              <span className="text-sm font-medium text-gray-700 dark:text-[#E5E7EB] w-32 shrink-0 truncate pr-2 capitalize" title={t.name}>
+            <div key={i} className="flex items-center gap-2 sm:gap-3">
+              <span className="text-xs sm:text-sm font-medium text-gray-700 dark:text-[#E5E7EB] w-20 sm:w-32 shrink-0 truncate pr-1 sm:pr-2 capitalize" title={t.name}>
                 {t.name}
               </span>
-              <div className="flex-1 bg-gray-100 dark:bg-white/[0.06] rounded-full h-2 overflow-hidden mx-2">
+              <div className="flex-1 bg-gray-100 dark:bg-white/[0.06] rounded-full h-2 overflow-hidden mx-1 sm:mx-2">
                 <div
                   className="bg-emerald-500 h-full rounded-full transition-all duration-300"
                   style={{ width: `${pct}%` }}
                 />
               </div>
-              <span className="text-sm font-medium text-gray-900 dark:text-[#F9FAFB] w-12 text-right tabular-nums">
+              <span className="text-xs sm:text-sm font-medium text-gray-900 dark:text-[#F9FAFB] w-8 sm:w-12 text-right tabular-nums">
                 {t.count}
               </span>
             </div>

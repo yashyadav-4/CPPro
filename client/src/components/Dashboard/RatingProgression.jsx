@@ -228,10 +228,10 @@ export default function RatingProgression({ loading, cfRatingHistory, lcRatingHi
 
   return (
     <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
         <p className="text-xs text-gray-400 dark:text-[#9CA3AF] font-normal uppercase tracking-wide">Rating Progression</p>
         {(cfPrediction || lcPrediction || ccPrediction) && (
-          <div className="flex items-center gap-2 text-[10px]">
+          <div className="flex items-center flex-wrap gap-2 text-[10px]">
             <span className="text-gray-600 dark:text-gray-600 uppercase tracking-wide">6-mo</span>
             <span className="text-gray-600 dark:text-gray-700">→</span>
             {cfPrediction && (

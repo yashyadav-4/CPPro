@@ -29,7 +29,7 @@ export default function LevelUpPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#0a0a0a] pt-24 pb-12 px-6 transition-colors duration-200">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#0a0a0a] pt-24 pb-12 px-4 sm:px-6 transition-colors duration-200">
       <div className="max-w-6xl mx-auto space-y-8">
         
         {/* Header Section */}

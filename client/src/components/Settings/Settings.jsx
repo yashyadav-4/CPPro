@@ -477,7 +477,7 @@ export default function Settings() {
               <h2 className="text-base font-semibold text-gray-900 dark:text-white">Linked Accounts</h2>
             </div>
             <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 bg-white dark:bg-[#0a0a0a] rounded-lg border border-gray-100 dark:border-white/[0.06]">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-white dark:bg-[#0a0a0a] rounded-lg border border-gray-100 dark:border-white/[0.06] gap-2.5">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-md bg-blue-500 flex items-center justify-center">
                     <span className="text-white text-xs font-black">CF</span>
@@ -532,7 +532,7 @@ export default function Settings() {
                   </Link>
                 )}
               </div>
-              <div className="flex items-center justify-between p-3 bg-white dark:bg-[#0a0a0a] rounded-lg border border-gray-100 dark:border-white/[0.06]">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-white dark:bg-[#0a0a0a] rounded-lg border border-gray-100 dark:border-white/[0.06] gap-2.5">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-md bg-amber-500 flex items-center justify-center">
                     <span className="text-white text-xs font-black">LC</span>
@@ -590,7 +590,7 @@ export default function Settings() {
 
               {/* ── CodeChef row ── */}
               <div className="rounded-lg border border-gray-100 dark:border-white/[0.06] overflow-hidden">
-                <div className="flex items-center justify-between p-3 bg-white dark:bg-[#0a0a0a]">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-white dark:bg-[#0a0a0a] gap-2.5">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-md bg-emerald-600 flex items-center justify-center">
                       <span className="text-white text-xs font-black">CC</span>
@@ -731,7 +731,7 @@ export default function Settings() {
 
 
               {/* ── GeeksforGeeks row ── */}
-              <div className="flex items-center justify-between p-3 bg-white dark:bg-[#0a0a0a] rounded-lg border border-gray-100 dark:border-white/[0.06]">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-white dark:bg-[#0a0a0a] rounded-lg border border-gray-100 dark:border-white/[0.06] gap-2.5">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-md flex items-center justify-center" style={{ backgroundColor: '#2F8D46' }}>
                     <span className="text-white text-[10px] font-black">GFG</span>

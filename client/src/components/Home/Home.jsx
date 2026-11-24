@@ -529,7 +529,7 @@ function ContestVisual({t}){
 
 function CardWindow({t,children}){
   return(
-    <div style={{background:t.bgCard,border:`1px solid ${t.border}`,borderRadius:12,padding:"1.4rem",boxShadow:`0 4px 16px ${t.shadow}`}}>
+    <div style={{background:t.bgCard,border:`1px solid ${t.border}`,borderRadius:12,padding:"clamp(0.85rem, 3vw, 1.4rem)",boxShadow:`0 4px 16px ${t.shadow}`}}>
       <div style={{display:"flex",alignItems:"center",gap:"0.4rem",marginBottom:"1rem",paddingBottom:"0.8rem",borderBottom:`1px solid ${t.border}`}}>
         <div style={{display:"flex",gap:5}}>
           {["#ff5f57","#febc2e","#28c840"].map((c,i)=><div key={i} style={{width:8,height:8,borderRadius:"50%",background:c}}/>)}
@@ -651,16 +651,26 @@ export default function Home(){
         ::-webkit-scrollbar-track{background:transparent;}
         ::-webkit-scrollbar-thumb{background:${t.accent};border-radius:2px;}
         .container{max-width:1120px;margin:0 auto;padding:0 3rem;}
+        .home-section{padding:7rem 0;}
+        @media(max-width:1024px){
+          .hero-dash{grid-template-columns:1fr!important;}
+        }
         @media(max-width:900px){
-          .feat-row{grid-template-columns:1fr!important;gap:2rem!important;}
+          .feat-row{grid-template-columns:1fr!important;gap:2rem!important;padding:2.5rem 0!important;}
           .feat-row>div{order:0!important;}
           .g3{grid-template-columns:1fr!important;}
-          .stats-flex{display:grid!important;grid-template-columns:1fr 1fr!important;padding:0 1.4rem!important;}
-          .stats-flex>div{border:none!important;border-bottom:1px solid ${t.statsDvdr}!important;padding:1.25rem 0.5rem!important;text-align:center!important;}
+          .stats-flex{display:grid!important;grid-template-columns:1fr 1fr!important;padding:0 1.2rem!important;}
+          .stats-flex>div{border:none!important;border-bottom:1px solid ${t.statsDvdr}!important;padding:1.1rem 0.5rem!important;text-align:center!important;}
           .stats-flex>div:nth-child(odd){border-right:1px solid ${t.statsDvdr}!important;}
           .stats-flex>div:nth-last-child(-n+2){border-bottom:none!important;}
-          .container{padding:0 1.4rem;}
-          .hero-dash{grid-template-columns:1fr!important;}
+          .container{padding:0 1.25rem;}
+        }
+        @media(max-width:768px){
+          .home-section{padding:3.5rem 0!important;}
+        }
+        @media(max-width:480px){
+          .container{padding:0 1rem;}
+          .stats-flex{padding:0 0.5rem!important;}
         }
       `}</style>
 
@@ -796,7 +806,7 @@ export default function Home(){
        <LiveStatsBar t={t} stats={stats}/>
 
       {/* ── FEATURES ── */}
-      <motion.section animate={{backgroundColor:t.bg}} transition={{duration:0.35}} style={{padding:"7rem 0"}}>
+      <motion.section animate={{backgroundColor:t.bg}} transition={{duration:0.35}} className="home-section">
         <div className="container">
           <motion.div initial="hidden" whileInView="visible" viewport={{once:true,margin:"-80px"}} variants={stagger}>
             <Badge t={t}>FEATURES</Badge>
@@ -814,8 +824,8 @@ export default function Home(){
       </motion.section>
 
       {/* ── HOW IT WORKS ── */}
-      <motion.section animate={{backgroundColor:t.bg2}} transition={{duration:0.35}}
-        style={{padding:"7rem 0",borderTop:`1px solid ${t.border}`,borderBottom:`1px solid ${t.border}`}}>
+      <motion.section animate={{backgroundColor:t.bg2}} transition={{duration:0.35}} className="home-section"
+        style={{borderTop:`1px solid ${t.border}`,borderBottom:`1px solid ${t.border}`}}>
         <div className="container">
           <motion.div initial="hidden" whileInView="visible" viewport={{once:true,margin:"-80px"}} variants={stagger}>
             <Badge t={t}>HOW IT WORKS</Badge>
@@ -847,7 +857,7 @@ export default function Home(){
       </motion.section>
 
       {/* ── TESTIMONIALS ── */}
-      <motion.section animate={{backgroundColor:t.bg}} transition={{duration:0.35}} style={{padding:"7rem 0"}}>
+      <motion.section animate={{backgroundColor:t.bg}} transition={{duration:0.35}} className="home-section">
         <div className="container">
           <motion.div initial="hidden" whileInView="visible" viewport={{once:true,margin:"-80px"}} variants={stagger}>
             <Badge t={t}>FROM USERS</Badge>
@@ -875,7 +885,7 @@ export default function Home(){
       </motion.section>
 
       {/* ── CTA ── */}
-      <motion.section animate={{backgroundColor:t.ctaBg}} transition={{duration:0.35}} style={{paddingTop:"7rem", paddingBottom:"12rem", position:"relative",overflow:"hidden"}}>
+      <motion.section animate={{backgroundColor:t.ctaBg}} transition={{duration:0.35}} style={{paddingTop:"clamp(3.5rem, 8vw, 7rem)", paddingBottom:"clamp(5rem, 12vw, 12rem)", position:"relative",overflow:"hidden"}}>
         {/* Base Grid */}
         <div style={{position:"absolute",inset:0,backgroundImage:`linear-gradient(rgba(255,255,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.03) 1px,transparent 1px)`,backgroundSize:"48px 48px",pointerEvents:"none",zIndex:0}}/>
         

@@ -331,22 +331,22 @@ function ErrorTerminal() {
   return (
     <div className="bg-[#0d1117] border border-white/[0.06] rounded-xl overflow-hidden">
       {/* Terminal header bar */}
-      <div className="flex items-center justify-between px-4 py-2.5 bg-white/[0.03] border-b border-white/[0.06]">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-3 sm:px-4 py-2.5 bg-white/[0.03] border-b border-white/[0.06]">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <div className="flex gap-1.5">
             <div className="w-2.5 h-2.5 rounded-full bg-red-500/60" />
             <div className="w-2.5 h-2.5 rounded-full bg-amber-500/60" />
             <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/60" />
           </div>
-          <Terminal size={13} className="text-gray-500 ml-2" />
-          <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">System Error Logs</span>
+          <Terminal size={13} className="text-gray-500 ml-1.5 sm:ml-2" />
+          <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">System Error Logs</span>
           {logs.length > 0 && (
             <span className="text-[9px] font-mono bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded ml-1">
               {logs.length}
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           <button
             onClick={clearLogs}
             className="flex items-center gap-1 text-[10px] text-gray-500 hover:text-red-400 transition-colors"
@@ -371,7 +371,7 @@ function ErrorTerminal() {
       </div>
 
       {/* Terminal body */}
-      <div className={`overflow-y-auto font-mono text-[11px] leading-relaxed px-4 py-3 space-y-0.5 transition-all ${
+      <div className={`overflow-y-auto font-mono text-[11px] leading-relaxed px-3 sm:px-4 py-3 space-y-1 sm:space-y-0.5 transition-all ${
         expanded ? 'max-h-[800px]' : 'max-h-[400px]'
       }`}>
         {loading && logs.length === 0 ? (
@@ -380,13 +380,15 @@ function ErrorTerminal() {
           <div className="text-gray-600 py-4 text-center">No errors logged — system is healthy ✓</div>
         ) : (
           logs.map((log, i) => (
-            <div key={log._id || i} className="flex gap-2 py-0.5 group hover:bg-white/[0.02] px-1 rounded">
-              <span className="text-gray-600 flex-shrink-0 w-[120px]">{fmtTime(log.createdAt)}</span>
-              <span className={`flex-shrink-0 px-1.5 py-0 rounded text-[10px] font-medium ${levelBg[log.level] || ''} ${levelColor[log.level] || 'text-gray-400'}`}>
-                {(log.level || 'err').toUpperCase()}
-              </span>
-              <span className="text-cyan-400/70 flex-shrink-0">[{log.source}]</span>
-              <span className="text-gray-300 break-all">{log.message}</span>
+            <div key={log._id || i} className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-2 py-1.5 sm:py-0.5 group hover:bg-white/[0.02] px-1 rounded border-b sm:border-b-0 border-white/[0.04]">
+              <div className="flex items-center gap-2 flex-wrap shrink-0">
+                <span className="text-gray-600 flex-shrink-0 text-[10px] sm:text-[11px] sm:w-[120px]">{fmtTime(log.createdAt)}</span>
+                <span className={`self-start inline-flex items-center flex-shrink-0 px-1.5 py-0.5 sm:py-0 rounded text-[10px] font-medium leading-tight ${levelBg[log.level] || ''} ${levelColor[log.level] || 'text-gray-400'}`}>
+                  {(log.level || 'err').toUpperCase()}
+                </span>
+                <span className="text-cyan-400/70 flex-shrink-0 text-[10px] sm:text-[11px]">[{log.source}]</span>
+              </div>
+              <span className="text-gray-300 break-words flex-1 min-w-0 pl-1 sm:pl-0">{log.message}</span>
             </div>
           ))
         )}

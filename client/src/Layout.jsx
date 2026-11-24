@@ -46,7 +46,7 @@ function Layout() {
     };
 
     return (
-        <div className="min-h-screen bg-white dark:bg-[#0a0a0a] text-gray-900 dark:text-white flex flex-col">
+        <div className="min-h-screen bg-white dark:bg-[#0a0a0a] text-gray-900 dark:text-white flex flex-col w-full overflow-x-hidden">
             <AnimatePresence mode="wait">
                 {!isAuthPage && isLoading && (
                     <LoadingScreen key="loader" onComplete={handleLoadingComplete} />
@@ -54,7 +54,7 @@ function Layout() {
             </AnimatePresence>
 
             {!isAuthPage && <Header />}
-            <main className="flex-1">
+            <main className="flex-1 w-full overflow-x-hidden">
                 <Outlet />
             </main>
             {!isAuthPage && <Footer/>}

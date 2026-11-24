@@ -165,9 +165,9 @@ export default function PlatformProfiles({
         </p>
 
         {/* 2x2 Matrix with clean quadrant dividers */}
-        <div className="grid grid-cols-2 flex-1">
+        <div className="grid grid-cols-1 sm:grid-cols-2 flex-1 gap-3 sm:gap-0">
           {/* Top-Left: Codeforces */}
-          <div className="pr-3 pb-3 border-r border-b border-gray-100 dark:border-white/[0.06] flex flex-col justify-between">
+          <div className="sm:pr-3 sm:pb-3 sm:border-r sm:border-b border-gray-100 dark:border-white/[0.06] flex flex-col justify-between pb-3 border-b sm:pb-3">
             <PlatformCard
               platform="Codeforces"
               handle={cfHandle}
@@ -181,7 +181,7 @@ export default function PlatformProfiles({
           </div>
 
           {/* Top-Right: LeetCode */}
-          <div className="pl-3 pb-3 border-b border-gray-100 dark:border-white/[0.06] flex flex-col justify-between">
+          <div className="sm:pl-3 sm:pb-3 sm:border-b border-gray-100 dark:border-white/[0.06] flex flex-col justify-between pb-3 border-b sm:pb-3">
             <PlatformCard
               platform="LeetCode"
               handle={lcHandle}
@@ -196,7 +196,7 @@ export default function PlatformProfiles({
           </div>
 
           {/* Bottom-Left: CodeChef */}
-          <div className="pr-3 pt-3 border-r border-gray-100 dark:border-white/[0.06] flex flex-col justify-between">
+          <div className="sm:pr-3 sm:pt-3 sm:border-r border-gray-100 dark:border-white/[0.06] flex flex-col justify-between pb-3 sm:pb-0 border-b sm:border-b-0">
             <PlatformCard
               platform="CodeChef"
               handle={ccHandle}
@@ -211,7 +211,7 @@ export default function PlatformProfiles({
           </div>
 
           {/* Bottom-Right: GeeksforGeeks */}
-          <div className="pl-3 pt-3 flex flex-col justify-between">
+          <div className="sm:pl-3 sm:pt-3 flex flex-col justify-between">
             <GfgCard
               handle={gfgHandle}
               codingScore={gfgCodingScore}
@@ -226,8 +226,9 @@ export default function PlatformProfiles({
     );
   }
 
-  // 1 to 3 platforms linked: classic horizontal row with vertical dividers
-  const divider = <div className="w-px bg-gray-100 dark:bg-white/[0.06] self-stretch shrink-0" />;
+  // 1 to 3 platforms linked: classic horizontal row on sm+, vertical stack on mobile
+  const divider = <div className="hidden sm:block w-px bg-gray-100 dark:bg-white/[0.06] self-stretch shrink-0" />;
+  const hDivider = <div className="sm:hidden h-px w-full bg-gray-100 dark:bg-white/[0.06] shrink-0" />;
   const cards = [];
   if (hasCf)  cards.push({ key: 'cf',  node: <PlatformCard platform="Codeforces" handle={cfHandle} rating={cfRating} maxRating={cfMaxRating} rank={cfRank} colorClass="text-blue-500" icon={CodeforcesIcon} /> });
   if (hasLc)  cards.push({ key: 'lc',  node: <PlatformCard platform="LeetCode"   handle={lcHandle} rating={lcRating} maxRating={lcMaxRating} rank={lcRank} colorClass="text-amber-500" icon={LeetCodeIcon} iconColorClass="text-[#FFA116]" /> });
@@ -239,9 +240,10 @@ export default function PlatformProfiles({
       <p className="text-[11px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 shrink-0">
         Platform Profiles
       </p>
-      <div className="flex gap-2.5 sm:gap-3.5 items-start flex-1">
+      <div className="flex flex-col sm:flex-row gap-3 sm:gap-3.5 items-stretch sm:items-start flex-1">
         {cards.map((c, i) => (
           <div key={c.key} className="contents">
+            {i > 0 && hDivider}
             {i > 0 && divider}
             {c.node}
           </div>

@@ -34,13 +34,13 @@ function CodeChefMark({ className = '' }) {
 export default function TotalContests({ loading, cfContests = 0, lcContests = 0, ccContests = 0, cfBestRank, lcBestRank, ccBestRank }) {
   if (loading) {
     return (
-      <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-6 flex flex-col justify-center min-h-[140px]">
-        <div className="flex items-center gap-6">
-          <div className="w-1/3 flex flex-col items-center">
+      <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4 sm:p-6 flex flex-col justify-center min-h-[140px]">
+        <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
+          <div className="w-full sm:w-1/3 flex flex-col items-center">
             <Skeleton className="h-4 w-24 mb-3" />
             <Skeleton className="h-12 w-20" />
           </div>
-          <div className="flex-1 flex flex-col gap-3">
+          <div className="w-full sm:flex-1 flex flex-col gap-3">
             <Skeleton className="h-8 w-full" />
             <Skeleton className="h-8 w-full" />
             <Skeleton className="h-8 w-full" />
@@ -56,11 +56,11 @@ export default function TotalContests({ loading, cfContests = 0, lcContests = 0,
   const globalBest = validRanks.length > 0 ? Math.min(...validRanks) : null;
 
   return (
-    <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-6 flex items-center min-h-[140px]">
+    <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center min-h-[140px] gap-4 sm:gap-0">
       {/* Left side: Total */}
-      <div className="w-1/3 flex flex-col items-center justify-center border-r border-gray-100 dark:border-white/[0.05] pr-4">
+      <div className="w-full sm:w-1/3 flex flex-col items-center justify-center border-b sm:border-b-0 sm:border-r border-gray-100 dark:border-white/[0.05] pb-4 sm:pb-0 sm:pr-4">
         <span className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Total Contests</span>
-        <span className="text-5xl font-black text-gray-900 dark:text-white tracking-tight">{total}</span>
+        <span className="text-4xl sm:text-5xl font-black text-gray-900 dark:text-white tracking-tight">{total}</span>
         {globalBest && (
           <span className="text-[10px] text-emerald-600 dark:text-emerald-500 font-bold uppercase tracking-wide mt-2">
             Peak Rank: #{globalBest}
@@ -69,7 +69,7 @@ export default function TotalContests({ loading, cfContests = 0, lcContests = 0,
       </div>
 
       {/* Right side: Platforms */}
-      <div className="flex-1 flex flex-col gap-2.5 pl-6">
+      <div className="w-full sm:flex-1 flex flex-col gap-2.5 sm:pl-6">
         {lcContests > 0 && (
           <div className="flex items-center justify-between px-4 py-2.5 bg-gray-50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/[0.05] rounded-lg">
             <div className="flex items-center gap-2.5">

@@ -187,7 +187,7 @@ export default function ProgressTab() {
       </div>
 
       {/* ── Row 2: Stat Cards (compact 2x3 → 3x2 on lg) ─── */}
-      <div className="grid grid-cols-3 lg:grid-cols-6 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
         {statCards.map((s,i) => {
           const Ic=s.icon; const c=cm[s.c]; const comp=s.k?comparison[s.k]:null;
           return (

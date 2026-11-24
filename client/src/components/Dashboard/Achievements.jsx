@@ -46,7 +46,7 @@ export default function Achievements({ loading, achievements, lcLinked, lcSessio
     return (
       <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-[#404040] rounded-xl p-4">
         <Skeleton className="h-3 w-28 mb-4" />
-        <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
           {[...Array(12)].map((_, i) => <Skeleton key={i} className="h-24 rounded-lg" />)}
         </div>
       </div>
@@ -82,7 +82,7 @@ export default function Achievements({ loading, achievements, lcLinked, lcSessio
         </div>
       )}
 
-      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
         {/* Earned first */}
         {earned.map((a, i) => <AchievementCard key={`e-${i}`} {...a} />)}
         {/* Then in-progress */}

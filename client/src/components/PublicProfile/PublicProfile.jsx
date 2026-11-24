@@ -47,46 +47,50 @@ function ProfileHeader({ profile, cfData, lcData, ccData, gfgData }) {
   const locationStr = locationParts.join(', ');
 
   return (
-    <div className="bg-white dark:bg-[#111111] border border-gray-100 dark:border-white/[0.06] rounded-2xl p-6 mb-3">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
-        {/* Avatar */}
-        <div className="flex-shrink-0">
-          {profile.profilePic ? (
-            <img
-              className="w-20 h-20 rounded-full object-cover ring-2 ring-emerald-500/30"
-              src={profile.profilePic}
-              alt={profile.name}
-            />
-          ) : (
-            <div className="w-20 h-20 rounded-full bg-emerald-500/15 text-emerald-500 flex items-center justify-center text-3xl font-bold ring-2 ring-emerald-500/30">
-              {(profile.name || profile.username || 'U').charAt(0).toUpperCase()}
+    <div className="bg-white dark:bg-[#111111] border border-gray-100 dark:border-white/[0.06] rounded-2xl p-4 sm:p-6 mb-3">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 sm:gap-5">
+        <div className="flex items-start sm:items-center gap-4 sm:gap-5 min-w-0">
+          {/* Avatar */}
+          <div className="flex-shrink-0">
+            {profile.profilePic ? (
+              <img
+                className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover ring-2 ring-emerald-500/30"
+                src={profile.profilePic}
+                alt={profile.name || profile.username}
+              />
+            ) : (
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-emerald-500/15 text-emerald-500 flex items-center justify-center text-2xl sm:text-3xl font-bold ring-2 ring-emerald-500/30">
+                {(profile.name || profile.username || 'U').charAt(0).toUpperCase()}
+              </div>
+            )}
+          </div>
+
+          {/* Info */}
+          <div className="min-w-0 flex-1">
+            {profile.name && (
+              <h1 className="text-xl font-semibold text-gray-900 dark:text-white truncate">{profile.name}</h1>
+            )}
+            <p className="text-sm text-gray-400 dark:text-gray-500 mb-2">@{profile.username}</p>
+
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
+              {profile.college && (
+                <span className="flex items-center gap-1">
+                  <GraduationCap size={12} className="text-gray-400 shrink-0" />
+                  <span className="truncate max-w-[280px]">{profile.college}</span>
+                </span>
+              )}
+              {locationStr && (
+                <span className="flex items-center gap-1">
+                  <MapPin size={12} className="text-gray-400 shrink-0" />
+                  <span>{locationStr}</span>
+                </span>
+              )}
             </div>
-          )}
-        </div>
-
-        {/* Info */}
-        <div className="flex-1 min-w-0">
-          <h1 className="text-xl font-semibold text-gray-900 dark:text-white truncate">{profile.name}</h1>
-          <p className="text-sm text-gray-400 dark:text-gray-500 mb-2">@{profile.username}</p>
-
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
-            {profile.college && (
-              <span className="flex items-center gap-1">
-                <GraduationCap size={12} className="text-gray-400" />
-                {profile.college}
-              </span>
-            )}
-            {locationStr && (
-              <span className="flex items-center gap-1">
-                <MapPin size={12} className="text-gray-400" />
-                {locationStr}
-              </span>
-            )}
           </div>
         </div>
 
         {/* Platform handles */}
-        <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
+        <div className="flex flex-wrap items-center gap-2 lg:justify-end">
           {profile.linkedAccounts?.codeforces && (
             <a
               href={`https://codeforces.com/profile/${profile.linkedAccounts.codeforces}`}

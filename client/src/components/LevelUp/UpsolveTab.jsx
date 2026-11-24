@@ -160,7 +160,7 @@ export default function UpsolveTab() {
         </div>
 
         {/* Controls: Platform Filters + Sort Toggle */}
-        <div className="flex flex-col sm:flex-row items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           {/* Sort Toggle */}
           <div className="flex items-center bg-gray-100/80 dark:bg-[#1a1a1a] p-1 rounded-xl border border-gray-200/50 dark:border-gray-800/50">
              <button
@@ -218,8 +218,8 @@ export default function UpsolveTab() {
 
       {/* Codeforces Specific Filters */}
       {activePlatform === 'codeforces' && (
-        <div className="flex justify-end mb-6 -mt-4">
-           <div className="flex items-center bg-gray-100/80 dark:bg-[#1a1a1a] p-1 rounded-xl border border-gray-200/50 dark:border-gray-800/50">
+        <div className="flex flex-wrap justify-start sm:justify-end mb-6 -mt-2 sm:-mt-4">
+           <div className="flex flex-wrap items-center bg-gray-100/80 dark:bg-[#1a1a1a] p-1 rounded-xl border border-gray-200/50 dark:border-gray-800/50 max-w-full">
              <button
                onClick={() => setCfFilter('all')}
                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
@@ -250,8 +250,8 @@ export default function UpsolveTab() {
 
       {/* LeetCode Specific Filters */}
       {activePlatform === 'leetcode' && (
-        <div className="flex justify-end mb-6 -mt-4">
-           <div className="flex items-center bg-gray-100/80 dark:bg-[#1a1a1a] p-1 rounded-xl border border-gray-200/50 dark:border-gray-800/50">
+        <div className="flex flex-wrap justify-start sm:justify-end mb-6 -mt-2 sm:-mt-4">
+           <div className="flex flex-wrap items-center bg-gray-100/80 dark:bg-[#1a1a1a] p-1 rounded-xl border border-gray-200/50 dark:border-gray-800/50 max-w-full">
              <button
                onClick={() => setLcFilter('all')}
                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${

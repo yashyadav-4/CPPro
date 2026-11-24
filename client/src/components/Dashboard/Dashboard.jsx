@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
-import { RefreshCw, Link as LinkIcon, AlertTriangle, Shield, Share2, ExternalLink, Zap, Check } from 'lucide-react';
+import { RefreshCw, Link as LinkIcon, AlertTriangle, Shield, Share2, ExternalLink, Zap, Check, X } from 'lucide-react';
 
 import { useDashboardData } from '../../hooks/useDashboardData';
 import { mergeLast7Days, mergeHeatmaps, mergeTopics, mergeContests } from '../../utils/dashboardHelpers';
@@ -529,13 +529,25 @@ export default function Dashboard() {
                 {refreshing ? 'Refreshing...' : cooldown > 0 ? `${formatCooldown(cooldown)}` : 'Refresh'}
               </button>
 
-              {/* Inline sync popover — horizontal */}
+              {/* Sync popover — modal dialog on mobile, dropdown on desktop */}
               {showSyncPopover && (
-                <div className="absolute right-0 top-full mt-1.5 z-50 rounded-xl border border-black/[0.08] dark:border-white/[0.09] bg-white dark:bg-[#111111] shadow-lg dark:shadow-none ring-1 ring-black/[0.04] dark:ring-white/[0.04] p-2.5 min-w-max">
-                  <p className="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2 px-0.5">Select platforms to sync</p>
+                <div
+                  onClick={(e) => { if (e.target === e.currentTarget) setShowSyncPopover(false); }}
+                  className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 sm:bg-transparent sm:p-0 sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-1.5 sm:block"
+                >
+                  <div className="w-full max-w-xs sm:w-auto sm:min-w-max rounded-xl border border-black/[0.08] dark:border-white/[0.09] bg-white dark:bg-[#111111] shadow-2xl dark:shadow-none ring-1 ring-black/[0.04] dark:ring-white/[0.04] p-3 sm:p-2.5">
+                    <div className="flex items-center justify-between mb-2 px-0.5">
+                      <p className="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Select platforms to sync</p>
+                      <button
+                        onClick={() => setShowSyncPopover(false)}
+                        className="sm:hidden text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-0.5"
+                      >
+                        <X size={13} />
+                      </button>
+                    </div>
 
-                  {/* Platform toggle pills — horizontal row */}
-                  <div className="flex items-center gap-1.5 mb-2.5">
+                    {/* Platform toggle pills */}
+                    <div className="grid grid-cols-2 sm:flex sm:items-center gap-1.5 mb-2.5">
                     {[
                       linkedAccounts.codeforces && {
                         key: 'cf', label: 'Codeforces',
@@ -583,7 +595,7 @@ export default function Dashboard() {
                         <button
                           key={key}
                           onClick={() => togglePlatform(key)}
-                          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs transition-all duration-100 ${
+                          className={`flex items-center justify-center sm:justify-start gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs transition-all duration-100 ${
                             isSelected
                               ? `${selectedLight} ${selectedDark}`
                               : 'border-black/[0.08] dark:border-white/[0.08] bg-gray-50/50 dark:bg-white/[0.02] text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/[0.04]'
@@ -606,8 +618,9 @@ export default function Dashboard() {
                     {selectedPlatforms.size === 0 ? 'Select a platform' : ` Sync (${selectedPlatforms.size})`}
                   </button>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
+          </div>
             {/* Hard Refresh hint */}
             {(() => {
               if (cooldown > 0 || refreshing) return null;

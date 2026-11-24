@@ -538,7 +538,7 @@ export default function HelpSupport() {
       </div>
 
       {/* ── Body: Sidebar + Content ── */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 flex gap-8 items-start">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
 
         {/* Sidebar — desktop */}
         <aside className="hidden lg:block w-52 flex-shrink-0 sticky top-24">
@@ -574,7 +574,7 @@ export default function HelpSupport() {
         </aside>
 
         {/* Mobile: horizontal tab strip */}
-        <div className="lg:hidden w-full mb-4 -mx-1 overflow-x-auto pb-2 flex gap-2">
+        <div className="lg:hidden w-full -mx-1 overflow-x-auto pb-2 flex gap-2 shrink-0 no-scrollbar">
           <button
             onClick={() => setActiveCategory(null)}
             className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
@@ -601,10 +601,7 @@ export default function HelpSupport() {
         </div>
 
         {/* Content area */}
-        <div className="flex-1 min-w-0">
-          {/* Mobile strip is sibling above — content starts here for desktop */}
-          <div className="lg:hidden" /> {/* spacer consumed above */}
-
+        <div className="w-full flex-1 min-w-0">
           {filtered.length === 0 ? (
             <div className="text-center py-20 text-gray-400 dark:text-gray-500">
               <Search size={32} className="mx-auto mb-3 opacity-40" />

@@ -75,7 +75,7 @@ function dateKey(year, month, day) {
 export default function CalendarGrid({ contests = [], year, month, onPrev, onNext, loading, onDelete }) {
   if (loading) {
     return (
-      <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-5 flex-1">
+      <div className="w-full max-w-full bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-3 sm:p-5 flex-1 min-w-0">
         <div className="flex items-center justify-between mb-4">
           <Skeleton className="h-4 w-28" />
           <div className="flex gap-2">
@@ -111,7 +111,7 @@ export default function CalendarGrid({ contests = [], year, month, onPrev, onNex
     today.getDate()     === day;
 
   return (
-    <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-5 flex flex-col flex-1 min-w-0">
+    <div className="w-full max-w-full bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-3 sm:p-5 flex flex-col flex-1 min-w-0">
 
       {/* ── Header ── */}
       <div className="flex items-center justify-between mb-4 shrink-0">
@@ -153,7 +153,7 @@ export default function CalendarGrid({ contests = [], year, month, onPrev, onNex
       </div>
 
       {/* ── Weekday labels + Day cells (horizontally scrollable on mobile) ── */}
-      <div className="overflow-x-auto -mx-1">
+      <div className="w-full overflow-x-auto -mx-1">
         <div style={{ minWidth: '420px' }}>
       <div className="grid grid-cols-7 gap-1 mb-1 shrink-0">
         {WEEKDAYS.map(w => (

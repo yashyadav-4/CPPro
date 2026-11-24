@@ -40,10 +40,10 @@ export default function SkillGaps({ loading, skills }) {
 
   return (
     <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 mb-4">
         <p className="text-[11px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-widest">Topic Mastery</p>
-        <div className="flex items-center gap-4">
-          <div className="flex gap-3">
+        <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+          <div className="flex flex-wrap gap-2.5 sm:gap-3">
             <span className="text-[10px] text-gray-400 dark:text-gray-500 flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0" /> ≥65%
             </span>
@@ -54,13 +54,13 @@ export default function SkillGaps({ loading, skills }) {
               <span className="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" /> &lt;40%
             </span>
           </div>
-          <span className="text-[10px] text-gray-400 dark:text-gray-500 border-l border-gray-100 dark:border-white/[0.06] pl-4">
+          <span className="text-[10px] text-gray-400 dark:text-gray-500 border-l border-gray-100 dark:border-white/[0.06] pl-3 sm:pl-4">
             {list.length} topics
           </span>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-5 gap-y-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-5 gap-y-3">
         {list.map((s, i) => {
           const cfg = STATUS_CONFIG[s.status] || STATUS_CONFIG.fair;
           const volumePct = Math.round((s.solved / maxSolved) * 100);

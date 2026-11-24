@@ -181,10 +181,10 @@ export default function DailyChallenge() {
 
     // ── Main ─────────────────────────────────────────────────────────────────
     return (
-        <div className="max-w-7xl mx-auto px-6 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
 
             {/* ── Mission header ── */}
-            <div className="flex items-start justify-between mb-2">
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 mb-2">
                 <div>
                     <div className="flex items-center gap-2">
                         <h1 className="text-xl font-bold text-white tracking-tight">Today's Missions</h1>

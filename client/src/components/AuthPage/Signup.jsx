@@ -92,7 +92,7 @@ export default function Signup() {
           backgroundColor: theme.card,
           border: `1px solid ${theme.border}`,
           borderRadius: '24px',
-          padding: '2rem 2.25rem',
+          padding: 'clamp(1.25rem, 5vw, 2.25rem)',
           boxShadow: isDark ? '0 24px 48px rgba(0,0,0,0.4)' : '0 24px 48px rgba(0,0,0,0.06)',
           position: 'relative',
           zIndex: 1

@@ -96,7 +96,7 @@ export default function Header() {
                     </div>
 
                     {/* Center Section - Navigation (Desktop) */}
-                    <nav className="hidden lg:flex flex-1 justify-center gap-3 xl:gap-5 px-2">
+                    <nav className="hidden xl:flex flex-1 justify-center gap-2 xl:gap-4 px-2">
                         {navItems.map((item) => {
                             if (dropdownThemes[item]) {
                                 return (
@@ -108,7 +108,7 @@ export default function Header() {
                                     >
                                         <button
                                             data-tour={TOUR_ID[item]}
-                                            className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors whitespace-nowrap gap-1 ${activeDropdown === item || window.location.pathname.startsWith('/learning')
+                                            className={`inline-flex items-center px-1 pt-1 border-b-2 text-xs xl:text-sm font-medium transition-colors whitespace-nowrap gap-1 ${activeDropdown === item || window.location.pathname.startsWith('/learning')
                                                 ? 'border-emerald-600 text-gray-900 dark:text-white'
                                                 : 'border-transparent text-gray-500 dark:text-gray-200 hover:text-gray-700 dark:hover:text-white hover:border-gray-300 dark:hover:border-white/25'
                                             }`}
@@ -147,7 +147,7 @@ export default function Header() {
                                     end={item === 'Home'}
                                     data-tour={TOUR_ID[item]}
                                     className={({ isActive }) =>
-                                        `inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors whitespace-nowrap ${isActive
+                                        `inline-flex items-center px-1 pt-1 border-b-2 text-xs xl:text-sm font-medium transition-colors whitespace-nowrap ${isActive
                                             ? 'border-emerald-600 text-gray-900 dark:text-white'
                                             : 'border-transparent text-gray-500 dark:text-gray-200 hover:text-gray-700 dark:hover:text-white hover:border-gray-300 dark:hover:border-white/25'
                                         }`
@@ -160,7 +160,7 @@ export default function Header() {
                     </nav>
 
                     {/* Right Section - Actions & Profile */}
-                    <div className="hidden lg:flex flex-shrink-0 items-center justify-end gap-3 xl:gap-4">
+                    <div className="hidden xl:flex flex-shrink-0 items-center justify-end gap-2.5 xl:gap-4">
                         <button
                             onClick={toggleTheme}
                             title={isDark ? 'Light mode' : 'Dark mode'}
@@ -229,7 +229,7 @@ export default function Header() {
                     </div>
 
                     {/* Mobile menu button */}
-                    <div className="flex lg:hidden flex-1 justify-end items-center gap-3">
+                    <div className="flex xl:hidden flex-1 justify-end items-center gap-2 sm:gap-3">
                         <button
                             onClick={toggleTheme}
                             className="flex items-center gap-1 px-2 py-1 rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-gray-600 dark:text-gray-300 text-xs font-medium hover:text-gray-900 dark:hover:text-white transition-colors"
@@ -249,7 +249,7 @@ export default function Header() {
 
             {/* Mobile Menu */}
             {isMobileMenuOpen && (
-                <div className="lg:hidden bg-white/90 dark:bg-black/80 backdrop-blur-2xl border-t border-white/[0.08] dark:border-white/[0.05] rounded-b-2xl overflow-hidden shadow-2xl transition-all duration-300">
+                <div className="xl:hidden bg-white/90 dark:bg-black/80 backdrop-blur-2xl border-t border-white/[0.08] dark:border-white/[0.05] rounded-b-2xl overflow-hidden shadow-2xl transition-all duration-300 max-h-[calc(100vh-5rem)] overflow-y-auto overscroll-contain">
                     <div className="pt-2 pb-3 space-y-1">
                         {navItems.map((item) => {
                             if (dropdownThemes[item]) {

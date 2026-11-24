@@ -52,11 +52,11 @@ export default function ContestTracker() {
     );
 
   return (
-    <div className="bg-[#ffffff] dark:bg-[#0a0a0a] px-6 py-6 min-h-screen">
+    <div className="bg-[#ffffff] dark:bg-[#0a0a0a] px-4 sm:px-6 py-6 min-h-screen">
       <div className="max-w-[1400px] mx-auto space-y-4">
 
         {/* ── Page header ── */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-6">
             <div>
               <h1 className="text-lg font-medium text-gray-900 dark:text-white">
@@ -116,7 +116,7 @@ export default function ContestTracker() {
           </div>
 
           {/* Auto-update info chip — no manual refresh needed */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
             {isAuthenticated && (
               <button
                 onClick={() => setIsModalOpen(true)}
@@ -146,7 +146,7 @@ export default function ContestTracker() {
         )}
 
         {/* ── Main layout: calendar + sidebar ── */}
-        <div className="flex flex-col lg:flex-row gap-4 items-start">
+        <div className="flex flex-col lg:flex-row gap-4 items-stretch lg:items-start w-full">
           {/* Calendar takes remaining space */}
           <CalendarGrid
             contests={contests}

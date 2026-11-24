@@ -208,33 +208,35 @@ export default function LeaderBoard() {
                 <><EyeOff size={12} /> Your profile is private — Others can see you as <strong className="text-gray-900 dark:text-white">Anonymous</strong> on leaderboard</>
               )}
             </div>
-            <div className="relative bg-gradient-to-r from-emerald-600/10 via-gray-50 dark:via-[#111111] to-emerald-600/10 border border-emerald-500/30 rounded-xl p-4 flex items-center gap-4 overflow-hidden">
+            <div className="relative bg-gradient-to-r from-emerald-600/10 via-gray-50 dark:via-[#111111] to-emerald-600/10 border border-emerald-500/30 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 overflow-hidden">
               {/* Corner Ribbon */}
               <div className="absolute top-0 left-0 bg-emerald-600 text-[10px] font-bold px-3 py-1 text-white uppercase tracking-wider rounded-br-lg z-10">
                 My Rank
               </div>
-              <div className="flex-shrink-0 relative z-20 mt-2">
-                {currentUser.profilePic ? (
-                  <img className="h-12 w-12 rounded-full object-cover ring-2 ring-emerald-500/50" src={currentUser.profilePic} alt="" onError={(e) => {
-                    e.target.onerror = null;
-                    e.target.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100%" height="100%" fill="%2310b981"/><text x="50" y="50" dominant-baseline="central" text-anchor="middle" fill="white" font-size="40" font-family="sans-serif">' + encodeURIComponent((currentUser.name || currentUser.username || 'A').charAt(0).toUpperCase()) + '</text></svg>';
-                  }} />
-                ) : (
-                  <div className="h-12 w-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xl ring-2 ring-emerald-500/50">
-                    {(currentUser.name || currentUser.username || 'A').charAt(0).toUpperCase()}
-                  </div>
-                )}
+              <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0 mt-2 sm:mt-0">
+                <div className="flex-shrink-0 relative z-20">
+                  {currentUser.profilePic ? (
+                    <img className="h-12 w-12 rounded-full object-cover ring-2 ring-emerald-500/50" src={currentUser.profilePic} alt="" onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100%" height="100%" fill="%2310b981"/><text x="50" y="50" dominant-baseline="central" text-anchor="middle" fill="white" font-size="40" font-family="sans-serif">' + encodeURIComponent((currentUser.name || currentUser.username || 'A').charAt(0).toUpperCase()) + '</text></svg>';
+                    }} />
+                  ) : (
+                    <div className="h-12 w-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xl ring-2 ring-emerald-500/50">
+                      {(currentUser.name || currentUser.username || 'A').charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-gray-900 dark:text-white font-semibold truncate">{currentUser.name || currentUser.username}</p>
+                  <p className="text-gray-400 text-sm truncate">@{currentUser.username}</p>
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-gray-900 dark:text-white font-semibold truncate">{currentUser.name || currentUser.username}</p>
-                <p className="text-gray-400 text-sm truncate">@{currentUser.username}</p>
-              </div>
-              <div className="text-right flex items-center gap-6">
+              <div className="flex items-center justify-between sm:justify-end gap-6 pt-2 sm:pt-0 border-t sm:border-t-0 border-emerald-500/15">
                 <div>
                   <p className="text-xs text-gray-500">{getPrimaryLabel(category)}</p>
                   <p className="text-xl font-black text-gray-900 dark:text-white">{getPrimaryValue(currentUser, category).toLocaleString()}</p>
                 </div>
-                <div>
+                <div className="text-right">
                   <p className="text-xs text-gray-500">{scope === 'global' ? 'Global Rank' : 'Rank'}</p>
                   <p className="text-xl font-black text-emerald-400">#{currentUser.rank}</p>
                 </div>

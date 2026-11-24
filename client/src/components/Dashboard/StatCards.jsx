@@ -77,7 +77,7 @@ export default function StatCards({
 }) {
   if (loading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {[...Array(6)].map((_, i) => <Skeleton key={i} />)}
       </div>
     );
@@ -137,7 +137,7 @@ export default function StatCards({
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
       {cards.map((c, i) => <StatCard key={i} {...c} />)}
     </div>
   );

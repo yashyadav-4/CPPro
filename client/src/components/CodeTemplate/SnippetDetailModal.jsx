@@ -75,7 +75,7 @@ export default function SnippetDetailModal({ snippet, onClose, onDelete, onEdit 
                         <button onClick={onClose} className="w-3 h-3 rounded-full bg-[#ff5f57] hover:brightness-110 transition-all" />
                         <div className="w-3 h-3 rounded-full bg-[#febc2e]" />
                         <div className="w-3 h-3 rounded-full bg-[#28c840]" />
-                        <span className="ml-3 text-[11px] font-mono text-gray-500 tracking-widest">
+                        <span className="ml-3 text-[11px] font-mono text-gray-500 tracking-widest hidden sm:inline">
                             CPPRO_VAULT // {LANG_LABEL[hlLanguage] || language}
                         </span>
                     </div>
@@ -114,10 +114,10 @@ export default function SnippetDetailModal({ snippet, onClose, onDelete, onEdit 
                     </div>
                 </div>
 
-                {/* ── Body: two-column layout ───────────────────────────── */}
-                <div className="flex flex-1 min-h-0 overflow-hidden">
+                {/* ── Body: two-column layout (stacks on mobile) ───────────────────────────── */}
+                <div className="flex flex-col sm:flex-row flex-1 min-h-0 overflow-hidden">
                     {/* Left panel — metadata */}
-                    <div className="w-52 shrink-0 border-r border-gray-200 dark:border-white/[0.06] p-5 flex flex-col gap-5 overflow-y-auto bg-gray-50/50 dark:bg-white/[0.01]">
+                    <div className="w-full sm:w-52 shrink-0 border-b sm:border-b-0 sm:border-r border-gray-200 dark:border-white/[0.06] p-4 sm:p-5 flex flex-col gap-3 sm:gap-5 overflow-y-auto bg-gray-50/50 dark:bg-white/[0.01] max-h-48 sm:max-h-none">
                         {/* Title */}
                         <div>
                             <p className="text-[9px] font-bold text-gray-500 dark:text-gray-600 uppercase tracking-widest mb-1.5">Snippet</p>

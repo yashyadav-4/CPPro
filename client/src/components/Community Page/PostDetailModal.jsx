@@ -205,7 +205,7 @@ export default function PostDetailModal({ post, onClose, onVoteToggle, onPinTogg
         {/* Body */}
         <div className="flex flex-col items-center bg-gray-50/30 dark:bg-[#0a0a0a]">
           {/* Post content */}
-          <div className="w-full max-w-5xl p-8 md:p-12 border-b border-gray-100 dark:border-white/[0.07] bg-white dark:bg-transparent">
+          <div className="w-full max-w-5xl p-4 sm:p-8 md:p-12 border-b border-gray-100 dark:border-white/[0.07] bg-white dark:bg-transparent">
             {/* Content */}
             {isEditing ? (
               <div className="flex flex-col gap-3 mb-6">
@@ -272,7 +272,7 @@ export default function PostDetailModal({ post, onClose, onVoteToggle, onPinTogg
             )}
 
             {/* Vote + pin controls */}
-            <div className="flex items-center gap-3 mt-8 pt-5 border-t border-gray-100 dark:border-white/[0.07]">
+            <div className="flex flex-wrap items-center gap-3 mt-8 pt-5 border-t border-gray-100 dark:border-white/[0.07]">
               <div className="flex items-center gap-1 bg-gray-50 dark:bg-[#0a0a0a] border border-gray-200 dark:border-white/[0.08] rounded-full p-0.5">
                 <button
                   className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors ${upvoted ? "bg-emerald-500/20 text-emerald-500" : "text-gray-400 hover:text-emerald-500 hover:bg-emerald-500/10"}`}
@@ -311,7 +311,7 @@ export default function PostDetailModal({ post, onClose, onVoteToggle, onPinTogg
           </div>
 
           {/* Comments panel */}
-          <div className="w-full max-w-5xl p-8 md:p-12 flex flex-col bg-transparent">
+          <div className="w-full max-w-5xl p-4 sm:p-8 md:p-12 flex flex-col bg-transparent">
             <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex-shrink-0 flex items-center gap-2">
               <MessageCircle size={20} className="text-emerald-500" /> Discussion
             </h3>

@@ -3,7 +3,7 @@ import { SearchX, Home, ArrowLeft } from "lucide-react";
 
 export default function NotFound() {
   return (
-    <div className="min-h-[80vh] flex items-center justify-center bg-gray-50 dark:bg-[#0a0a0a] px-6 py-20">
+    <div className="min-h-[80vh] flex items-center justify-center bg-gray-50 dark:bg-[#0a0a0a] px-4 sm:px-6 py-12 sm:py-20">
       <div className="text-center max-w-lg">
         {/* Animated icon or decorative element */}
         <div className="flex justify-center mb-6">

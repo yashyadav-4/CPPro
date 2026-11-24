@@ -258,7 +258,7 @@ function ResourcesSection({ isDark }) {
   const themeBorder = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.08)';
 
   return (
-    <div className="max-w-[1200px] mx-auto px-6 pt-8 pb-28">
+    <div className="max-w-[1200px] mx-auto px-4 sm:px-6 pt-8 pb-28">
       {/* Section header */}
       <div className="mb-8">
         <div className="flex items-center gap-2 mb-2">
@@ -386,7 +386,7 @@ export default function LearningPage() {
   return (
     <div className="w-full overflow-x-hidden font-mono" style={{ backgroundColor: themeVars.bg, color: themeVars.text }}>
       {/* Header */}
-      <div className="px-6 pt-10 pb-4 max-w-[1200px] mx-auto flex flex-col md:flex-row items-end md:items-center justify-between gap-4">
+      <div className="px-4 sm:px-6 pt-10 pb-4 max-w-[1200px] mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1.5">
             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -405,7 +405,7 @@ export default function LearningPage() {
         </div>
 
         {/* Nav tabs */}
-        <div className="flex bg-gray-100 dark:bg-white/5 p-1 rounded-xl border border-gray-200 dark:border-white/10">
+        <div className="flex bg-gray-100 dark:bg-white/5 p-1 rounded-xl border border-gray-200 dark:border-white/10 overflow-x-auto max-w-full">
           <NavLink
             to="/learning/cp"
             className={({ isActive }) => `px-4 py-2 rounded-lg text-xs font-bold transition-all ${isActive && !isResources ? 'bg-white dark:bg-white/10 shadow-sm text-emerald-600 dark:text-emerald-400' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'}`}

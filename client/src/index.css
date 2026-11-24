@@ -50,12 +50,16 @@
   --color-accent-bdr: rgba(34, 197, 94, 0.2);
 }
 
+html,
 body {
   background-color: var(--color-bg);
   color: var(--color-text-main);
   font-family: var(--font-sans);
   margin: 0;
   min-height: 100vh;
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -81,6 +85,15 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #cbd5e1;
+}
+
+/* Hide scrollbar utility */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 /* Add some smooth transitions globally for inputs and buttons */

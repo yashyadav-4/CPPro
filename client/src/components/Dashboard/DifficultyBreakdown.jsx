@@ -89,18 +89,21 @@ export default function DifficultyBreakdown({ loading, cfBands, lcBands, gfgBand
   return (
     <div className="bg-white dark:bg-[#111111] border border-black/[0.07] dark:border-white/[0.08] rounded-xl p-4 flex flex-col h-full max-h-[400px]">
       {/* Header */}
-      <div className="flex items-center justify-between mb-3 shrink-0">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 shrink-0">
         <p className="text-[11px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-widest">
           Difficulty Breakdown
         </p>
-        <div className="flex gap-1">
+        <div className="flex flex-wrap items-center gap-1">
           {hasCf && (
             <button
                onClick={() => setTab('cf')}
                className={`text-xs px-2.5 py-1 rounded-md font-medium transition-colors ${activeTab === 'cf'
                  ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-500'
                  : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
-             >Codeforces</button>
+             >
+               <span className="hidden sm:inline">Codeforces</span>
+               <span className="sm:hidden">CF</span>
+             </button>
           )}
           {hasLc && (
             <button
@@ -108,7 +111,10 @@ export default function DifficultyBreakdown({ loading, cfBands, lcBands, gfgBand
                className={`text-xs px-2.5 py-1 rounded-md font-medium transition-colors ${activeTab === 'lc'
                  ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-500'
                  : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
-             >LeetCode</button>
+             >
+               <span className="hidden sm:inline">LeetCode</span>
+               <span className="sm:hidden">LC</span>
+             </button>
           )}
           {hasGfg && (
             <button
@@ -116,7 +122,10 @@ export default function DifficultyBreakdown({ loading, cfBands, lcBands, gfgBand
                className={`text-xs px-2.5 py-1 rounded-md font-medium transition-colors ${activeTab === 'gfg'
                  ? 'bg-green-50 dark:bg-green-950/40 text-[#2F8D46] dark:text-[#4ade80]'
                  : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
-             >GeeksforGeeks</button>
+             >
+               <span className="hidden sm:inline">GeeksforGeeks</span>
+               <span className="sm:hidden">GFG</span>
+             </button>
           )}
         </div>
       </div>

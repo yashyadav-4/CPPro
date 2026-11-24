@@ -92,7 +92,7 @@ export default function Login() {
           backgroundColor: theme.card,
           border: `1px solid ${theme.border}`,
           borderRadius: '24px',
-          padding: '2.5rem',
+          padding: 'clamp(1.25rem, 5vw, 2.5rem)',
           boxShadow: isDark ? '0 24px 48px rgba(0,0,0,0.4)' : '0 24px 48px rgba(0,0,0,0.06)',
           position: 'relative',
           zIndex: 1
